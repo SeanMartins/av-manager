@@ -229,8 +229,6 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
       <label class="il">Ruolo</label>
       <div class="chips" id="roleChips">
         <span class="chip on" onclick="window.pickRole(this)">Tecnico AV</span>
-        <span class="chip" onclick="window.pickRole(this)">Operatore LED</span>
-        <span class="chip" onclick="window.pickRole(this)">Interprete</span>
         <span class="chip" onclick="window.pickRole(this)">Project Manager</span>
         <span class="chip" onclick="window.pickRole(this)">Magazziniere</span>
       </div>
@@ -346,7 +344,7 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
       <div class="sec"><div class="stl">QR registrazione</div></div>
       <div class="card">
         <div class="ig"><label class="il">Ruolo per il nuovo dipendente</label>
-          <select id="qrRole"><option>Tecnico AV</option><option>Operatore LED</option><option>Interprete</option><option>Project Manager</option><option>Magazziniere</option></select></div>
+          <select id="qrRole"><option>Tecnico AV</option><option>Project Manager</option><option>Magazziniere</option></select></div>
         <button class="btn btn-p btn-f" onclick="window.genQRReg()">📲 Genera QR di registrazione</button>
         <div id="qrRegOut" style="display:none">
           <div class="qrw"><div class="qri" id="qrRegCv"></div></div>
@@ -671,6 +669,80 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
   </div>
 </div>
 
+<!-- Pre-expose global state and UI functions BEFORE the module loads -->
+<!-- This ensures onclick handlers work even if Firebase is slow -->
+<script>
+// Global state accessible by both module and inline handlers
+window._avState = {
+  privOk: false,
+  selRole: 'Tecnico AV',
+  selLuogo: '🏢 In sede',
+};
+
+// UI functions that don't need Firebase — available immediately
+// pickRole defined in pre-module script
+
+// togglePriv defined in pre-module script
+
+window.goPage = n => {
+  const titles = {presenze:'Presenze',location:'Location',magazzino:'Magazzino',team:'Team & Registro'};
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(b=>b.classList.remove('on'));
+  document.getElementById('p-'+n)?.classList.add('on');
+  document.getElementById('n-'+n)?.classList.add('on');
+  document.getElementById('ptitle').textContent = titles[n]||n;
+};
+
+window.openMod = id => {
+  document.getElementById(id)?.classList.add('on');
+  document.body.style.overflow='hidden';
+};
+
+window.closeMod = id => {
+  document.getElementById(id)?.classList.remove('on');
+  document.body.style.overflow='';
+};
+
+window.pickLuogo = (el, luogo) => {
+  document.querySelectorAll('#luogoChips .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  window._avState.selLuogo = luogo;
+  const isCustom = luogo.includes('Assistenza') || luogo.includes('Trasferta');
+  document.getElementById('luogoCustomWrap').style.display = isCustom?'block':'none';
+  document.getElementById('gpsWrap').style.display = isCustom?'block':'none';
+  document.getElementById('gpsResult').textContent='';
+};
+
+window.toggleCk = k => {
+  document.getElementById('cb'+k)?.classList.toggle('on');
+  document.getElementById('cl'+k)?.classList.toggle('on');
+  const all=document.querySelectorAll('.cbox').length;
+  const done=document.querySelectorAll('.cbox.on').length;
+  const pct=all?Math.round(done/all*100):0;
+  const bar=document.getElementById('checkBar');
+  const pctEl=document.getElementById('checkPct');
+  if(bar) bar.style.width=pct+'%';
+  if(pctEl) pctEl.textContent=pct+'%';
+};
+
+window.resetCheck = () => {
+  document.querySelectorAll('.cbox').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.clbl').forEach(l=>l.classList.remove('on'));
+  window.toggleCk && document.querySelectorAll('.cbox').forEach((_,i)=>{});
+  const bar=document.getElementById('checkBar');
+  const pctEl=document.getElementById('checkPct');
+  if(bar) bar.style.width='0%';
+  if(pctEl) pctEl.textContent='0%';
+};
+
+// Close modals on backdrop tap
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.mol').forEach(m=>{
+    m.addEventListener('click', e=>{ if(e.target===m) window.closeMod(m.id); });
+  });
+});
+</script>
+
 <script type="module">
 // ═══════════════════════════════════════════════════
 // FIREBASE CONFIG
@@ -693,7 +765,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-// ─── Collezioni ───────────────────────────────────
+// ─── Use shared state from pre-module script ───────
+// These point to the same object, so changes sync automatically
+const avState = window._avState;
+// Getters for convenience
+const getPrivOk  = () => avState.privOk;
+const getSelRole = () => avState.selRole;
+const getSelLuogo= () => avState.selLuogo;
 const C = {
   team:      () => collection(db, 'team'),
   locations: () => collection(db, 'locations'),
@@ -711,10 +789,7 @@ let user      = null;
 let punchedIn = false;
 let punchStart= null;
 let punchDocId= null;
-let privOk    = false;
-let selRole   = 'Tecnico AV';
-let selLuogo  = '🏢 In sede';
-let gpsCoords = null;
+let gpsCoords = null; // privOk, selRole, selLuogo live in window._avState
 
 // Cache locale aggiornata dai listener realtime
 let cacheTeam      = [];
@@ -770,13 +845,13 @@ function restoreActivePunch() {
   if (btn) { btn.className='pbtn pout'; btn.textContent='⏹ Timbra uscita'; }
   const pad = x => String(x).padStart(2,'0');
   const e = new Date(p.entrata);
-  if (stat) stat.innerHTML = `Entrata timbrata alle ${pad(e.getHours())}:${pad(e.getMinutes())} <span class="luogo-badge">${selLuogo}</span>`;
+  if (stat) stat.innerHTML = `Entrata timbrata alle ${pad(e.getHours())}:${pad(e.getMinutes())} <span class="luogo-badge">${avState.selLuogo}</span>`;
   // Blocca selezione luogo
   const lw = document.getElementById('luogoWrap');
   if (lw) { lw.style.opacity='0.4'; lw.style.pointerEvents='none'; }
   // Evidenzia chip corretto
   document.querySelectorAll('#luogoChips .chip').forEach(c => {
-    c.classList.toggle('on', c.textContent.trim() === selLuogo);
+    c.classList.toggle('on', c.textContent.trim() === avState.selLuogo);
   });
   toast('🔄 Turno ripristinato — entrata alle '+pad(e.getHours())+':'+pad(e.getMinutes()));
 }
@@ -853,18 +928,12 @@ async function seedIfEmpty() {
 // ═══════════════════════════════════════════════════
 // REGISTER / LOGIN
 // ═══════════════════════════════════════════════════
-window.pickRole = el => {
-  document.querySelectorAll('#roleChips .chip').forEach(c=>c.classList.remove('on'));
-  el.classList.add('on'); selRole = el.textContent.trim();
-};
-window.togglePriv = () => {
-  privOk=!privOk;
-  document.getElementById('privBox').classList.toggle('on',privOk);
-};
+// pickRole defined in pre-module script
+// togglePriv defined in pre-module script
 window.doReg = async () => {
   const nome=v('rNome'), cognome=v('rCognome'), email=v('rEmail'), tel=v('rTel');
   if(!nome||!cognome||!email){ toast('Compila nome, cognome ed email','r'); return; }
-  if(!privOk){ toast('Accetta la privacy policy','r'); return; }
+  if(!avState.privOk){ toast('Accetta la privacy policy','r'); return; }
 
   const btn = document.getElementById('regBtn');
   btn.textContent='Salvataggio...'; btn.disabled=true;
@@ -877,7 +946,7 @@ window.doReg = async () => {
       btn.textContent='Inizia →'; btn.disabled=false; return;
     }
     const uid = 'u'+Date.now();
-    const member = {id:uid, nome, cognome, email, tel:tel||'', ruolo:selRole, createdAt:new Date().toISOString()};
+    const member = {id:uid, nome, cognome, email, tel:tel||'', ruolo:avState.selRole, createdAt:new Date().toISOString()};
     await setDoc(doc(db,'team',uid), member);
     user = member;
     localStorage.setItem('av_user', JSON.stringify(user));
@@ -991,7 +1060,7 @@ window.punch = async () => {
     btn.className='pbtn pout'; btn.textContent='⏹ Timbra uscita';
     // Determina luogo finale
     const customLuogo = v('luogoCustom');
-    const luogoFinale = customLuogo ? selLuogo+' — '+customLuogo : selLuogo;
+    const luogoFinale = customLuogo ? avState.selLuogo+' — '+customLuogo : avState.selLuogo;
     stat.innerHTML=`Entrata timbrata alle ${t} <span class="luogo-badge">${luogoFinale}</span>`;
     const ref = await addDoc(C.presenze(), {
       uid:user.id, nome:user.nome+' '+user.cognome,
@@ -1854,6 +1923,8 @@ window.closeMod=id=>{if(id==='mPreparaLavoro')stopCamera();_origClose(id);};
 
 // ═══════════════════════════════════════════════════
 // QR REGISTRAZIONE
+// ═══════════════════════════════════════════════════
+window.genQRReg = () => {
   const role=v('qrRole');
   const token='AV'+Date.now().toString(36).toUpperCase().slice(-6);
   const url=`${location.origin}${location.pathname}?token=${token}&role=${encodeURIComponent(role)}`;
