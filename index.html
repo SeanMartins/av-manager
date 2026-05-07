@@ -228,21 +228,21 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
     <div class="ig">
       <label class="il">Ruolo</label>
       <div class="chips" id="roleChips">
-        <span class="chip on" onclick="pickRole(this)">Tecnico AV</span>
-        <span class="chip" onclick="pickRole(this)">Operatore LED</span>
-        <span class="chip" onclick="pickRole(this)">Interprete</span>
-        <span class="chip" onclick="pickRole(this)">Project Manager</span>
-        <span class="chip" onclick="pickRole(this)">Magazziniere</span>
+        <span class="chip on" onclick="window.pickRole(this)">Tecnico AV</span>
+        <span class="chip" onclick="window.pickRole(this)">Operatore LED</span>
+        <span class="chip" onclick="window.pickRole(this)">Interprete</span>
+        <span class="chip" onclick="window.pickRole(this)">Project Manager</span>
+        <span class="chip" onclick="window.pickRole(this)">Magazziniere</span>
       </div>
     </div>
     <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:20px">
-      <div id="privBox" class="cbox" onclick="togglePriv()" style="margin-top:2px"></div>
-      <span style="font-size:12px;color:var(--tx2);line-height:1.5;cursor:pointer" onclick="togglePriv()">Acconsento al trattamento dei dati personali (GDPR) per uso interno aziendale.</span>
+      <div id="privBox" class="cbox" onclick="window.togglePriv()" style="margin-top:2px"></div>
+      <span style="font-size:12px;color:var(--tx2);line-height:1.5;cursor:pointer" onclick="window.togglePriv()">Acconsento al trattamento dei dati personali (GDPR) per uso interno aziendale.</span>
     </div>
-    <button class="btn btn-p btn-f" id="regBtn" onclick="doReg()">Inizia →</button>
+    <button class="btn btn-p btn-f" id="regBtn" onclick="window.doReg()">Inizia →</button>
     <div style="text-align:center;margin-top:14px">
       <span style="font-size:13px;color:var(--tx3)">Già registrato? </span>
-      <span style="font-size:13px;color:var(--ac2);cursor:pointer" onclick="doQuickLogin()">Accedi</span>
+      <span style="font-size:13px;color:var(--ac2);cursor:pointer" onclick="window.doQuickLogin()">Accedi</span>
     </div>
   </div>
 </div>
@@ -251,7 +251,7 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
 <div id="app" style="display:none">
   <div id="topbar">
     <div><div id="ptitle" style="font-size:17px;font-weight:600;letter-spacing:-.3px">Presenze</div><div id="pdate" class="sub"></div></div>
-    <div class="av-btn" id="avbtn" onclick="openMod('mProf')">?</div>
+    <div class="av-btn" id="avbtn" onclick="window.openMod('mProf')">?</div>
   </div>
 
   <div id="content">
@@ -266,22 +266,22 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
         <div id="luogoWrap" style="margin-bottom:12px">
           <div style="font-size:12px;color:var(--tx2);margin-bottom:7px;font-weight:500;text-align:center">Dove ti trovi?</div>
           <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap" id="luogoChips">
-            <span class="chip on" onclick="pickLuogo(this,'🏢 In sede')">🏢 In sede</span>
-            <span class="chip" onclick="pickLuogo(this,'🔧 Assistenza')">🔧 Assistenza</span>
-            <span class="chip" onclick="pickLuogo(this,'✈️ Trasferta')">✈️ Trasferta</span>
+            <span class="chip on" onclick="window.pickLuogo(this,'🏢 In sede')">🏢 In sede</span>
+            <span class="chip" onclick="window.pickLuogo(this,'🔧 Assistenza')">🔧 Assistenza</span>
+            <span class="chip" onclick="window.pickLuogo(this,'✈️ Trasferta')">✈️ Trasferta</span>
           </div>
           <div id="luogoCustomWrap" style="display:none;margin-top:8px">
             <input type="text" id="luogoCustom" placeholder="Specifica il luogo (es. Superstudio Milano)">
           </div>
           <div id="gpsWrap" style="display:none;margin-top:8px">
-            <button class="btn btn-f" onclick="getGPS()" id="gpsBtn" style="font-size:13px;padding:9px">
+            <button class="btn btn-f" onclick="window.getGPS()" id="gpsBtn" style="font-size:13px;padding:9px">
               📍 Rileva posizione GPS
             </button>
             <div id="gpsResult" style="font-size:12px;color:var(--tx2);margin-top:6px;text-align:center"></div>
           </div>
         </div>
 
-        <button class="pbtn pin" id="pbtn" onclick="punch()">⏱ Timbra entrata</button>
+        <button class="pbtn pin" id="pbtn" onclick="window.punch()">⏱ Timbra entrata</button>
       </div>
 
       <div class="sg sg3">
@@ -305,7 +305,7 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
         <div class="sc"><div class="sn" id="nLoc">0</div><div class="sl">Location</div></div>
         <div class="sc"><div class="sn" id="nFoto">0</div><div class="sl">Foto totali</div></div>
       </div>
-      <div class="sec"><div class="stl">Location</div><button class="btn btn-sm btn-p" onclick="openMod('mNewLoc')">+ Nuova</button></div>
+      <div class="sec"><div class="stl">Location</div><button class="btn btn-sm btn-p" onclick="window.openMod('mNewLoc')">+ Nuova</button></div>
       <div id="locList"></div>
     </div>
 
@@ -332,7 +332,7 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
           <select id="kitLing"><option value="0">Solo italiano</option><option value="2">2 lingue</option><option value="3">3 lingue</option><option value="4">4+ lingue</option></select></div>
         <div class="ig"><label class="il">LED wall</label>
           <select id="kitLed"><option value="">Nessuno</option><option value="s">Piccolo (≤6 mq)</option><option value="m">Medio (6–20 mq)</option><option value="l">Grande (20+ mq)</option></select></div>
-        <button class="btn btn-p btn-f" onclick="genKit()">🎛 Genera lista materiali</button>
+        <button class="btn btn-p btn-f" onclick="window.genKit()">🎛 Genera lista materiali</button>
       </div>
       <div id="kitResult"></div>
     </div>
@@ -347,11 +347,11 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
       <div class="card">
         <div class="ig"><label class="il">Ruolo per il nuovo dipendente</label>
           <select id="qrRole"><option>Tecnico AV</option><option>Operatore LED</option><option>Interprete</option><option>Project Manager</option><option>Magazziniere</option></select></div>
-        <button class="btn btn-p btn-f" onclick="genQRReg()">📲 Genera QR di registrazione</button>
+        <button class="btn btn-p btn-f" onclick="window.genQRReg()">📲 Genera QR di registrazione</button>
         <div id="qrRegOut" style="display:none">
           <div class="qrw"><div class="qri" id="qrRegCv"></div></div>
           <p style="text-align:center;font-size:12px;color:var(--tx2);margin-bottom:12px" id="qrRegMeta"></p>
-          <div style="display:flex;gap:8px"><button class="btn btn-f" onclick="printQR()">🖨 Stampa</button><button class="btn btn-f" onclick="shareQR()">📤 Condividi</button></div>
+          <div style="display:flex;gap:8px"><button class="btn btn-f" onclick="window.printQR()">🖨 Stampa</button><button class="btn btn-f" onclick="window.shareQR()">📤 Condividi</button></div>
         </div>
       </div>
       <div class="sec"><div class="stl">Dipendenti registrati</div></div>
@@ -364,17 +364,17 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
           <span style="font-size:12px;color:var(--tx2)">Completamento</span>
           <span style="font-size:12px;font-weight:600" id="checkPct">0%</span>
         </div>
-        <button class="btn btn-f" style="margin-top:11px" onclick="resetCheck()">↺ Reset</button>
+        <button class="btn btn-f" style="margin-top:11px" onclick="window.resetCheck()">↺ Reset</button>
       </div>
     </div>
 
   </div><!-- /content -->
 
   <div id="nav">
-    <div class="ni on" id="n-presenze" onclick="goPage('presenze')"><div class="ic">⏱</div><div class="lb">Presenze</div></div>
-    <div class="ni" id="n-location" onclick="goPage('location')"><div class="ic">📍</div><div class="lb">Location</div></div>
-    <div class="ni" id="n-magazzino" onclick="goPage('magazzino')"><div class="ic">📦</div><div class="lb">Magazzino</div></div>
-    <div class="ni" id="n-team" onclick="goPage('team')"><div class="ic">👥</div><div class="lb">Team</div></div>
+    <div class="ni on" id="n-presenze" onclick="window.goPage('presenze')"><div class="ic">⏱</div><div class="lb">Presenze</div></div>
+    <div class="ni" id="n-location" onclick="window.goPage('location')"><div class="ic">📍</div><div class="lb">Location</div></div>
+    <div class="ni" id="n-magazzino" onclick="window.goPage('magazzino')"><div class="ic">📦</div><div class="lb">Magazzino</div></div>
+    <div class="ni" id="n-team" onclick="window.goPage('team')"><div class="ic">👥</div><div class="lb">Team</div></div>
   </div>
 </div>
 
@@ -394,7 +394,7 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
     <div class="row" style="padding:7px 0"><span style="font-size:13px;color:var(--tx2);width:76px">Telefono</span><span style="font-size:13px" id="profTel">—</span></div>
   </div>
   <button class="btn btn-f" style="margin-top:8px" onclick="window.openMod('mExport')">📊 Esporta presenze Excel</button>
-  <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci dall'account</button>
+  <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="window.doLogout()">Esci dall'account</button>
   <button class="btn btn-f" style="margin-top:8px" onclick="window.closeMod('mProf')">Chiudi</button>
 </div></div>
 
@@ -454,8 +454,8 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
     </div>
   </div>
   <div style="display:flex;gap:8px">
-    <button class="btn btn-f" onclick="closeMod('mNewLoc')">Annulla</button>
-    <button class="btn btn-p btn-f" onclick="saveLoc()">Salva</button>
+    <button class="btn btn-f" onclick="window.closeMod('mNewLoc')">Annulla</button>
+    <button class="btn btn-p btn-f" onclick="window.saveLoc()">Salva</button>
   </div>
 </div></div>
 
@@ -477,8 +477,8 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
       <select id="aStato"><option value="ok">Disponibile</option><option value="out">In uso</option><option value="maint">Manutenzione</option></select></div>
   </div>
   <div style="display:flex;gap:8px">
-    <button class="btn btn-f" onclick="closeMod('mNewArt')">Annulla</button>
-    <button class="btn btn-p btn-f" onclick="saveArt()">Salva + QR</button>
+    <button class="btn btn-f" onclick="window.closeMod('mNewArt')">Annulla</button>
+    <button class="btn btn-p btn-f" onclick="window.saveArt()">Salva + QR</button>
   </div>
 </div></div>
 
@@ -489,8 +489,8 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
   <div style="font-size:13px;color:var(--tx2);margin-bottom:14px" id="qrArtLbl"></div>
   <div class="qrw"><div class="qri" id="qrArtCv"></div></div>
   <div style="display:flex;gap:8px;margin-top:14px">
-    <button class="btn btn-f" onclick="printArtQR()">🖨 Stampa</button>
-    <button class="btn btn-f" onclick="closeMod('mQRArt')">Chiudi</button>
+    <button class="btn btn-f" onclick="window.printArtQR()">🖨 Stampa</button>
+    <button class="btn btn-f" onclick="window.closeMod('mQRArt')">Chiudi</button>
   </div>
 </div></div>
 
