@@ -134,7 +134,7 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
 .mhd{width:36px;height:4px;background:var(--bg3);border-radius:2px;margin:0 auto 16px}
 
 /* ── REGISTER ── */
-#reg{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(var(--st) + 28px) 22px calc(40px + var(--sb));background:var(--bg);overflow-y:auto}
+#reg{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(var(--st) + 16px) 20px calc(24px + var(--sb));background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
 .rlogo{width:72px;height:72px;border-radius:20px;background:var(--acb);border:1px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:22px}
 
 /* ── TOAST ── */
@@ -217,31 +217,61 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
 
 <!-- REGISTER -->
 <div id="reg">
-  <div class="rlogo">🎛️</div>
-  <div style="font-size:26px;font-weight:600;letter-spacing:-1px;text-align:center;margin-bottom:6px">AV Manager</div>
-  <div style="font-size:14px;color:var(--tx2);text-align:center;margin-bottom:32px;line-height:1.5">Gestione eventi audio-video</div>
-  <div style="width:100%;max-width:340px">
-    <div class="ig"><label class="il">Nome</label><input type="text" id="rNome" placeholder="Mario"></div>
-    <div class="ig"><label class="il">Cognome</label><input type="text" id="rCognome" placeholder="Rossi"></div>
-    <div class="ig"><label class="il">Email</label><input type="email" id="rEmail" placeholder="mario@azienda.it"></div>
-    <div class="ig"><label class="il">Telefono</label><input type="tel" id="rTel" placeholder="+39 333 000 0000"></div>
-    <div class="ig">
-      <label class="il">Ruolo</label>
-      <div class="chips" id="roleChips">
-        <span class="chip on" onclick="window.pickRole(this)">Tecnico AV</span>
-        <span class="chip" onclick="window.pickRole(this)">Project Manager</span>
-        <span class="chip" onclick="window.pickRole(this)">Magazziniere</span>
+
+  <!-- Header compatto -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;align-self:flex-start;width:100%;max-width:380px">
+    <div style="width:44px;height:44px;border-radius:12px;background:var(--acb);border:1px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🎛️</div>
+    <div>
+      <div style="font-size:20px;font-weight:700;letter-spacing:-0.5px">AV Manager</div>
+      <div style="font-size:12px;color:var(--tx2)">Gestione eventi audio-video</div>
+    </div>
+  </div>
+
+  <div style="width:100%;max-width:380px">
+
+    <!-- Tab login / registra -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:18px;background:var(--bg2);border-radius:var(--rs);padding:4px">
+      <button id="tabReg" onclick="window.switchTab('reg')" style="padding:9px;border-radius:6px;border:none;background:var(--ac);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Registrati</button>
+      <button id="tabLogin" onclick="window.switchTab('login')" style="padding:9px;border-radius:6px;border:none;background:transparent;color:var(--tx2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer">Accedi</button>
+    </div>
+
+    <!-- FORM REGISTRAZIONE -->
+    <div id="formReg">
+      <!-- Nome + Cognome su stessa riga -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div><label class="il">Nome</label><input type="text" id="rNome" placeholder="Mario" style="margin-bottom:0"></div>
+        <div><label class="il">Cognome</label><input type="text" id="rCognome" placeholder="Rossi" style="margin-bottom:0"></div>
+      </div>
+      <div style="margin-bottom:10px"><label class="il">Email</label><input type="email" id="rEmail" placeholder="mario@azienda.it" style="margin-bottom:0"></div>
+      <div style="margin-bottom:10px"><label class="il">Telefono</label><input type="tel" id="rTel" placeholder="+39 333 000 0000" style="margin-bottom:0"></div>
+      <div style="margin-bottom:12px">
+        <label class="il">Ruolo</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="roleChips">
+          <span class="chip on" onclick="window.pickRole(this)" style="font-size:12px;padding:6px 12px">Tecnico AV</span>
+          <span class="chip" onclick="window.pickRole(this)" style="font-size:12px;padding:6px 12px">Project Manager</span>
+          <span class="chip" onclick="window.pickRole(this)" style="font-size:12px;padding:6px 12px">Magazziniere</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+        <div id="privBox" class="cbox" onclick="window.togglePriv()" style="margin-top:1px;flex-shrink:0"></div>
+        <span style="font-size:11px;color:var(--tx2);line-height:1.5;cursor:pointer" onclick="window.togglePriv()">Acconsento al trattamento dei dati personali (GDPR) per uso interno aziendale.</span>
+      </div>
+      <button class="btn btn-p btn-f" id="regBtn" onclick="window.doReg()" style="padding:13px;font-size:15px;font-weight:600">
+        Inizia →
+      </button>
+    </div>
+
+    <!-- FORM LOGIN -->
+    <div id="formLogin" style="display:none">
+      <div style="margin-bottom:14px"><label class="il">La tua email</label><input type="email" id="loginEmail" placeholder="mario@azienda.it" style="margin-bottom:0"></div>
+      <button class="btn btn-p btn-f" onclick="window.doQuickLogin()" style="padding:13px;font-size:15px;font-weight:600">
+        Accedi →
+      </button>
+      <div style="font-size:12px;color:var(--tx2);text-align:center;margin-top:10px">
+        Inserisci l'email con cui ti sei registrato
       </div>
     </div>
-    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:20px">
-      <div id="privBox" class="cbox" onclick="window.togglePriv()" style="margin-top:2px"></div>
-      <span style="font-size:12px;color:var(--tx2);line-height:1.5;cursor:pointer" onclick="window.togglePriv()">Acconsento al trattamento dei dati personali (GDPR) per uso interno aziendale.</span>
-    </div>
-    <button class="btn btn-p btn-f" id="regBtn" onclick="window.doReg()">Inizia →</button>
-    <div style="text-align:center;margin-top:14px">
-      <span style="font-size:13px;color:var(--tx3)">Già registrato? </span>
-      <span style="font-size:13px;color:var(--ac2);cursor:pointer" onclick="window.doQuickLogin()">Accedi</span>
-    </div>
+
   </div>
 </div>
 
@@ -762,6 +792,16 @@ window.pickRole = el => {
   window._avState.selRole = el.textContent.trim();
 };
 
+window.switchTab = tab => {
+  const isReg = tab === 'reg';
+  document.getElementById('formReg').style.display  = isReg ? 'block' : 'none';
+  document.getElementById('formLogin').style.display = isReg ? 'none'  : 'block';
+  document.getElementById('tabReg').style.background   = isReg ? 'var(--ac)' : 'transparent';
+  document.getElementById('tabReg').style.color        = isReg ? '#fff' : 'var(--tx2)';
+  document.getElementById('tabLogin').style.background = isReg ? 'transparent' : 'var(--ac)';
+  document.getElementById('tabLogin').style.color      = isReg ? 'var(--tx2)' : '#fff';
+};
+
 window.togglePriv = () => {
   window._avState.privOk = !window._avState.privOk;
   const box = document.getElementById('privBox');
@@ -1052,9 +1092,13 @@ window.doReg = async () => {
 };
 
 window.doQuickLogin = async () => {
-  const email = prompt('Inserisci la tua email:');
-  if(!email) return;
-  const snap = await getDocs(query(C.team(), where('email','==',email.trim().toLowerCase())));
+  const emailEl = document.getElementById('loginEmail');
+  const email = emailEl ? emailEl.value.trim() : '';
+  if(!email){ toast('Inserisci la tua email','r'); return; }
+  const btn = document.querySelector('#formLogin .btn-p');
+  if(btn){ btn.textContent='Accesso...'; btn.disabled=true; }
+  const snap = await getDocs(query(C.team(), where('email','==',email.toLowerCase())));
+  if(btn){ btn.textContent='Accedi →'; btn.disabled=false; }
   if(snap.empty){ toast('Email non trovata — registrati','r'); return; }
   user = {id: snap.docs[0].id, ...snap.docs[0].data()};
   localStorage.setItem('av_user', JSON.stringify(user));
