@@ -680,9 +680,17 @@ window._avState = {
 };
 
 // UI functions that don't need Firebase — available immediately
-// pickRole defined in pre-module script
+window.pickRole = el => {
+  document.querySelectorAll('#roleChips .chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  window._avState.selRole = el.textContent.trim();
+};
 
-// togglePriv defined in pre-module script
+window.togglePriv = () => {
+  window._avState.privOk = !window._avState.privOk;
+  const box = document.getElementById('privBox');
+  if (box) box.classList.toggle('on', window._avState.privOk);
+};
 
 window.goPage = n => {
   const titles = {presenze:'Presenze',location:'Location',magazzino:'Magazzino',team:'Team & Registro'};
