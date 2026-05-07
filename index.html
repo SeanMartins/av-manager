@@ -872,6 +872,32 @@ document.addEventListener('DOMContentLoaded', () => {
     m.addEventListener('click', e=>{ if(e.target===m) window.closeMod(m.id); });
   });
 });
+
+// ── Stub doReg / doQuickLogin — mostrano loader finché Firebase non è pronto ──
+// Vengono sovrascritti dal modulo non appena Firebase carica
+window._fbReady = false;
+window._fbQueue = []; // coda di azioni in attesa
+
+window.doReg = () => {
+  const btn = document.getElementById('regBtn');
+  if(btn){ btn.textContent='Connessione...'; btn.disabled=true; }
+  if(!window._fbReady){
+    window._fbQueue.push('reg');
+    setTimeout(()=>{ if(!window._fbReady){ if(btn){btn.textContent='Inizia →';btn.disabled=false;} window._showFbError(); }}, 8000);
+  }
+};
+window.doQuickLogin = () => {
+  const btn = document.querySelector('#formLogin .btn-p');
+  if(btn){ btn.textContent='Connessione...'; btn.disabled=true; }
+  if(!window._fbReady){
+    window._fbQueue.push('login');
+    setTimeout(()=>{ if(!window._fbReady){ if(btn){btn.textContent='Accedi →';btn.disabled=false;} window._showFbError(); }}, 8000);
+  }
+};
+window._showFbError = () => {
+  const t = document.getElementById('toast');
+  if(t){ t.style.background='var(--rd)'; t.style.color='#fff'; t.textContent='Connessione a Firebase fallita — riprova'; t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',4000); }
+};
 </script>
 
 <script>
@@ -897,8 +923,54 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 // ─── Use shared state from pre-module script ───────
-// These point to the same object, so changes sync automatically
 const avState = window._avState;
+
+// ── Segnala che Firebase è pronto e svuota la coda ──
+window._fbReady = true;
+const _queue = window._fbQueue || [];
+
+// Override definitivo delle funzioni con quelle Firebase-ready
+window.doReg = async () => {
+  const nome=v('rNome'), cognome=v('rCognome'), email=v('rEmail'), tel=v('rTel');
+  if(!nome||!cognome||!email){ toast('Compila nome, cognome ed email','r'); return; }
+  if(!avState.privOk){ toast('Accetta la privacy policy','r'); return; }
+  const btn = document.getElementById('regBtn');
+  if(btn){ btn.textContent='Salvataggio...'; btn.disabled=true; }
+  try {
+    const snap = await getDocs(query(C.team(), where('email','==',email)));
+    if(!snap.empty){ toast('Email già registrata — usa Accedi','a'); if(btn){btn.textContent='Inizia →';btn.disabled=false;} return; }
+    const uid='u'+Date.now();
+    const member={id:uid,nome,cognome,email,tel:tel||'',ruolo:avState.selRole,createdAt:new Date().toISOString()};
+    await setDoc(doc(db,'team',uid),member);
+    user=member; localStorage.setItem('av_user',JSON.stringify(user));
+    await seedIfEmpty(); launchApp(); toast('✓ Benvenuto '+nome+'!');
+  } catch(e){ toast('Errore: '+e.message,'r'); console.error(e); }
+  if(btn){ btn.textContent='Inizia →'; btn.disabled=false; }
+};
+
+window.doQuickLogin = async () => {
+  const emailEl=document.getElementById('loginEmail');
+  const email=emailEl?emailEl.value.trim():'';
+  if(!email){ toast('Inserisci la tua email','r'); return; }
+  const btn=document.querySelector('#formLogin .btn-p');
+  if(btn){ btn.textContent='Accesso...'; btn.disabled=true; }
+  try {
+    const snap=await getDocs(query(C.team(),where('email','==',email.toLowerCase())));
+    if(snap.empty){ toast('Email non trovata — registrati','r'); if(btn){btn.textContent='Accedi →';btn.disabled=false;} return; }
+    user={id:snap.docs[0].id,...snap.docs[0].data()};
+    localStorage.setItem('av_user',JSON.stringify(user)); launchApp();
+  } catch(e){ toast('Errore: '+e.message,'r'); console.error(e); }
+  if(btn){ btn.textContent='Accedi →'; btn.disabled=false; }
+};
+
+// Esegui azioni in coda (premute prima che Firebase fosse pronto)
+if(_queue.length){
+  setTimeout(()=>{
+    if(_queue.includes('reg')) window.doReg();
+    else if(_queue.includes('login')) window.doQuickLogin();
+    window._fbQueue=[];
+  },100);
+}
 // Getters for convenience
 const getPrivOk  = () => avState.privOk;
 const getSelRole = () => avState.selRole;
@@ -1059,51 +1131,7 @@ async function seedIfEmpty() {
 // ═══════════════════════════════════════════════════
 // REGISTER / LOGIN
 // ═══════════════════════════════════════════════════
-// pickRole defined in pre-module script
-// togglePriv defined in pre-module script
-window.doReg = async () => {
-  const nome=v('rNome'), cognome=v('rCognome'), email=v('rEmail'), tel=v('rTel');
-  if(!nome||!cognome||!email){ toast('Compila nome, cognome ed email','r'); return; }
-  if(!avState.privOk){ toast('Accetta la privacy policy','r'); return; }
-
-  const btn = document.getElementById('regBtn');
-  btn.textContent='Salvataggio...'; btn.disabled=true;
-
-  try {
-    // Controlla duplicato email
-    const snap = await getDocs(query(C.team(), where('email','==',email)));
-    if (!snap.empty) {
-      toast('Email già registrata — usa Accedi','a');
-      btn.textContent='Inizia →'; btn.disabled=false; return;
-    }
-    const uid = 'u'+Date.now();
-    const member = {id:uid, nome, cognome, email, tel:tel||'', ruolo:avState.selRole, createdAt:new Date().toISOString()};
-    await setDoc(doc(db,'team',uid), member);
-    user = member;
-    localStorage.setItem('av_user', JSON.stringify(user));
-    await seedIfEmpty();
-    launchApp();
-    toast('✓ Benvenuto '+nome+'!');
-  } catch(e) {
-    toast('Errore: '+e.message,'r');
-    console.error(e);
-  }
-  btn.textContent='Inizia →'; btn.disabled=false;
-};
-
-window.doQuickLogin = async () => {
-  const emailEl = document.getElementById('loginEmail');
-  const email = emailEl ? emailEl.value.trim() : '';
-  if(!email){ toast('Inserisci la tua email','r'); return; }
-  const btn = document.querySelector('#formLogin .btn-p');
-  if(btn){ btn.textContent='Accesso...'; btn.disabled=true; }
-  const snap = await getDocs(query(C.team(), where('email','==',email.toLowerCase())));
-  if(btn){ btn.textContent='Accedi →'; btn.disabled=false; }
-  if(snap.empty){ toast('Email non trovata — registrati','r'); return; }
-  user = {id: snap.docs[0].id, ...snap.docs[0].data()};
-  localStorage.setItem('av_user', JSON.stringify(user));
-  launchApp();
-};
+// doReg and doQuickLogin defined earlier (after Firebase ready signal)
 
 function launchApp() {
   document.getElementById('reg').style.display='none';
