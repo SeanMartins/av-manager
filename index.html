@@ -12,6 +12,7 @@
 <title>AV Manager</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <style>
 :root {
   --bg:    #0a0a0f; --bg1: #111118; --bg2: #1a1a24; --bg3: #22222f;
@@ -185,6 +186,31 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
 
 /* ── PRESENZA ROW ── */
 .pres-luogo { font-size: 11px; color: var(--tx2); margin-top: 1px; }
+
+/* ── FORUM ── */
+.fpost{background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+.fpost:hover{border-color:var(--b2)}
+.fpost-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.fpost-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.fpost-meta{font-size:11px;color:var(--tx2);margin-top:2px}
+.fpost-title{font-size:14px;font-weight:600;line-height:1.3;margin-bottom:4px}
+.fpost-body{font-size:13px;color:var(--tx2);line-height:1.5;margin-bottom:8px}
+.fpost-imgs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.fpost-img{aspect-ratio:4/3;border-radius:var(--rs);overflow:hidden;background:var(--bg3)}
+.fpost-img img{width:100%;height:100%;object-fit:cover}
+.fpost-footer{display:flex;align-items:center;gap:12px;padding-top:8px;border-top:1px solid var(--b)}
+.fpost-stat{font-size:12px;color:var(--tx2);display:flex;align-items:center;gap:4px}
+.reply-box{background:var(--bg2);border-radius:var(--r);padding:14px;margin-top:12px}
+.reply-item{padding:10px 0;border-bottom:1px solid var(--b)}
+.reply-item:last-child{border-bottom:none;padding-bottom:0}
+.reply-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.reply-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;background:var(--acb);color:var(--ac2)}
+.reply-body{font-size:13px;line-height:1.5;color:var(--tx)}
+.reply-imgs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:7px}
+.reply-img{aspect-ratio:4/3;border-radius:6px;overflow:hidden;background:var(--bg3)}
+.reply-img img{width:100%;height:100%;object-fit:cover}
+.empty{text-align:center;padding:36px 20px;color:var(--tx3);font-size:14px}
+.dv{height:1px;background:var(--b);margin:12px 0}
 </style>
 </head>
 <body>
@@ -266,7 +292,10 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
 
       <div class="sec"><div class="stl">Team oggi</div><span class="bdg bg">● Live</span></div>
       <div class="card" id="teamToday"></div>
-      <div class="sec" style="margin-top:6px"><div class="stl">Ticket aperti</div><button class="btn btn-sm btn-p" onclick="window.openMod('mNewTicket')">+ Nuovo</button></div>
+      <div class="sec" style="margin-top:6px">
+        <div class="stl">Forum discussioni</div>
+        <button class="btn btn-sm btn-p" onclick="window.openMod('mNewTicket')">+ Nuovo</button>
+      </div>
       <div id="ticketList"></div>
     </div>
 
@@ -287,7 +316,13 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
         <div class="sc"><div class="sn" id="nDisp">0</div><div class="sl">Disponibili</div></div>
         <div class="sc"><div class="sn" id="nOut">0</div><div class="sl">In uso</div></div>
       </div>
-      <div class="sec"><div class="stl">Inventario</div><button class="btn btn-sm btn-p" onclick="openMod('mNewArt')">+ Articolo</button></div>
+
+      <!-- PREPARA LAVORO -->
+      <button class="btn btn-p btn-f" style="margin-bottom:14px;font-size:15px;padding:14px" onclick="window.openMod('mPreparaLavoro')">
+        📋 Prepara un nuovo lavoro
+      </button>
+
+      <div class="sec"><div class="stl">Inventario</div><button class="btn btn-sm btn-p" onclick="window.openMod('mNewArt')">+ Articolo</button></div>
       <input type="text" placeholder="🔍 Cerca..." id="magSearch" oninput="renderMag()" style="margin-bottom:12px">
       <div id="magList"></div>
       <div class="sec" style="margin-top:8px"><div class="stl">Kit evento</div></div>
@@ -459,21 +494,182 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
   </div>
 </div></div>
 
-<!-- Nuovo ticket -->
-<div class="mol" id="mNewTicket"><div class="msh">
+<!-- PREPARA LAVORO -->
+<div class="mol" id="mPreparaLavoro"><div class="msh">
   <div class="mhd"></div>
-  <div class="stl" style="margin-bottom:14px">Nuovo ticket</div>
-  <div class="ig"><label class="il">Titolo</label><input type="text" id="tTitolo" placeholder="Es: VPN non funziona"></div>
-  <div class="ig"><label class="il">Categoria</label>
-    <select id="tCat"><option>Rete / VPN</option><option>Hardware</option><option>Software</option><option>Account / Accessi</option><option>Altro</option></select></div>
-  <div class="ig"><label class="il">Priorità</label>
-    <select id="tPri"><option value="Alta">🔴 Alta</option><option value="Media" selected>🟡 Media</option><option value="Bassa">🟢 Bassa</option></select></div>
-  <div class="ig"><label class="il">Descrizione</label><textarea id="tDesc" placeholder="Descrivi il problema..."></textarea></div>
-  <div style="display:flex;gap:8px">
-    <button class="btn btn-f" onclick="closeMod('mNewTicket')">Annulla</button>
-    <button class="btn btn-p btn-f" onclick="saveTicket()">Apri ticket</button>
+
+  <!-- Step 1: info lavoro -->
+  <div id="plStep1">
+    <div class="stl" style="margin-bottom:4px">📋 Prepara un nuovo lavoro</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Inserisci i dettagli, poi scannerizza i QR degli articoli</div>
+    <div class="ig"><label class="il">Nome evento / lavoro</label><input type="text" id="plNome" placeholder="Convegno Milano 15/06"></div>
+    <div class="ig"><label class="il">Location</label>
+      <select id="plLoc"><option value="">-- Seleziona location --</option></select>
+    </div>
+    <div class="ig"><label class="il">Data lavoro</label><input type="date" id="plData"></div>
+    <div class="ig"><label class="il">Note aggiuntive</label><textarea id="plNote" placeholder="Note per il tecnico..." style="min-height:60px"></textarea></div>
+    <button class="btn btn-p btn-f" onclick="window.plGoScan()">📷 Avvia scansione QR →</button>
+    <button class="btn btn-f" style="margin-top:8px" onclick="window.closeMod('mPreparaLavoro')">Annulla</button>
+  </div>
+
+  <!-- Step 2: scanner -->
+  <div id="plStep2" style="display:none">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <button class="btn btn-sm" onclick="window.plBack()">← Torna</button>
+      <div class="stl">Scannerizza QR articoli</div>
+    </div>
+
+    <!-- Camera viewfinder -->
+    <div style="position:relative;border-radius:var(--r);overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:1">
+      <video id="plVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+      <!-- mirino -->
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+        <div style="width:60%;height:60%;border:2px solid rgba(108,99,255,.8);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>
+      </div>
+      <div style="position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:12px;color:rgba(255,255,255,.7)">Inquadra il QR code dell'articolo</div>
+    </div>
+
+    <!-- Inserimento manuale fallback -->
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <input type="text" id="plManualId" placeholder="Oppure inserisci ID manuale..." style="flex:1;margin-bottom:0">
+      <button class="btn btn-sm btn-p" onclick="window.plAddManual()" style="flex-shrink:0">+ Aggiungi</button>
+    </div>
+
+    <!-- Lista articoli scannerizzati -->
+    <div class="sec">
+      <div class="stl">Lista preparata</div>
+      <span class="bdg bp" id="plCount">0 articoli</span>
+    </div>
+    <div id="plItems" style="margin-bottom:14px">
+      <div class="empty" style="padding:16px">Nessun articolo ancora — scannerizza i QR</div>
+    </div>
+
+    <button class="btn btn-p btn-f" style="font-size:15px;padding:14px" onclick="window.plGeneraPDF()">📄 Genera PDF riepilogo</button>
   </div>
 </div></div>
+
+<!-- Nuovo ticket -->
+<!-- Nuovo post forum -->
+<div class="mol" id="mNewTicket"><div class="msh">
+  <div class="mhd"></div>
+  <div class="stl" style="margin-bottom:14px">📢 Nuovo post</div>
+  <div class="ig"><label class="il">Titolo</label><input type="text" id="tTitolo" placeholder="Es: Problema VPN in sede Milano"></div>
+  <div class="ig"><label class="il">Categoria</label>
+    <select id="tCat">
+      <option>🔧 Tecnico</option>
+      <option>📦 Magazzino</option>
+      <option>📍 Location</option>
+      <option>💡 Idea / Suggerimento</option>
+      <option>📢 Comunicazione</option>
+      <option>❓ Domanda</option>
+    </select>
+  </div>
+  <div class="ig"><label class="il">Priorità</label>
+    <select id="tPri">
+      <option value="Alta">🔴 Urgente</option>
+      <option value="Media" selected>🟡 Normale</option>
+      <option value="Bassa">🟢 Bassa priorità</option>
+    </select>
+  </div>
+  <div class="ig"><label class="il">Messaggio</label>
+    <textarea id="tDesc" placeholder="Descrivi il problema o scrivi il tuo messaggio..." style="min-height:90px"></textarea>
+  </div>
+  <div class="ig">
+    <label class="il">Foto (opzionale)</label>
+    <div class="upz" onclick="document.getElementById('tFoto').click()" style="padding:14px">
+      <div style="font-size:20px;margin-bottom:4px">📷</div>
+      <div style="font-size:12px;color:var(--tx2)">Aggiungi foto al post</div>
+    </div>
+    <input type="file" id="tFoto" accept="image/*" multiple style="display:none" onchange="window.previewPostFoto(event)">
+    <div class="pgrid" id="tFotoPreview"></div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-f" onclick="window.closeMod('mNewTicket')">Annulla</button>
+    <button class="btn btn-p btn-f" onclick="window.saveTicket()">Pubblica</button>
+  </div>
+</div></div>
+
+<!-- Thread forum (dettaglio post + risposte) -->
+<div class="mol" id="mThread"><div class="msh">
+  <div class="mhd"></div>
+  <div id="mThreadBody"></div>
+</div></div>
+
+<!-- PREPARA LAVORO -->
+<div class="mol" id="mPreparaLavoro" style="align-items:stretch">
+  <div class="msh" style="border-radius:0;max-height:100vh;height:100dvh;display:flex;flex-direction:column;padding:0">
+
+    <!-- Header fisso -->
+    <div style="padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 12px;background:var(--bg1);border-bottom:1px solid var(--b);flex-shrink:0">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <button class="btn btn-sm" onclick="window.chiudiPreparaLavoro()">← Esci</button>
+        <div style="font-size:15px;font-weight:600">📋 Prepara lavoro</div>
+        <button class="btn btn-sm btn-p" id="btnGenPDF" onclick="window.generaPDF()" style="display:none">📄 PDF</button>
+      </div>
+    </div>
+
+    <!-- Scrollable body -->
+    <div style="flex:1;overflow-y:auto;padding:16px">
+
+      <!-- Step 1: Info lavoro -->
+      <div id="plStep1">
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:14px">Inserisci i dettagli del lavoro, poi scansiona i QR code dei materiali.</div>
+        <div class="ig"><label class="il">Nome evento / lavoro</label>
+          <input type="text" id="plNome" placeholder="Es: Convegno Milano — 15 Giugno"></div>
+        <div class="ig"><label class="il">Location</label>
+          <input type="text" id="plLocation" placeholder="Es: Palazzo delle Stelline, Milano"></div>
+        <div class="ig"><label class="il">Data evento</label>
+          <input type="date" id="plData"></div>
+        <div class="ig"><label class="il">Note aggiuntive</label>
+          <textarea id="plNote" placeholder="Es: Setup dalle 8:00, cliente XYZ..." style="min-height:60px"></textarea></div>
+        <button class="btn btn-p btn-f" style="margin-top:4px" onclick="window.avviaScanner()">
+          📷 Avvia scanner QR →
+        </button>
+      </div>
+
+      <!-- Step 2: Scanner + lista -->
+      <div id="plStep2" style="display:none">
+
+        <!-- Info lavoro riepilogo -->
+        <div class="card" style="margin-bottom:12px;padding:10px 14px">
+          <div style="font-size:13px;font-weight:600" id="plRiepilogoNome"></div>
+          <div style="font-size:11px;color:var(--tx2);margin-top:2px" id="plRiepilogoInfo"></div>
+        </div>
+
+        <!-- Scanner camera -->
+        <div style="position:relative;border-radius:var(--r);overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:1" id="scannerWrap">
+          <video id="scannerVideo" style="width:100%;height:100%;object-fit:cover" playsinline autoplay muted></video>
+          <canvas id="scannerCanvas" style="display:none"></canvas>
+          <!-- mirino -->
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+            <div style="width:60%;aspect-ratio:1;border:2px solid rgba(108,99,255,.8);border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div>
+          </div>
+          <div style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:12px;color:rgba(255,255,255,.7);white-space:nowrap" id="scanStatus">Punta la fotocamera al QR code</div>
+        </div>
+
+        <!-- Aggiunta manuale -->
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <input type="text" id="manualId" placeholder="Oppure inserisci ID manualmente..." style="flex:1;margin-bottom:0">
+          <button class="btn btn-sm btn-p" onclick="window.addManuale()">+ Add</button>
+        </div>
+
+        <!-- Lista scansionati -->
+        <div class="sec">
+          <div class="stl">Materiali preparati</div>
+          <span class="bdg bp" id="countScansionati">0</span>
+        </div>
+        <div id="listaScansionati" style="margin-bottom:12px">
+          <div class="empty" style="padding:20px">Nessun articolo ancora — scansiona un QR 📦</div>
+        </div>
+
+        <button class="btn btn-p btn-f" style="font-size:15px;padding:14px" onclick="window.generaPDF()">
+          📄 Genera PDF lista preparazione
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 <script type="module">
 // ═══════════════════════════════════════════════════
@@ -504,6 +700,8 @@ const C = {
   magazzino: () => collection(db, 'magazzino'),
   tickets:   () => collection(db, 'tickets'),
   presenze:  () => collection(db, 'presenze'),
+  forum:     () => collection(db, 'forum'),
+  replies:   (tid) => collection(db, 'forum', tid, 'replies'),
 };
 
 // ═══════════════════════════════════════════════════
@@ -524,6 +722,8 @@ let cacheLoc       = [];
 let cacheMag       = [];
 let cacheTickets   = [];
 let cachePresenze  = [];
+let cacheForum     = [];
+let postFotoBase64 = [];
 
 const CHECKS = [
   {cat:'Alimentazione',items:['Potenza disponibile verificata','Quadri elettrici mappati','Trifase verificata','Generatore disponibile']},
@@ -610,10 +810,17 @@ function startListeners() {
     renderMag();
   });
 
-  // Tickets aperti
+  // Tickets (vecchio sistema — mantieni per compatibilità)
   onSnapshot(query(C.tickets(), where('stato','==','aperto'), orderBy('createdAt','desc')), snap => {
     cacheTickets = snap.docs.map(d => ({id: d.id, ...d.data()}));
     renderPresenze();
+  });
+
+  // Forum posts — realtime
+  onSnapshot(query(C.forum(), orderBy('createdAt','desc')), snap => {
+    cacheForum = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    renderForum();
+    document.getElementById('nTicket').textContent = cacheForum.length;
   });
 
   // Presenze oggi
@@ -625,17 +832,11 @@ function startListeners() {
 }
 
 // ═══════════════════════════════════════════════════
-// SEED dati demo (solo se collezioni vuote)
+// SEED magazzino demo (solo se collezione vuota)
 // ═══════════════════════════════════════════════════
 async function seedIfEmpty() {
-  const snap = await getDocs(C.locations());
-  if (!snap.empty) return; // già popolato
-  const locs = [
-    {nome:'Palazzo delle Stelline',indirizzo:'C.so Magenta 61, Milano',tipo:'Hotel / Congress center',tags:['WiFi','Trifase'],note:'Soffitti bassi sala A (3.2m). Accesso camion da via laterale.',foto:0,pins:[],createdAt:new Date().toISOString()},
-    {nome:"Villa Borromeo d'Adda",indirizzo:'Via Borromeo 1, Arcore (MB)',tipo:'Villa / Residenza storica',tags:['Buio totale','Accesso camion'],note:'Generatore obbligatorio >15kW. Pavimento 1700: vietato forare.',foto:0,pins:[],createdAt:new Date().toISOString()},
-    {nome:'Superstudio Più',indirizzo:'Via Tortona 27, Milano',tipo:'Spazio industriale',tags:['Trifase','Generatore'],note:'Altezza 8m. Griglia rigging disponibile.',foto:0,pins:[],createdAt:new Date().toISOString()},
-  ];
-  for (const l of locs) await addDoc(C.locations(), l);
+  const snap = await getDocs(C.magazzino());
+  if (!snap.empty) return;
   const mag = [
     {cat:'traduzione',nome:'Bosch LBB 3422 ricevitore IR',marca:'Bosch',ser:'SN-TS001',qty:24,stato:'ok',createdAt:new Date().toISOString()},
     {cat:'traduzione',nome:'Audipack Silent 9300 cabina regia',marca:'Audipack',ser:'SN-TS002',qty:2,stato:'ok',createdAt:new Date().toISOString()},
@@ -1066,25 +1267,593 @@ window.genKit = () => {
 };
 
 // ═══════════════════════════════════════════════════
+// PREPARA LAVORO — Scanner QR + PDF
+// ═══════════════════════════════════════════════════
+let scanStream     = null;
+let scanInterval   = null;
+let materialiPrep  = []; // [{id, nome, marca, ser, qty, cat}]
+let scanLastCode   = '';
+let scanLastTime   = 0;
+
+window.avviaScanner = () => {
+  const nome = v('plNome');
+  if (!nome) { toast('Inserisci il nome del lavoro','r'); return; }
+  // Imposta data di oggi se vuota
+  if (!v('plData')) document.getElementById('plData').value = new Date().toISOString().split('T')[0];
+  // Mostra riepilogo
+  document.getElementById('plRiepilogoNome').textContent = nome;
+  document.getElementById('plRiepilogoInfo').textContent =
+    (v('plLocation')||'Location non specificata') + ' · ' +
+    (v('plData') ? new Date(v('plData')).toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'}) : '');
+  // Passa a step 2
+  document.getElementById('plStep1').style.display = 'none';
+  document.getElementById('plStep2').style.display = 'block';
+  document.getElementById('btnGenPDF').style.display = 'block';
+  materialiPrep = [];
+  renderListaPrep();
+  avviaCamera();
+};
+
+async function avviaCamera() {
+  const video = document.getElementById('scannerVideo');
+  const status = document.getElementById('scanStatus');
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width:{ideal:1280}, height:{ideal:720} }
+    });
+    video.srcObject = scanStream;
+    status.textContent = 'Fotocamera attiva — punta il QR code';
+    startDecoding();
+  } catch(e) {
+    status.textContent = '⚠️ Fotocamera non disponibile — usa inserimento manuale';
+    console.warn('Camera error:', e);
+  }
+}
+
+function startDecoding() {
+  const video   = document.getElementById('scannerVideo');
+  const canvas  = document.getElementById('scannerCanvas');
+  const status  = document.getElementById('scanStatus');
+  const ctx     = canvas.getContext('2d');
+  scanInterval  = setInterval(() => {
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    // Usa jsQR se disponibile, altrimenti BarcodeDetector API
+    if (window.jsQR) {
+      const code = jsQR(imgData.data, imgData.width, imgData.height, {inversionAttempts:'dontInvert'});
+      if (code) handleQRCode(code.data, status);
+    } else if (window.BarcodeDetector) {
+      new BarcodeDetector({formats:['qr_code']}).detect(canvas)
+        .then(codes => { if(codes.length) handleQRCode(codes[0].rawValue, status); })
+        .catch(()=>{});
+    }
+  }, 400);
+}
+
+function handleQRCode(raw, statusEl) {
+  // Debounce — ignora stesso codice per 3 secondi
+  const now = Date.now();
+  if (raw === scanLastCode && now - scanLastTime < 3000) return;
+  scanLastCode = raw; scanLastTime = now;
+  let data = {};
+  try { data = JSON.parse(raw); } catch { data = {id: raw, nome: raw, ser:'—'}; }
+  const id = data.id || raw;
+  // Cerca nel database magazzino
+  const articolo = cacheMag.find(m => m.id === id || m.ser === id);
+  if (!articolo) {
+    statusEl.textContent = '⚠️ Articolo non trovato: '+id;
+    if(statusEl) setTimeout(()=>statusEl.textContent='Punta la fotocamera al QR code',2000);
+    navigator.vibrate?.([100,50,100]);
+    toast('Articolo non trovato nel magazzino','a');
+    return;
+  }
+  // Controlla duplicato
+  const existing = materialiPrep.find(m => m.id === articolo.id);
+  if (existing) {
+    existing.qtyScan = (existing.qtyScan||1) + 1;
+    statusEl.textContent = `✓ ${articolo.nome} (×${existing.qtyScan})`;
+    navigator.vibrate?.(50);
+  } else {
+    materialiPrep.push({...articolo, qtyScan: 1});
+    statusEl.textContent = '✓ Aggiunto: ' + articolo.nome;
+    navigator.vibrate?.(100);
+    toast('✓ '+articolo.nome,'g');
+  }
+  renderListaPrep();
+  setTimeout(()=>{ if(statusEl) statusEl.textContent='Punta la fotocamera al QR code'; },1800);
+}
+
+window.addManuale = () => {
+  const id = v('manualId'); if(!id) return;
+  const fake = {data: id};
+  handleQRCode(id, document.getElementById('scanStatus'));
+  document.getElementById('manualId').value = '';
+};
+
+function renderListaPrep() {
+  const el = document.getElementById('listaScansionati'); if(!el) return;
+  document.getElementById('countScansionati').textContent = materialiPrep.length + ' art.';
+  if (!materialiPrep.length) {
+    el.innerHTML = '<div class="empty" style="padding:20px">Nessun articolo ancora — scansiona un QR 📦</div>';
+    return;
+  }
+  const catLabel = {traduzione:'🎧 Traduzione',ledwall:'🖥 LED wall'};
+  let h = '<div class="card" style="padding:8px 14px">';
+  materialiPrep.forEach((m,i) => {
+    h += `<div class="row" style="padding:8px 0">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.nome}</div>
+        <div style="font-size:11px;color:var(--tx2)">${catLabel[m.cat]||''} · ${m.ser||'—'}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <button onclick="window.decQty(${i})" style="width:26px;height:26px;border-radius:50%;background:var(--bg3);border:1px solid var(--b2);color:var(--tx);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+        <span style="font-family:var(--mono);font-size:14px;min-width:24px;text-align:center">×${m.qtyScan}</span>
+        <button onclick="window.incQty(${i})" style="width:26px;height:26px;border-radius:50%;background:var(--bg3);border:1px solid var(--b2);color:var(--tx);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+        <button onclick="window.removePrep(${i})" style="width:26px;height:26px;border-radius:50%;background:var(--rdb);border:none;color:var(--rd);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+    </div>`;
+  });
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+window.incQty    = i => { if(materialiPrep[i]) { materialiPrep[i].qtyScan++; renderListaPrep(); } };
+window.decQty    = i => { if(materialiPrep[i]) { materialiPrep[i].qtyScan = Math.max(1,materialiPrep[i].qtyScan-1); renderListaPrep(); } };
+window.removePrep= i => { materialiPrep.splice(i,1); renderListaPrep(); };
+
+window.chiudiPreparaLavoro = () => {
+  fermaCamera();
+  document.getElementById('plStep1').style.display = 'block';
+  document.getElementById('plStep2').style.display = 'none';
+  document.getElementById('btnGenPDF').style.display = 'none';
+  window.closeMod('mPreparaLavoro');
+};
+
+function fermaCamera() {
+  clearInterval(scanInterval); scanInterval=null;
+  if (scanStream) { scanStream.getTracks().forEach(t=>t.stop()); scanStream=null; }
+}
+
+// ─── GENERA PDF ──────────────────────────────────
+window.generaPDF = () => {
+  if (!materialiPrep.length) { toast('Aggiungi almeno un articolo','a'); return; }
+  fermaCamera();
+  const nome    = v('plNome') || 'Lavoro';
+  const loc     = v('plLocation') || '—';
+  const dataEv  = v('plData') ? new Date(v('plData')).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) : '—';
+  const tecnico = user ? user.nome+' '+user.cognome : '—';
+  const ora     = new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  const dataOggi= new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'});
+  const totArt  = materialiPrep.reduce((s,m)=>s+m.qtyScan,0);
+
+  // Raggruppa per categoria
+  const gruppi = {};
+  materialiPrep.forEach(m => {
+    const cat = m.cat==='traduzione'?'🎧 Traduzione simultanea':'🖥 LED wall';
+    if(!gruppi[cat]) gruppi[cat]=[];
+    gruppi[cat].push(m);
+  });
+
+  let righe = '';
+  Object.entries(gruppi).forEach(([cat,items]) => {
+    righe += `<tr><td colspan="4" style="background:#f0f0f8;font-weight:700;font-size:12px;padding:8px 12px;color:#333;letter-spacing:.5px;text-transform:uppercase">${cat}</td></tr>`;
+    items.forEach((m,i) => {
+      righe += `<tr style="background:${i%2===0?'#fff':'#fafafa'}">
+        <td style="padding:9px 12px;font-size:13px;font-weight:500">${m.nome}</td>
+        <td style="padding:9px 12px;font-size:12px;color:#666">${m.marca||'—'}</td>
+        <td style="padding:9px 12px;font-size:12px;color:#666;font-family:monospace">${m.ser||'—'}</td>
+        <td style="padding:9px 12px;font-size:14px;font-weight:700;text-align:center;color:#6c63ff">×${m.qtyScan}</td>
+      </tr>`;
+    });
+  });
+
+  const note = v('plNote');
+  const html = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">
+  <title>Lista preparazione — ${nome}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;background:#fff;padding:0}
+    .header{background:linear-gradient(135deg,#6c63ff 0%,#8b84ff 100%);color:#fff;padding:32px 40px 28px}
+    .header h1{font-size:22px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
+    .header .sub{font-size:13px;opacity:.85}
+    .meta-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;padding:24px 40px;border-bottom:1px solid #eee}
+    .meta-item label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#888;display:block;margin-bottom:3px}
+    .meta-item span{font-size:14px;font-weight:600;color:#1a1a1a}
+    .table-wrap{padding:0 40px 24px}
+    table{width:100%;border-collapse:collapse;margin-top:20px;border-radius:8px;overflow:hidden;border:1px solid #e5e5e5}
+    th{background:#6c63ff;color:#fff;padding:10px 12px;font-size:11px;text-align:left;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+    th:last-child{text-align:center}
+    .total-row td{background:#f0f0f8;font-weight:700;padding:11px 12px;font-size:13px;border-top:2px solid #6c63ff}
+    .footer{margin:0 40px 32px;padding:16px;background:#f8f8ff;border-radius:8px;border:1px solid #e8e8f5}
+    .footer .label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#888;margin-bottom:6px}
+    .sign-line{display:flex;justify-content:space-between;margin-top:32px;padding:0 40px}
+    .sign-box{text-align:center;width:45%}
+    .sign-box .line{border-bottom:1px solid #ccc;margin-bottom:6px;height:40px}
+    .sign-box span{font-size:11px;color:#888}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>
+  <div class="header">
+    <h1>📋 Lista preparazione materiali</h1>
+    <div class="sub">${nome}</div>
+  </div>
+  <div class="meta-grid">
+    <div class="meta-item"><label>Location</label><span>${loc}</span></div>
+    <div class="meta-item"><label>Data evento</label><span>${dataEv}</span></div>
+    <div class="meta-item"><label>Preparato da</label><span>${tecnico}</span></div>
+    <div class="meta-item"><label>Data preparazione</label><span>${dataOggi} alle ${ora}</span></div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Articolo</th><th>Marca</th><th>N° Seriale</th><th style="text-align:center">Qt.</th></tr></thead>
+      <tbody>
+        ${righe}
+        <tr class="total-row"><td colspan="3">TOTALE ARTICOLI</td><td style="text-align:center;color:#6c63ff">×${totArt}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  ${note?`<div class="footer"><div class="label">Note</div><div style="font-size:13px;line-height:1.6;color:#333">${note}</div></div>`:''}
+  <div class="sign-line">
+    <div class="sign-box"><div class="line"></div><span>Firma tecnico — ${tecnico}</span></div>
+    <div class="sign-box"><div class="line"></div><span>Firma responsabile</span></div>
+  </div>
+  <script>window.onload=()=>{window.print();}<\/script>
+  </body></html>`;
+
+  const blob = new Blob([html],{type:'text/html;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const w    = window.open(url,'_blank');
+  if(!w) {
+    // Fallback: scarica direttamente
+    const a=document.createElement('a');
+    a.href=url; a.download=`preparazione_${nome.replace(/\s+/g,'_')}.html`;
+    a.click();
+  }
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+  toast('✓ PDF generato!');
+};
+
+// ═══════════════════════════════════════════════════
 // TICKETS
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// FORUM
+// ═══════════════════════════════════════════════════
+const avCls = ['a1','a2','a3','a4'];
+const catEmoji = {'🔧 Tecnico':'🔧','📦 Magazzino':'📦','📍 Location':'📍','💡 Idea / Suggerimento':'💡','📢 Comunicazione':'📢','❓ Domanda':'❓'};
+const priColors = {Alta:'br',Media:'ba',Bassa:'bg'};
+const priLabels = {Alta:'🔴 Urgente',Media:'🟡 Normale',Bassa:'🟢 Bassa'};
+
+function renderForum() {
+  const el = document.getElementById('ticketList'); if(!el) return;
+  if(!cacheForum.length){ el.innerHTML='<div class="empty">Nessun post ancora — crea il primo! 💬</div>'; return; }
+  let h = '';
+  cacheForum.forEach(p => {
+    const member = cacheTeam.find(m=>m.id===p.uid);
+    const ini = member ? (member.nome[0]+member.cognome[0]).toUpperCase() : '??';
+    const avC = cacheTeam.findIndex(m=>m.id===p.uid) % 4;
+    const dt = p.createdAt ? new Date(p.createdAt).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+    const imgs = (p.foto||[]).slice(0,3).map(f=>`<div class="fpost-img"><img src="${f}" loading="lazy"></div>`).join('');
+    h += `<div class="fpost" onclick="window.openThread('${p.id}')">
+      <div class="fpost-head">
+        <div class="fpost-av ${avCls[avC]}">${ini}</div>
+        <div style="flex:1;min-width:0">
+          <div class="fpost-title">${p.titolo}</div>
+          <div class="fpost-meta">${member?.nome||'Utente'} · ${dt}</div>
+        </div>
+        <span class="bdg ${priColors[p.priorita]||'ba'}" style="flex-shrink:0">${priLabels[p.priorita]||''}</span>
+      </div>
+      ${p.desc?`<div class="fpost-body">${p.desc.slice(0,120)}${p.desc.length>120?'…':''}</div>`:''}
+      ${imgs?`<div class="fpost-imgs">${imgs}</div>`:''}
+      <div class="fpost-footer">
+        <span class="fpost-stat">💬 ${p.replyCount||0} risposte</span>
+        <span class="fpost-stat">🏷 ${catEmoji[p.cat]||''} ${p.cat||''}</span>
+        ${p.risolto?'<span class="bdg bg" style="margin-left:auto">✓ Risolto</span>':''}
+      </div>
+    </div>`;
+  });
+  el.innerHTML = h;
+}
+
+// Preview foto nel form nuovo post
+window.previewPostFoto = e => {
+  postFotoBase64 = [];
+  const grid = document.getElementById('tFotoPreview'); grid.innerHTML='';
+  Array.from(e.target.files).slice(0,4).forEach(f => {
+    const r = new FileReader(); r.onload = ev => {
+      postFotoBase64.push(ev.target.result);
+      const d=document.createElement('div'); d.className='pth';
+      const img=document.createElement('img'); img.src=ev.target.result;
+      d.appendChild(img); grid.appendChild(d);
+    }; r.readAsDataURL(f);
+  });
+};
+
 window.saveTicket = async () => {
   const tit=v('tTitolo'); if(!tit){toast('Inserisci un titolo','r');return;}
-  await addDoc(C.tickets(), {titolo:tit,cat:v('tCat'),priorita:v('tPri'),desc:v('tDesc'),stato:'aperto',data:new Date().toLocaleDateString('it-IT'),uid:user?.id,createdAt:new Date().toISOString()});
-  window.closeMod('mNewTicket'); toast('✓ Ticket aperto');
+  const btn=document.querySelector('#mNewTicket .btn-p');
+  btn.textContent='Pubblicazione...'; btn.disabled=true;
+  await addDoc(C.forum(), {
+    titolo:tit, cat:v('tCat'), priorita:v('tPri'), desc:v('tDesc'),
+    uid:user?.id, nome:user?.nome+' '+user?.cognome,
+    foto: postFotoBase64,
+    replyCount:0, risolto:false,
+    createdAt:new Date().toISOString()
+  });
+  btn.textContent='Pubblica'; btn.disabled=false;
+  window.closeMod('mNewTicket');
+  toast('✓ Post pubblicato!');
   ['tTitolo','tDesc'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('tFotoPreview').innerHTML='';
+  postFotoBase64=[];
+};
+
+// Apri thread con risposte
+window.openThread = async tid => {
+  const post = cacheForum.find(p=>p.id===tid); if(!post) return;
+  const member = cacheTeam.find(m=>m.id===post.uid);
+  const ini = member?(member.nome[0]+member.cognome[0]).toUpperCase():'??';
+  const avC = cacheTeam.findIndex(m=>m.id===post.uid)%4;
+  const dt = post.createdAt?new Date(post.createdAt).toLocaleDateString('it-IT',{day:'2-digit',month:'long',hour:'2-digit',minute:'2-digit'}):'';
+  const imgs = (post.foto||[]).map(f=>`<div class="fpost-img"><img src="${f}" loading="lazy"></div>`).join('');
+
+  document.getElementById('mThreadBody').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <button class="btn btn-sm" onclick="window.closeMod('mThread')">← Torna</button>
+      <span class="bdg ${priColors[post.priorita]||'ba'}">${priLabels[post.priorita]||''}</span>
+      ${!post.risolto?`<button class="btn btn-sm bg" onclick="window.markRisolto('${tid}')" style="margin-left:auto">✓ Risolto</button>`:'<span class="bdg bg" style="margin-left:auto">✓ Risolto</span>'}
+    </div>
+    <div class="fpost-head">
+      <div class="fpost-av ${avCls[avC]}">${ini}</div>
+      <div><div class="fpost-title" style="font-size:16px">${post.titolo}</div>
+      <div class="fpost-meta">${member?.nome||'Utente'} · ${dt}</div></div>
+    </div>
+    ${post.desc?`<div style="font-size:14px;line-height:1.6;color:var(--tx);margin:12px 0">${post.desc}</div>`:''}
+    ${imgs?`<div class="fpost-imgs" style="margin-bottom:12px">${imgs}</div>`:''}
+    <div class="dv"></div>
+    <div id="replyList" style="margin-bottom:14px"><div style="font-size:12px;color:var(--tx2);text-align:center;padding:12px">Caricamento risposte...</div></div>
+    <div class="reply-box">
+      <div style="font-size:13px;font-weight:500;margin-bottom:10px;color:var(--tx)">💬 Rispondi</div>
+      <textarea id="replyText" placeholder="Scrivi una risposta..." style="margin-bottom:10px;min-height:70px"></textarea>
+      <div class="upz" onclick="document.getElementById('replyFoto').click()" style="padding:11px;margin-bottom:8px">
+        <div style="font-size:13px;color:var(--tx2)">📷 Aggiungi foto alla risposta</div>
+      </div>
+      <input type="file" id="replyFoto" accept="image/*" multiple style="display:none" onchange="window.previewReplyFoto(event)">
+      <div class="pgrid" id="replyFotoPreview"></div>
+      <button class="btn btn-p btn-f" onclick="window.sendReply('${tid}')">Invia risposta</button>
+    </div>`;
+  window.openMod('mThread');
+  loadReplies(tid);
+};
+
+let replyFotoBase64 = [];
+window.previewReplyFoto = e => {
+  replyFotoBase64=[];
+  const grid=document.getElementById('replyFotoPreview'); grid.innerHTML='';
+  Array.from(e.target.files).slice(0,4).forEach(f=>{
+    const r=new FileReader(); r.onload=ev=>{
+      replyFotoBase64.push(ev.target.result);
+      const d=document.createElement('div'); d.className='pth';
+      const img=document.createElement('img'); img.src=ev.target.result;
+      d.appendChild(img); grid.appendChild(d);
+    }; r.readAsDataURL(f);
+  });
+};
+
+async function loadReplies(tid) {
+  const snap = await getDocs(query(C.replies(tid), orderBy('createdAt')));
+  const replies = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const el = document.getElementById('replyList'); if(!el) return;
+  if(!replies.length){ el.innerHTML='<div style="font-size:13px;color:var(--tx2);text-align:center;padding:12px">Nessuna risposta ancora — sii il primo! 👋</div>'; return; }
+  let h='';
+  replies.forEach(r=>{
+    const m=cacheTeam.find(x=>x.id===r.uid);
+    const dt=r.createdAt?new Date(r.createdAt).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+    const imgs=(r.foto||[]).map(f=>`<div class="reply-img"><img src="${f}" loading="lazy"></div>`).join('');
+    h+=`<div class="reply-item">
+      <div class="reply-head">
+        <div class="reply-av">${m?(m.nome[0]+m.cognome[0]).toUpperCase():'??'}</div>
+        <div><span style="font-size:13px;font-weight:500">${m?.nome||'Utente'}</span> <span style="font-size:11px;color:var(--tx2)">· ${dt}</span></div>
+      </div>
+      <div class="reply-body">${r.testo}</div>
+      ${imgs?`<div class="reply-imgs">${imgs}</div>`:''}
+    </div>`;
+  });
+  el.innerHTML=h;
+}
+
+window.sendReply = async tid => {
+  const testo=v('replyText'); if(!testo){toast('Scrivi un messaggio','r');return;}
+  const btn=document.querySelector('#mThread .btn-p');
+  btn.textContent='Invio...'; btn.disabled=true;
+  await addDoc(C.replies(tid),{testo,uid:user?.id,foto:replyFotoBase64,createdAt:new Date().toISOString()});
+  // Incrementa contatore risposte
+  await updateDoc(doc(db,'forum',tid),{replyCount:(cacheForum.find(p=>p.id===tid)?.replyCount||0)+1});
+  btn.textContent='Invia risposta'; btn.disabled=false;
+  document.getElementById('replyText').value='';
+  document.getElementById('replyFotoPreview').innerHTML='';
+  replyFotoBase64=[];
+  toast('✓ Risposta inviata');
+  loadReplies(tid);
+};
+
+window.markRisolto = async tid => {
+  await updateDoc(doc(db,'forum',tid),{risolto:true});
+  window.closeMod('mThread');
+  toast('✓ Discussione segnata come risolta');
 };
 
 window.closeTicket = async id => {
-  if(!confirm('Segnare come risolto?')) return;
   await updateDoc(doc(db,'tickets',id),{stato:'risolto'});
-  toast('✓ Ticket risolto');
+  toast('✓ Risolto');
 };
 
 // ═══════════════════════════════════════════════════
-// QR REGISTRAZIONE
+// PREPARA LAVORO — QR scanner + PDF
 // ═══════════════════════════════════════════════════
-window.genQRReg = () => {
+let plArticoli = [];
+let plStream   = null;
+let plScanInterval = null;
+
+window.openMod = id => {
+  document.getElementById(id).classList.add('on');
+  document.body.style.overflow='hidden';
+  if (id === 'mPreparaLavoro') {
+    plArticoli=[];
+    document.getElementById('plStep1').style.display='block';
+    document.getElementById('plStep2').style.display='none';
+    const sel=document.getElementById('plLoc');
+    sel.innerHTML='<option value="">-- Seleziona location --</option>';
+    cacheLoc.forEach(l=>{const o=document.createElement('option');o.value=l.nome;o.textContent=l.nome;sel.appendChild(o);});
+    document.getElementById('plData').value=new Date().toISOString().slice(0,10);
+    renderPlItems();
+  }
+  if (id==='mExport'){populateExpDip();document.getElementById('expPreview').style.display='none';document.getElementById('btnDownload').style.display='none';}
+};
+
+window.plBack = ()=>{ stopCamera(); document.getElementById('plStep1').style.display='block'; document.getElementById('plStep2').style.display='none'; };
+
+window.plGoScan = ()=>{
+  if(!v('plNome')){toast('Inserisci il nome del lavoro','r');return;}
+  document.getElementById('plStep1').style.display='none';
+  document.getElementById('plStep2').style.display='block';
+  startCamera();
+};
+
+async function startCamera(){
+  try{
+    plStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
+    const vid=document.getElementById('plVideo');
+    vid.srcObject=plStream; await vid.play();
+    startQRScan();
+  }catch(e){ toast('Fotocamera non disponibile — usa inserimento manuale','a'); }
+}
+
+function stopCamera(){
+  clearInterval(plScanInterval); plScanInterval=null;
+  if(plStream){plStream.getTracks().forEach(t=>t.stop());plStream=null;}
+}
+
+function startQRScan(){
+  if(plScanInterval) return;
+  const video=document.getElementById('plVideo');
+  const canvas=document.createElement('canvas');
+  const ctx=canvas.getContext('2d');
+  plScanInterval=setInterval(()=>{
+    if(!video.videoWidth) return;
+    canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+    ctx.drawImage(video,0,0);
+    if('BarcodeDetector' in window){
+      new BarcodeDetector({formats:['qr_code']}).detect(canvas)
+        .then(codes=>{if(codes.length)processQRCode(codes[0].rawValue);}).catch(()=>{});
+    } else if(window.jsQR){
+      const d=ctx.getImageData(0,0,canvas.width,canvas.height);
+      const c=jsQR(d.data,d.width,d.height);
+      if(c) processQRCode(c.data);
+    }
+  },600);
+}
+
+function processQRCode(raw){
+  try{ const d=JSON.parse(raw); addToList(d.id||d.ser||raw, d.nome||null); }
+  catch(e){ addToList(raw,null); }
+}
+
+function addToList(id,nomeHint){
+  const m=cacheMag.find(x=>x.id===id||x.ser===id||(x.id||'').toLowerCase()===(id||'').toLowerCase()||(x.ser||'').toLowerCase()===(id||'').toLowerCase());
+  if(!m&&!nomeHint){toast('Articolo "'+id+'" non trovato','a');return;}
+  const art=m||{id,nome:nomeHint||id,cat:'—',marca:'—',ser:id,qty:1,stato:'ok'};
+  const exist=plArticoli.find(x=>x.id===art.id||x.ser===art.ser);
+  if(exist){exist.qtyPrep=(exist.qtyPrep||1)+1;toast('✓ '+art.nome+' (×'+exist.qtyPrep+')');}
+  else{plArticoli.push({...art,qtyPrep:1});if(navigator.vibrate)navigator.vibrate(60);toast('✓ '+art.nome);}
+  renderPlItems();
+}
+
+window.plAddManual=()=>{const id=v('plManualId');if(!id){toast('Inserisci un ID','r');return;}addToList(id,null);document.getElementById('plManualId').value='';};
+window.plRemove=idx=>{plArticoli.splice(idx,1);renderPlItems();};
+window.plQtyChange=(idx,d)=>{plArticoli[idx].qtyPrep=Math.max(1,(plArticoli[idx].qtyPrep||1)+d);renderPlItems();};
+
+function renderPlItems(){
+  const el=document.getElementById('plItems');if(!el)return;
+  document.getElementById('plCount').textContent=plArticoli.length+' articoli';
+  if(!plArticoli.length){el.innerHTML='<div class="empty" style="padding:16px">Nessun articolo — scannerizza i QR</div>';return;}
+  let h='';
+  plArticoli.forEach((a,i)=>{
+    h+=`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nome}</div>
+        <div style="font-size:11px;color:var(--tx2)">${a.cat||'—'} · ${a.ser||a.id}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <button onclick="window.plQtyChange(${i},-1)" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);color:var(--tx);font-size:16px;cursor:pointer">−</button>
+        <span style="font-family:var(--mono);font-size:14px;min-width:22px;text-align:center">${a.qtyPrep||1}</span>
+        <button onclick="window.plQtyChange(${i},1)" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);color:var(--tx);font-size:16px;cursor:pointer">+</button>
+        <button onclick="window.plRemove(${i})" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--rdb);background:var(--rdb);color:var(--rd);font-size:14px;cursor:pointer">✕</button>
+      </div>
+    </div>`;
+  });
+  el.innerHTML=h;
+}
+
+window.plGeneraPDF=()=>{
+  if(!plArticoli.length){toast('Aggiungi almeno un articolo','r');return;}
+  stopCamera();
+  const nome=v('plNome')||'Lavoro', loc=v('plLoc')||'—';
+  const data=v('plData')?new Date(v('plData')).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('it-IT');
+  const tecnico=user?user.nome+' '+user.cognome:'—', ruolo=user?.ruolo||'';
+  const now=new Date().toLocaleString('it-IT');
+  const totPezzi=plArticoli.reduce((s,a)=>s+(a.qtyPrep||1),0);
+  const bycat={};
+  plArticoli.forEach(a=>{const k=a.cat||'Altro';if(!bycat[k])bycat[k]=[];bycat[k].push(a);});
+  let righe='';
+  Object.entries(bycat).forEach(([cat,items])=>{
+    righe+=`<tr><td colspan="4" style="background:#f0f0f8;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#555;padding:8px 10px">${cat}</td></tr>`;
+    items.forEach((a,i)=>{
+      righe+=`<tr style="background:${i%2===0?'#fff':'#fafafa'}">
+        <td style="padding:8px 10px;font-size:13px;font-weight:500">${a.nome}</td>
+        <td style="padding:8px 10px;font-size:12px;color:#666">${a.marca||'—'}</td>
+        <td style="padding:8px 10px;font-size:12px;color:#666;font-family:monospace">${a.ser||a.id}</td>
+        <td style="padding:8px 10px;font-size:14px;font-weight:700;text-align:center">${a.qtyPrep||1}</td>
+      </tr>`;
+    });
+  });
+  const html=`<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">
+<title>Lista preparazione — ${nome}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a2e;padding:0}.page{max-width:800px;margin:0 auto;padding:32px 40px}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #6c63ff}.logo{font-size:22px;font-weight:700;color:#6c63ff}.logo span{font-size:12px;font-weight:400;color:#888;display:block;margin-top:2px}.doc-title{font-size:26px;font-weight:700;margin-bottom:18px;letter-spacing:-.5px}.badge{display:inline-block;background:#ede9ff;color:#6c63ff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:18px}.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;background:#f8f8fc;border-radius:10px;padding:16px}.info-item label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#888;display:block;margin-bottom:3px}.info-item span{font-size:14px;font-weight:500}table{width:100%;border-collapse:collapse;margin-bottom:20px;border-radius:8px;overflow:hidden;box-shadow:0 0 0 1px #e8e8f0}th{background:#6c63ff;color:#fff;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;text-align:left}th:last-child,td:last-child{text-align:center;width:70px}.totale{display:flex;justify-content:flex-end;gap:20px;font-size:13px;color:#666;margin-bottom:24px}.totale strong{color:#1a1a2e;font-size:15px}.firma{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:32px;padding-top:20px;border-top:1px solid #eee}.firma-box{border-top:1px solid #ccc;padding-top:8px;font-size:11px;color:#888}.footer{margin-top:28px;padding-top:14px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:10px;color:#aaa}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style>
+</head><body><div class="page">
+<div class="header"><div><div class="logo">🎛 AV Manager<span>Sistema gestione eventi audio-video</span></div></div><div style="text-align:right;font-size:11px;color:#888">Generato il<br><strong style="color:#444">${now}</strong></div></div>
+<div class="doc-title">Lista preparazione materiali</div>
+<span class="badge">DOCUMENTO INTERNO — ${nome.toUpperCase()}</span>
+<div class="info-grid">
+  <div class="info-item"><label>Evento / Lavoro</label><span>${nome}</span></div>
+  <div class="info-item"><label>Data</label><span>${data}</span></div>
+  <div class="info-item"><label>Location</label><span>${loc}</span></div>
+  <div class="info-item"><label>Preparato da</label><span>${tecnico}${ruolo?' · '+ruolo:''}</span></div>
+  ${v('plNote')?`<div class="info-item" style="grid-column:1/-1"><label>Note</label><span>${v('plNote')}</span></div>`:''}
+</div>
+<table><thead><tr><th>Articolo</th><th>Marca</th><th>N° Seriale</th><th>Qtà</th></tr></thead><tbody>${righe}</tbody></table>
+<div class="totale"><span>Totale articoli: <strong>${plArticoli.length}</strong></span><span>Totale pezzi: <strong>${totPezzi}</strong></span></div>
+<div class="firma">
+  <div class="firma-box">Firma tecnico preparatore<br><br><br>${tecnico}</div>
+  <div class="firma-box">Firma responsabile verifica<br><br><br>___________________</div>
+</div>
+<div class="footer"><span>AV Manager · Lista preparazione materiali</span><span>${nome} · ${data}</span></div>
+</div></body></html>`;
+  const w=window.open('','_blank');
+  w.document.write(html); w.document.close();
+  setTimeout(()=>{w.focus();w.print();},400);
+  window.closeMod('mPreparaLavoro');
+  toast('✓ PDF generato!');
+};
+
+// Chiudi camera alla chiusura modal
+const _origClose=window.closeMod;
+window.closeMod=id=>{if(id==='mPreparaLavoro')stopCamera();_origClose(id);};
+
+// ═══════════════════════════════════════════════════
+// QR REGISTRAZIONE
   const role=v('qrRole');
   const token='AV'+Date.now().toString(36).toUpperCase().slice(-6);
   const url=`${location.origin}${location.pathname}?token=${token}&role=${encodeURIComponent(role)}`;
@@ -1770,9 +2539,74 @@ window.downloadExcel = () => {
   toast('✓ File scaricato!');
 };
 
-// Service Worker
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+// ═══════════════════════════════════════════════════
+// SERVICE WORKER + AUTO-UPDATE
+// ═══════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+
+  // Registra il SW
+  navigator.serviceWorker.register('/sw.js').then(reg => {
+
+    // Controlla aggiornamenti ogni 30 minuti anche lato client
+    setInterval(() => reg.update(), 30 * 60 * 1000);
+
+    // Quando un nuovo SW è pronto, attivalo subito
+    reg.addEventListener('updatefound', () => {
+      const newSW = reg.installing;
+      if (!newSW) return;
+      newSW.addEventListener('statechange', () => {
+        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+          // Nuovo SW installato — chiedi skip waiting e ricarica
+          newSW.postMessage('SKIP_WAITING');
+        }
+      });
+    });
+
+  }).catch(() => {});
+
+  // Ascolta messaggi dal SW (UPDATE_AVAILABLE o reload dopo skip waiting)
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data?.type === 'UPDATE_AVAILABLE') {
+      // Mostra banner aggiornamento non intrusivo
+      showUpdateBanner();
+    }
+  });
+
+  // Ricarica la pagina quando il controller cambia (nuovo SW attivo)
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) { refreshing = true; location.reload(); }
+  });
+}
+
+function showUpdateBanner() {
+  // Evita banner duplicati
+  if (document.getElementById('updateBanner')) return;
+  const b = document.createElement('div');
+  b.id = 'updateBanner';
+  b.style.cssText = `
+    position:fixed;top:calc(var(--st,0px) + 8px);left:50%;transform:translateX(-50%);
+    background:#6c63ff;color:#fff;padding:10px 18px;border-radius:20px;
+    font-size:13px;font-weight:500;z-index:999;display:flex;align-items:center;gap:10px;
+    box-shadow:0 4px 20px rgba(108,99,255,.4);white-space:nowrap;
+    animation:slideDown .3s ease;
+  `;
+  b.innerHTML = `
+    <span>🔄 Aggiornamento disponibile</span>
+    <button onclick="location.reload()" style="
+      background:rgba(255,255,255,.25);border:none;color:#fff;
+      padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;
+      cursor:pointer;font-family:var(--font)
+    ">Aggiorna ora</button>
+    <span onclick="this.parentElement.remove()" style="cursor:pointer;opacity:.7;font-size:16px">✕</span>
+  `;
+  // Aggiungi animazione
+  const style = document.createElement('style');
+  style.textContent = '@keyframes slideDown{from{transform:translateX(-50%) translateY(-20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}';
+  document.head.appendChild(style);
+  document.body.appendChild(b);
+  // Auto-rimuovi dopo 10 secondi se non premuto
+  setTimeout(() => b?.remove(), 10000);
 }
 </script>
 </body>
