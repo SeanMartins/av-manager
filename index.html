@@ -143,9 +143,48 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
 .qrw{display:flex;justify-content:center;padding:14px}
 .qri{background:#fff;border-radius:var(--rs);padding:11px;display:inline-block}
 
-/* ── DIVIDER ── */
-.dv{height:1px;background:var(--b);margin:10px 0}
-.empty{text-align:center;padding:36px 20px;color:var(--tx3);font-size:14px}
+/* ── RESPONSIVE ── */
+@media (min-width: 600px) {
+  #app { max-width: 100%; }
+  .page { padding: 24px 24px calc(90px + var(--sb)); }
+  .sg { grid-template-columns: repeat(3, 1fr); }
+  .sg3 { grid-template-columns: repeat(4, 1fr); }
+  .clk { font-size: 58px; }
+}
+@media (min-width: 900px) {
+  #app { flex-direction: row; flex-wrap: wrap; max-width: 100%; }
+  #topbar { width: 100%; flex-shrink: 0; }
+  #content { flex: 1; order: 2; }
+  #nav {
+    width: 220px; flex-direction: column; border-top: none;
+    border-right: 1px solid var(--b); padding-bottom: 0;
+    padding-top: 20px; order: 1; height: calc(100vh - 57px);
+    position: sticky; top: 57px; align-self: flex-start;
+  }
+  .ni { flex-direction: row; justify-content: flex-start; padding: 12px 20px; gap: 12px; border-radius: 10px; margin: 2px 10px; }
+  .ni .ic { font-size: 18px; }
+  .ni .lb { font-size: 13px; font-weight: 500; }
+  .ni.on { background: var(--acb); }
+  .page { padding: 28px 32px 40px; max-width: 860px; }
+  .sg { grid-template-columns: repeat(4, 1fr); }
+  .card { border-radius: 16px; }
+  .msh { max-width: 540px; margin: 0 auto; border-radius: 20px; }
+  .mol { align-items: center; }
+}
+@media (min-width: 1200px) {
+  #content { display: grid; grid-template-columns: 1fr; }
+  .page { max-width: 960px; }
+}
+
+/* ── LUOGO BADGE ── */
+.luogo-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; padding: 3px 10px; border-radius: 20px;
+  background: var(--acb); color: var(--ac2); font-weight: 500;
+}
+
+/* ── PRESENZA ROW ── */
+.pres-luogo { font-size: 11px; color: var(--tx2); margin-top: 1px; }
 </style>
 </head>
 <body>
@@ -196,16 +235,39 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
       <div style="margin-bottom:18px">
         <div class="clk" id="clock">--:--:--</div>
         <div class="clks" id="pstat">Non timbrato</div>
+
+        <!-- Selezione luogo -->
+        <div id="luogoWrap" style="margin-bottom:12px">
+          <div style="font-size:12px;color:var(--tx2);margin-bottom:7px;font-weight:500;text-align:center">Dove ti trovi?</div>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap" id="luogoChips">
+            <span class="chip on" onclick="pickLuogo(this,'🏢 In sede')">🏢 In sede</span>
+            <span class="chip" onclick="pickLuogo(this,'💻 Smart working')">💻 Smart working</span>
+            <span class="chip" onclick="pickLuogo(this,'🚧 Cantiere')">🚧 Cantiere</span>
+            <span class="chip" onclick="pickLuogo(this,'✈️ Trasferta')">✈️ Trasferta</span>
+          </div>
+          <div id="luogoCustomWrap" style="display:none;margin-top:8px">
+            <input type="text" id="luogoCustom" placeholder="Specifica il luogo (es. Superstudio Milano)">
+          </div>
+          <div id="gpsWrap" style="display:none;margin-top:8px">
+            <button class="btn btn-f" onclick="getGPS()" id="gpsBtn" style="font-size:13px;padding:9px">
+              📍 Rileva posizione GPS
+            </button>
+            <div id="gpsResult" style="font-size:12px;color:var(--tx2);margin-top:6px;text-align:center"></div>
+          </div>
+        </div>
+
         <button class="pbtn pin" id="pbtn" onclick="punch()">⏱ Timbra entrata</button>
       </div>
+
       <div class="sg sg3">
         <div class="sc"><div class="sn" id="oreOggi">0h</div><div class="sl">Ore oggi</div></div>
         <div class="sc"><div class="sn" id="nPresenti">0</div><div class="sl">Presenti</div></div>
         <div class="sc"><div class="sn" id="nTicket">0</div><div class="sl">Ticket</div></div>
       </div>
+
       <div class="sec"><div class="stl">Team oggi</div><span class="bdg bg">● Live</span></div>
       <div class="card" id="teamToday"></div>
-      <div class="sec" style="margin-top:6px"><div class="stl">Ticket aperti</div><button class="btn btn-sm btn-p" onclick="openMod('mNewTicket')">+ Nuovo</button></div>
+      <div class="sec" style="margin-top:6px"><div class="stl">Ticket aperti</div><button class="btn btn-sm btn-p" onclick="window.openMod('mNewTicket')">+ Nuovo</button></div>
       <div id="ticketList"></div>
     </div>
 
@@ -297,8 +359,45 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
     <div class="row" style="padding:7px 0"><span style="font-size:13px;color:var(--tx2);width:76px">Email</span><span style="font-size:13px" id="profEmail">—</span></div>
     <div class="row" style="padding:7px 0"><span style="font-size:13px;color:var(--tx2);width:76px">Telefono</span><span style="font-size:13px" id="profTel">—</span></div>
   </div>
+  <button class="btn btn-f" style="margin-top:8px" onclick="window.openMod('mExport')">📊 Esporta presenze Excel</button>
   <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci dall'account</button>
-  <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProf')">Chiudi</button>
+  <button class="btn btn-f" style="margin-top:8px" onclick="window.closeMod('mProf')">Chiudi</button>
+</div></div>
+
+<!-- Export Excel -->
+<div class="mol" id="mExport"><div class="msh">
+  <div class="mhd"></div>
+  <div class="stl" style="margin-bottom:6px">📊 Esporta presenze</div>
+  <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Genera un file Excel con tutte le timbrature del periodo selezionato.</div>
+  <div class="ig"><label class="il">Dipendente</label>
+    <select id="expDip">
+      <option value="all">Tutti i dipendenti</option>
+    </select>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="ig"><label class="il">Mese</label>
+      <select id="expMese">
+        <option value="0">Gennaio</option><option value="1">Febbraio</option>
+        <option value="2">Marzo</option><option value="3">Aprile</option>
+        <option value="4">Maggio</option><option value="5">Giugno</option>
+        <option value="6">Luglio</option><option value="7">Agosto</option>
+        <option value="8">Settembre</option><option value="9">Ottobre</option>
+        <option value="10">Novembre</option><option value="11">Dicembre</option>
+      </select>
+    </div>
+    <div class="ig"><label class="il">Anno</label>
+      <select id="expAnno"></select>
+    </div>
+  </div>
+  <div id="expPreview" style="display:none;margin-bottom:14px">
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:6px" id="expCount"></div>
+    <div style="background:var(--bg2);border-radius:var(--rs);padding:10px;font-size:12px;max-height:180px;overflow-y:auto" id="expTable"></div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-p btn-f" onclick="window.previewExport()">👁 Anteprima</button>
+    <button class="btn btn-f" onclick="window.downloadExcel()" id="btnDownload" style="display:none">⬇️ Scarica Excel</button>
+  </div>
+  <button class="btn btn-f" style="margin-top:8px" onclick="window.closeMod('mExport')">Chiudi</button>
 </div></div>
 
 <!-- Nuova location -->
@@ -417,6 +516,8 @@ let punchStart= null;
 let punchDocId= null;
 let privOk    = false;
 let selRole   = 'Tecnico AV';
+let selLuogo  = '🏢 In sede';
+let gpsCoords = null;
 
 // Cache locale aggiornata dai listener realtime
 let cacheTeam      = [];
@@ -436,13 +537,50 @@ const CHECKS = [
 // BOOT
 // ═══════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
-  // Utente salvato localmente (solo profilo, non dati)
+  // Utente salvato localmente
   const saved = localStorage.getItem('av_user');
   if (saved) { user = JSON.parse(saved); launchApp(); }
   tick(); setInterval(tick, 1000);
   setDate();
   renderCheck();
+  // Popola anni nel select export
+  const now = new Date();
+  const selAnno = document.getElementById('expAnno');
+  for(let y = now.getFullYear(); y >= now.getFullYear()-2; y--){
+    const o = document.createElement('option'); o.value=y; o.textContent=y; selAnno.appendChild(o);
+  }
+  // Imposta mese corrente
+  document.getElementById('expMese').value = now.getMonth();
 });
+
+// Ripristina turno attivo se l'app era stata chiusa durante un turno
+function restoreActivePunch() {
+  const active = localStorage.getItem('av_active_punch');
+  if (!active) return;
+  const p = JSON.parse(active);
+  // Verifica che il turno sia di oggi
+  if (new Date(p.entrata).toDateString() !== new Date().toDateString()) {
+    localStorage.removeItem('av_active_punch'); return;
+  }
+  punchedIn = true;
+  punchStart = new Date(p.entrata).getTime();
+  punchDocId = p.docId;
+  selLuogo = p.luogo || '🏢 In sede';
+  const btn = document.getElementById('pbtn');
+  const stat = document.getElementById('pstat');
+  if (btn) { btn.className='pbtn pout'; btn.textContent='⏹ Timbra uscita'; }
+  const pad = x => String(x).padStart(2,'0');
+  const e = new Date(p.entrata);
+  if (stat) stat.innerHTML = `Entrata timbrata alle ${pad(e.getHours())}:${pad(e.getMinutes())} <span class="luogo-badge">${selLuogo}</span>`;
+  // Blocca selezione luogo
+  const lw = document.getElementById('luogoWrap');
+  if (lw) { lw.style.opacity='0.4'; lw.style.pointerEvents='none'; }
+  // Evidenzia chip corretto
+  document.querySelectorAll('#luogoChips .chip').forEach(c => {
+    c.classList.toggle('on', c.textContent.trim() === selLuogo);
+  });
+  toast('🔄 Turno ripristinato — entrata alle '+pad(e.getHours())+':'+pad(e.getMinutes()));
+}
 
 // ═══════════════════════════════════════════════════
 // REALTIME LISTENERS — avviati dopo il login
@@ -574,9 +712,15 @@ function launchApp() {
   document.getElementById('profEmail').textContent=user.email;
   document.getElementById('profTel').textContent=user.tel||'—';
   startListeners();
+  // Ripristina turno attivo dopo che i listener sono partiti
+  setTimeout(restoreActivePunch, 800);
 }
 
-window.doLogout = () => { localStorage.removeItem('av_user'); location.reload(); };
+window.doLogout = () => {
+  localStorage.removeItem('av_user');
+  localStorage.removeItem('av_active_punch');
+  location.reload();
+};
 
 // ═══════════════════════════════════════════════════
 // NAVIGATION
@@ -609,6 +753,33 @@ function setDate(){
 }
 
 // ═══════════════════════════════════════════════════
+// LUOGO
+// ═══════════════════════════════════════════════════
+window.pickLuogo = (el, luogo) => {
+  document.querySelectorAll('#luogoChips .chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on'); selLuogo = luogo; gpsCoords = null;
+  const isCustom = luogo.includes('Cantiere') || luogo.includes('Trasferta');
+  document.getElementById('luogoCustomWrap').style.display = isCustom ? 'block' : 'none';
+  document.getElementById('gpsWrap').style.display = isCustom ? 'block' : 'none';
+  document.getElementById('gpsResult').textContent = '';
+};
+
+window.getGPS = () => {
+  const btn=document.getElementById('gpsBtn'), res=document.getElementById('gpsResult');
+  if(!navigator.geolocation){ toast('GPS non disponibile','a'); return; }
+  btn.textContent='⏳ Rilevamento...'; btn.disabled=true;
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      gpsCoords={lat:pos.coords.latitude.toFixed(5),lng:pos.coords.longitude.toFixed(5)};
+      res.innerHTML=`📍 ${gpsCoords.lat}, ${gpsCoords.lng} <a href="https://maps.google.com/?q=${gpsCoords.lat},${gpsCoords.lng}" target="_blank" style="color:var(--ac2);font-size:11px">Mappa →</a>`;
+      btn.textContent='✓ Posizione rilevata'; btn.disabled=false;
+    },
+    () => { toast('Impossibile rilevare la posizione','r'); btn.textContent='📍 Rileva posizione GPS'; btn.disabled=false; },
+    {timeout:10000}
+  );
+};
+
+// ═══════════════════════════════════════════════════
 // PUNCH
 // ═══════════════════════════════════════════════════
 window.punch = async () => {
@@ -618,17 +789,36 @@ window.punch = async () => {
   if(!punchedIn){
     punchedIn=true; punchStart=Date.now();
     btn.className='pbtn pout'; btn.textContent='⏹ Timbra uscita';
-    stat.textContent=`Entrata timbrata alle ${t}`;
-    const ref = await addDoc(C.presenze(), {uid:user.id, nome:user.nome+' '+user.cognome, entrata:now.toISOString(), uscita:null});
-    punchDocId = ref.id;
-    toast('✓ Entrata timbrata');
+    // Determina luogo finale
+    const customLuogo = v('luogoCustom');
+    const luogoFinale = customLuogo ? selLuogo+' — '+customLuogo : selLuogo;
+    stat.innerHTML=`Entrata timbrata alle ${t} <span class="luogo-badge">${luogoFinale}</span>`;
+    const ref = await addDoc(C.presenze(), {
+      uid:user.id, nome:user.nome+' '+user.cognome,
+      entrata:now.toISOString(), uscita:null,
+      luogo:luogoFinale,
+      gps: gpsCoords || null
+    });
+    punchDocId=ref.id;
+    // Salva turno attivo in localStorage — sopravvive alla chiusura app
+    localStorage.setItem('av_active_punch', JSON.stringify({
+      docId: ref.id, entrata: now.toISOString(), luogo: luogoFinale
+    }));
+    toast('✓ Entrata timbrata — '+luogoFinale);
+    // Blocca selezione luogo durante turno
+    document.getElementById('luogoWrap').style.opacity='0.4';
+    document.getElementById('luogoWrap').style.pointerEvents='none';
   } else {
     punchedIn=false;
     btn.className='pbtn pin'; btn.textContent='⏱ Timbra entrata';
     stat.textContent=`Uscita timbrata alle ${t}`;
     document.getElementById('oreOggi').textContent='0h';
-    if(punchDocId) await updateDoc(doc(db,'presenze',punchDocId), {uscita:now.toISOString()});
-    punchStart=null; punchDocId=null;
+    if(punchDocId) await updateDoc(doc(db,'presenze',punchDocId),{uscita:now.toISOString()});
+    punchStart=null; punchDocId=null; gpsCoords=null;
+    localStorage.removeItem('av_active_punch');
+    // Riabilita selezione luogo
+    document.getElementById('luogoWrap').style.opacity='1';
+    document.getElementById('luogoWrap').style.pointerEvents='auto';
     toast('✓ Uscita timbrata');
   }
 };
@@ -647,8 +837,16 @@ function renderPresenze(){
   else cacheTeam.forEach((m,i)=>{
     const ini=(m.nome[0]+m.cognome[0]).toUpperCase();
     const tp=todayPres.find(p=>p.uid===m.id);
-    const [bc,bl]=tp?tp.uscita?['ba','Uscito']:['bg','In sede']:['bp','Assente'];
-    th+=`<div class="row"><div class="av ${avCls[i%4]}">${ini}</div><div style="flex:1"><div style="font-size:14px;font-weight:500">${m.nome} ${m.cognome}</div><div style="font-size:11px;color:var(--tx2)">${m.ruolo}</div></div><span class="bdg ${bc}">${bl}</span></div>`;
+    const luogo=tp?.luogo||'';
+    const [bc,bl]=tp?tp.uscita?['ba','Uscito']:['bg','Presente']:['bp','Assente'];
+    th+=`<div class="row">
+      <div class="av ${avCls[i%4]}">${ini}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:500">${m.nome} ${m.cognome}</div>
+        <div class="pres-luogo">${luogo||m.ruolo}</div>
+      </div>
+      <span class="bdg ${bc}">${bl}</span>
+    </div>`;
   });
   document.getElementById('teamToday').innerHTML=th;
   let tkt='';
@@ -725,7 +923,6 @@ function renderTeamPage(){
 // ═══════════════════════════════════════════════════
 // LOCATION CRUD
 // ═══════════════════════════════════════════════════
-window.openMod = id => { document.getElementById(id).classList.add('on'); document.body.style.overflow='hidden'; };
 window.closeMod = id => { document.getElementById(id).classList.remove('on'); document.body.style.overflow=''; };
 document.querySelectorAll('.mol').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) window.closeMod(m.id); }));
 
@@ -1438,6 +1635,125 @@ function toast(msg,t='g'){
   el.style.color='#fff'; el.textContent=msg; el.style.opacity='1';
   clearTimeout(el._t); el._t=setTimeout(()=>el.style.opacity='0',2600);
 }
+
+// ═══════════════════════════════════════════════════
+// EXPORT EXCEL
+// ═══════════════════════════════════════════════════
+let exportData = [];
+
+// Popola select dipendenti nel modal export
+function populateExpDip() {
+  const sel = document.getElementById('expDip'); if (!sel) return;
+  sel.innerHTML = '<option value="all">Tutti i dipendenti</option>';
+  cacheTeam.forEach(m => {
+    const o = document.createElement('option');
+    o.value = m.id; o.textContent = m.nome+' '+m.cognome;
+    sel.appendChild(o);
+  });
+}
+
+window.openMod = id => {
+  document.getElementById(id).classList.add('on');
+  document.body.style.overflow='hidden';
+  if (id === 'mExport') { populateExpDip(); document.getElementById('expPreview').style.display='none'; document.getElementById('btnDownload').style.display='none'; }
+};
+
+window.previewExport = async () => {
+  const mese = parseInt(document.getElementById('expMese').value);
+  const anno = parseInt(document.getElementById('expAnno').value);
+  const dipId = document.getElementById('expDip').value;
+  toast('⏳ Caricamento dati...','a');
+
+  // Carica TUTTE le presenze del mese da Firebase
+  const start = new Date(anno, mese, 1).toISOString();
+  const end   = new Date(anno, mese+1, 0, 23, 59, 59).toISOString();
+  const snap  = await getDocs(query(C.presenze(),
+    where('entrata','>=',start),
+    where('entrata','<=',end),
+    orderBy('entrata')
+  ));
+
+  let rows = snap.docs.map(d => ({id:d.id,...d.data()}));
+
+  // Filtra per dipendente se richiesto
+  if (dipId !== 'all') rows = rows.filter(r => r.uid === dipId);
+
+  // Calcola ore lavorate
+  exportData = rows.map(r => {
+    const ent = new Date(r.entrata);
+    const usc = r.uscita ? new Date(r.uscita) : null;
+    const ore = usc ? ((usc - ent) / 3600000).toFixed(2) : '—';
+    const pad = x => String(x).padStart(2,'0');
+    return {
+      nome:      r.nome || '—',
+      data:      `${pad(ent.getDate())}/${pad(ent.getMonth()+1)}/${ent.getFullYear()}`,
+      giorno:    ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][ent.getDay()],
+      luogo:     r.luogo || 'In sede',
+      entrata:   `${pad(ent.getHours())}:${pad(ent.getMinutes())}`,
+      uscita:    usc ? `${pad(usc.getHours())}:${pad(usc.getMinutes())}` : '—',
+      ore_lav:   ore,
+      gps:       r.gps ? `${r.gps.lat},${r.gps.lng}` : '—',
+    };
+  });
+
+  const mesiNomi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  document.getElementById('expCount').textContent = `${exportData.length} timbrature trovate — ${mesiNomi[mese]} ${anno}`;
+
+  // Mostra anteprima tabella
+  let th = `<div style="display:grid;grid-template-columns:1fr 0.6fr 1fr 0.6fr 0.6fr 0.5fr;gap:4px 8px;font-weight:600;color:var(--tx);border-bottom:1px solid var(--b);padding-bottom:6px;margin-bottom:6px">
+    <span>Nome</span><span>Data</span><span>Luogo</span><span>Entrata</span><span>Uscita</span><span>Ore</span></div>`;
+  exportData.slice(0,20).forEach(r => {
+    th += `<div style="display:grid;grid-template-columns:1fr 0.6fr 1fr 0.6fr 0.6fr 0.5fr;gap:4px 8px;padding:4px 0;border-bottom:1px solid var(--b);font-size:11px">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.nome}</span>
+      <span>${r.giorno} ${r.data}</span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.luogo}</span>
+      <span>${r.entrata}</span><span>${r.uscita}</span><span style="font-weight:600">${r.ore_lav}</span></div>`;
+  });
+  if(exportData.length > 20) th += `<div style="font-size:11px;color:var(--tx2);margin-top:6px">... e altri ${exportData.length-20} record</div>`;
+
+  document.getElementById('expTable').innerHTML = th || '<div style="color:var(--tx2)">Nessuna timbratura trovata per questo periodo.</div>';
+  document.getElementById('expPreview').style.display = 'block';
+  document.getElementById('btnDownload').style.display = exportData.length ? 'block' : 'none';
+  toast('✓ '+exportData.length+' record trovati');
+};
+
+window.downloadExcel = () => {
+  if (!exportData.length) { toast('Nessun dato da esportare','a'); return; }
+  const mese = parseInt(document.getElementById('expMese').value);
+  const anno = parseInt(document.getElementById('expAnno').value);
+  const mesiNomi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+  // Genera CSV compatibile Excel (con BOM per caratteri italiani)
+  const headers = ['Nome','Data','Giorno','Luogo','Entrata','Uscita','Ore lavorate','GPS'];
+  const rows = exportData.map(r => [r.nome, r.data, r.giorno, r.luogo, r.entrata, r.uscita, r.ore_lav, r.gps]);
+
+  // Calcola totali per dipendente
+  const totali = {};
+  exportData.forEach(r => {
+    if (!totali[r.nome]) totali[r.nome] = 0;
+    const h = parseFloat(r.ore_lav);
+    if (!isNaN(h)) totali[r.nome] += h;
+  });
+
+  let csv = '\uFEFF'; // BOM per Excel
+  csv += headers.join(';') + '\n';
+  rows.forEach(r => { csv += r.map(c => `"${c}"`).join(';') + '\n'; });
+  csv += '\n';
+  csv += '"TOTALE ORE PER DIPENDENTE"\n';
+  Object.entries(totali).forEach(([nome, ore]) => {
+    csv += `"${nome}";"${ore.toFixed(2)} ore"\n`;
+  });
+  csv += `\n"Esportato il: ${new Date().toLocaleDateString('it-IT')} ${new Date().toLocaleTimeString('it-IT')}"\n`;
+
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `presenze_${mesiNomi[mese]}_${anno}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✓ File scaricato!');
+};
 
 // Service Worker
 if('serviceWorker' in navigator){
