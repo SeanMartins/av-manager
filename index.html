@@ -373,12 +373,13 @@ textarea { resize: vertical; min-height: 72px; }
       <div class="input-group">
         <label class="input-label">Ruolo</label>
         <div class="chip-row" id="roleChips">
-          <span class="chip" onclick="selectChip(this)">Tecnico AV</span>
-          <span class="chip" onclick="selectChip(this)">Operatore LED</span>
-          <span class="chip" onclick="selectChip(this)">Interprete</span>
-          <span class="chip" onclick="selectChip(this)">Project Manager</span>
-          <span class="chip" onclick="selectChip(this)">Magazziniere</span>
+          <span class="chip" onclick="selectChip(this,'Tecnico AV')">Tecnico AV</span>
+          <span class="chip" onclick="selectChip(this,'Operatore LED')">Operatore LED</span>
+          <span class="chip" onclick="selectChip(this,'Interprete')">Interprete</span>
+          <span class="chip" onclick="selectChip(this,'Project Manager')">Project Manager</span>
+          <span class="chip" onclick="selectChip(this,'Magazziniere')">Magazziniere</span>
         </div>
+        <input type="hidden" id="selectedRoleInput" value="Tecnico AV">
       </div>
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:20px">
         <div class="check-box" id="privacyBox" onclick="togglePrivacy()"></div>
@@ -755,8 +756,8 @@ textarea { resize: vertical; min-height: 72px; }
 // ─── SUPABASE CONFIG ──────────────────────────────────────
 // ⚠️  SOSTITUISCI CON I TUOI VALORI DA SUPABASE DASHBOARD
 // Settings → API → Project URL e anon public key
-const SUPABASE_URL = https://ykhzqlkdvrximwxesgna.supabase.co/rest/v1/;
-const SUPABASE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlraHpxbGtkdnJ4aW13eGVzZ25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMzUzMjMsImV4cCI6MjA5MzcxMTMyM30.ZV8bCq8v9jiomeOmt3fLdxZ0lAmdJPPqSf-CYp8wQBQ;
+const SUPABASE_URL = 'https://ykhzqlkdvrximwxesgna.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlraHpxbGtkdnJ4aW13eGVzZ25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMzUzMjMsImV4cCI6MjA5MzcxMTMyM30.ZV8bCq8v9jiomeOmt3fLdxZ0lAmdJPPqSf-CYp8wQBQ';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ─── STATE ───────────────────────────────────────────────
@@ -791,7 +792,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   setInterval(updateClock, 1000);
   updateDate();
   renderChecklist();
-
+  // Auto-seleziona primo chip ruolo
+  const firstChip = document.querySelector('#roleChips .chip');
+  if (firstChip) firstChip.classList.add('active');
   // Carica dati da Supabase
   await Promise.all([loadLocations(), loadMagazzino(), loadTeam()]);
 });
@@ -872,13 +875,16 @@ function updateDate() {
 
 // ─── AUTH ─────────────────────────────────────────────────
 let privacyChecked = false;
-let selectedRole = '';
+let selectedRole = 'Tecnico AV'; // default sempre impostato
 
-function selectChip(el) {
+function selectChip(el, role) {
   document.querySelectorAll('#roleChips .chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
-  selectedRole = el.textContent;
+  selectedRole = role;
+  document.getElementById('selectedRoleInput').value = role;
 }
+
+// Auto-seleziona il primo chip al caricamento
 function togglePrivacy() {
   privacyChecked = !privacyChecked;
   const box = document.getElementById('privacyBox');
@@ -892,12 +898,14 @@ async function completeReg() {
   if (!nome || !cognome || !email) { alert('Compila nome, cognome ed email'); return; }
   if (!privacyChecked) { alert('Accetta il consenso privacy'); return; }
 
-  // Mostra loader sul bottone
+  // Leggi ruolo da hidden input (sempre aggiornato) o dalla variabile
+  const ruolo = document.getElementById('selectedRoleInput')?.value || selectedRole || 'Tecnico AV';
+
   const btn = document.querySelector('#regStep1 .btn-primary');
   const origText = btn.textContent;
   btn.textContent = 'Salvataggio...'; btn.disabled = true;
 
-  const payload = { nome, cognome, email, telefono: tel, ruolo: selectedRole || 'Tecnico AV' };
+  const payload = { nome, cognome, email, telefono: tel || null, ruolo };
 
   const { data, error } = await sb.from('dipendenti')
     .insert([payload])
@@ -908,19 +916,23 @@ async function completeReg() {
 
   if (error) {
     if (error.code === '23505') {
-      // Email già registrata — carica il profilo esistente
+      // Email già registrata — carica profilo esistente
       const { data: existing } = await sb.from('dipendenti').select('*').eq('email', email).single();
-      currentUser = { nome: existing.nome, cognome: existing.cognome, email: existing.email, tel: existing.telefono, ruolo: existing.ruolo, db_id: existing.id };
-    } else {
-      // Errore reale — mostra dettaglio
-      alert(`Errore Supabase: ${error.message}\nCodice: ${error.code}\n\nVerifica che il file fix_rls.sql sia stato eseguito correttamente.`);
-      console.error('Supabase error:', error);
+      if (existing) {
+        currentUser = { nome: existing.nome, cognome: existing.cognome, email: existing.email, tel: existing.telefono, ruolo: existing.ruolo, db_id: existing.id };
+        localStorage.setItem('av_user', JSON.stringify(currentUser));
+        await loadTeam();
+        startApp();
+      }
       return;
     }
-  } else {
-    currentUser = { nome, cognome, email, tel, ruolo: selectedRole||'Tecnico AV', db_id: data?.id };
+    // Errore reale — mostra dettaglio
+    alert(`Errore: ${error.message}\n\nSe il problema persiste, esegui fix_rls.sql su Supabase.`);
+    console.error('Supabase error:', JSON.stringify(error));
+    return;
   }
 
+  currentUser = { nome, cognome, email, tel, ruolo, db_id: data?.id };
   localStorage.setItem('av_user', JSON.stringify(currentUser));
   await loadTeam();
   startApp();
