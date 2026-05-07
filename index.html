@@ -315,10 +315,15 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
         <div class="sc"><div class="sn" id="nOut">0</div><div class="sl">In uso</div></div>
       </div>
 
-      <!-- PREPARA LAVORO -->
-      <button class="btn btn-p btn-f" style="margin-bottom:14px;font-size:15px;padding:14px" onclick="window.openMod('mPreparaLavoro')">
-        📋 Prepara un nuovo lavoro
-      </button>
+      <!-- AZIONI PRINCIPALI -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <button class="btn btn-p btn-f" style="font-size:14px;padding:14px;flex-direction:column;gap:4px" onclick="window.openMod('mPreparaLavoro')">
+          <span style="font-size:22px">📋</span>Prepara lavoro
+        </button>
+        <button class="btn btn-f" style="font-size:14px;padding:14px;flex-direction:column;gap:4px;border-color:var(--am);color:var(--am)" onclick="window.openSmarca()">
+          <span style="font-size:22px">✅</span>Smarca lavori
+        </button>
+      </div>
 
       <div class="sec"><div class="stl">Inventario</div><button class="btn btn-sm btn-p" onclick="window.openMod('mNewArt')">+ Articolo</button></div>
       <input type="text" placeholder="🔍 Cerca..." id="magSearch" oninput="renderMag()" style="margin-bottom:12px">
@@ -547,6 +552,77 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
 </div></div>
 
 <!-- Nuovo ticket -->
+<!-- SMARCA LAVORI -->
+<div class="mol" id="mSmarca"><div class="msh">
+  <div class="mhd"></div>
+
+  <!-- Step 1: scegli lavoro -->
+  <div id="smStep1">
+    <div class="stl" style="margin-bottom:4px">✅ Smarca rientro materiali</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Seleziona il lavoro completato e verifica che tutto sia rientrato in magazzino</div>
+
+    <div class="ig">
+      <label class="il">Cerca lavoro eseguito</label>
+      <input type="text" id="smSearch" placeholder="Es: Convegno Milano..." oninput="window.smFilterLavori()">
+    </div>
+
+    <div id="smLavoriList" style="max-height:280px;overflow-y:auto;margin-bottom:12px">
+      <div class="empty">Caricamento lavori...</div>
+    </div>
+
+    <button class="btn btn-f" onclick="window.closeMod('mSmarca')">Annulla</button>
+  </div>
+
+  <!-- Step 2: scansione rientro -->
+  <div id="smStep2" style="display:none">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <button class="btn btn-sm" onclick="window.smBack()">← Torna</button>
+      <div>
+        <div class="stl" id="smNomeLavoro">—</div>
+        <div style="font-size:11px;color:var(--tx2)" id="smDataLavoro">—</div>
+      </div>
+    </div>
+
+    <!-- Progress rientro -->
+    <div class="card" style="margin-bottom:12px;padding:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:13px;color:var(--tx2)">Materiali verificati</span>
+        <span style="font-size:13px;font-weight:600" id="smProgTxt">0 / 0</span>
+      </div>
+      <div class="pbg"><div class="pfl" id="smProgBar" style="width:0%;background:var(--am)"></div></div>
+    </div>
+
+    <!-- Camera -->
+    <div style="position:relative;border-radius:var(--r);overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:1">
+      <video id="smVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+        <div style="width:60%;height:60%;border:2px solid rgba(245,158,11,.8);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>
+      </div>
+      <div style="position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:12px;color:rgba(255,255,255,.7)">Scannerizza QR per segnare rientro</div>
+    </div>
+
+    <!-- Inserimento manuale -->
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <input type="text" id="smManualId" placeholder="ID manuale..." style="flex:1;margin-bottom:0">
+      <button class="btn btn-sm" style="border-color:var(--am);color:var(--am);flex-shrink:0" onclick="window.smAddManual()">+ Verifica</button>
+    </div>
+
+    <!-- Lista articoli con stato -->
+    <div class="sec">
+      <div class="stl">Lista materiali</div>
+      <div style="display:flex;gap:6px">
+        <span class="bdg bg" id="smCntOk">0 ✓</span>
+        <span class="bdg br" id="smCntMiss">0 mancanti</span>
+      </div>
+    </div>
+    <div id="smItemsList" style="margin-bottom:14px"></div>
+
+    <button class="btn btn-p btn-f" style="font-size:15px;padding:14px;background:var(--am);border-color:var(--am)" onclick="window.smGeneraPDF()">
+      📄 Genera report rientro PDF
+    </button>
+  </div>
+</div></div>
+
 <!-- Nuovo post forum -->
 <div class="mol" id="mNewTicket"><div class="msh">
   <div class="mhd"></div>
@@ -704,6 +780,13 @@ window.goPage = n => {
 window.openMod = id => {
   document.getElementById(id)?.classList.add('on');
   document.body.style.overflow='hidden';
+};
+
+// Stub for smarca — overridden by module after Firebase loads
+window.openSmarca = () => {
+  document.getElementById('mSmarca')?.classList.add('on');
+  document.body.style.overflow='hidden';
+  document.getElementById('smLavoriList').innerHTML='<div class="empty">Caricamento in corso...</div>';
 };
 
 window.closeMod = id => {
@@ -1921,13 +2004,319 @@ window.plGeneraPDF=()=>{
   const w=window.open('','_blank');
   w.document.write(html); w.document.close();
   setTimeout(()=>{w.focus();w.print();},400);
+  // Salva lavoro su Firebase per la funzione "Smarca"
+  await salvaLavoroPreparato(nome, v('plLoc'), v('plData'), plArticoli, user?user.nome+' '+user.cognome:'—');
   window.closeMod('mPreparaLavoro');
-  toast('✓ PDF generato!');
+  toast('✓ PDF generato e lavoro salvato!');
 };
 
 // Chiudi camera alla chiusura modal
 const _origClose=window.closeMod;
 window.closeMod=id=>{if(id==='mPreparaLavoro')stopCamera();_origClose(id);};
+
+// ═══════════════════════════════════════════════════
+// SMARCA LAVORI — verifica rientro materiali
+// ═══════════════════════════════════════════════════
+let smLavori      = [];   // tutti i lavori salvati da Firebase
+let smLavoroSel   = null; // lavoro selezionato
+let smArticoli    = [];   // articoli del lavoro con stato rientro
+let smStream      = null;
+let smScanInterval= null;
+let smFiltrati    = [];
+
+// Collezione lavori su Firebase
+const C_lavori = () => collection(db, 'lavori_preparati');
+
+// Salva ogni lavoro preparato (chiamato da plGeneraPDF)
+async function salvaLavoroPreparato(nome, loc, data, articoli, tecnico) {
+  try {
+    await addDoc(C_lavori(), {
+      nome, location: loc, data,
+      tecnico, createdAt: new Date().toISOString(),
+      articoli: articoli.map(a=>({id:a.id||'', nome:a.nome, cat:a.cat||'', marca:a.marca||'', ser:a.ser||a.id||'', qty:a.qtyPrep||1})),
+      stato: 'completato'
+    });
+  } catch(e){ console.warn('Salvataggio lavoro:', e); }
+}
+
+window.openSmarca = async () => {
+  // Reset
+  smLavori=[]; smLavoroSel=null; smArticoli=[]; smFiltrati=[];
+  document.getElementById('smStep1').style.display='block';
+  document.getElementById('smStep2').style.display='none';
+  document.getElementById('smSearch').value='';
+  window.openMod('mSmarca');
+
+  // Carica lavori da Firebase
+  const snap = await getDocs(query(C_lavori(), orderBy('createdAt','desc')));
+  smLavori = snap.docs.map(d=>({id:d.id,...d.data()}));
+  smFiltrati = [...smLavori];
+  smRenderLavori();
+};
+
+function smRenderLavori() {
+  const el = document.getElementById('smLavoriList'); if(!el) return;
+  if(!smFiltrati.length){
+    el.innerHTML='<div class="empty">Nessun lavoro trovato.<br>I lavori vengono salvati automaticamente quando generi il PDF di preparazione.</div>';
+    return;
+  }
+  let h='';
+  smFiltrati.forEach(l=>{
+    const data = l.data ? new Date(l.data).toLocaleDateString('it-IT') : l.createdAt ? new Date(l.createdAt).toLocaleDateString('it-IT') : '—';
+    const nArt = (l.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
+    h+=`<div onclick="window.smSelezionaLavoro('${l.id}')" style="padding:12px;border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--am)'" onmouseout="this.style.borderColor='var(--b)'">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div>
+          <div style="font-size:14px;font-weight:600">${l.nome||'—'}</div>
+          <div style="font-size:11px;color:var(--tx2);margin-top:2px">📍 ${l.location||'—'} · 📅 ${data}</div>
+          <div style="font-size:11px;color:var(--tx2);margin-top:1px">👤 ${l.tecnico||'—'} · 📦 ${nArt} pezzi</div>
+        </div>
+        <span class="bdg ${l.rientroCompletato?'bg':'ba'}">${l.rientroCompletato?'✓ Rientrato':'In attesa'}</span>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = h;
+}
+
+window.smFilterLavori = () => {
+  const q = document.getElementById('smSearch').value.toLowerCase();
+  smFiltrati = q ? smLavori.filter(l=>(l.nome||'').toLowerCase().includes(q)||(l.location||'').toLowerCase().includes(q)) : [...smLavori];
+  smRenderLavori();
+};
+
+window.smSelezionaLavoro = id => {
+  smLavoroSel = smLavori.find(l=>l.id===id); if(!smLavoroSel) return;
+  // Copia articoli con stato rientro
+  smArticoli = (smLavoroSel.articoli||[]).map(a=>({...a, rientrato:false}));
+  document.getElementById('smNomeLavoro').textContent = smLavoroSel.nome||'—';
+  const data = smLavoroSel.data ? new Date(smLavoroSel.data).toLocaleDateString('it-IT') : '—';
+  document.getElementById('smDataLavoro').textContent = '📅 '+data+' · 📍 '+(smLavoroSel.location||'—');
+  document.getElementById('smStep1').style.display='none';
+  document.getElementById('smStep2').style.display='block';
+  smUpdateProgress();
+  smRenderItems();
+  smStartCamera();
+};
+
+window.smBack = () => {
+  smStopCamera();
+  document.getElementById('smStep1').style.display='block';
+  document.getElementById('smStep2').style.display='none';
+};
+
+// ── Camera scanner ────────────────────────────────
+async function smStartCamera(){
+  try {
+    smStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
+    const vid = document.getElementById('smVideo');
+    vid.srcObject = smStream; await vid.play();
+    smScanInterval = setInterval(()=>{
+      if(!vid.videoWidth) return;
+      const canvas=document.createElement('canvas');
+      canvas.width=vid.videoWidth; canvas.height=vid.videoHeight;
+      canvas.getContext('2d').drawImage(vid,0,0);
+      if('BarcodeDetector' in window){
+        new BarcodeDetector({formats:['qr_code']}).detect(canvas)
+          .then(codes=>{ if(codes.length) smProcessQR(codes[0].rawValue); }).catch(()=>{});
+      } else if(window.jsQR){
+        const d=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height);
+        const c=jsQR(d.data,d.width,d.height); if(c) smProcessQR(c.data);
+      }
+    },600);
+  } catch(e){ toast('Fotocamera non disponibile — usa ID manuale','a'); }
+}
+
+function smStopCamera(){
+  clearInterval(smScanInterval); smScanInterval=null;
+  if(smStream){smStream.getTracks().forEach(t=>t.stop());smStream=null;}
+}
+
+function smProcessQR(raw){
+  try{ const d=JSON.parse(raw); smMarcaRientrato(d.id||d.ser||raw); }
+  catch(e){ smMarcaRientrato(raw); }
+}
+
+window.smAddManual = () => {
+  const id=document.getElementById('smManualId').value.trim();
+  if(!id){toast('Inserisci un ID','r');return;}
+  smMarcaRientrato(id);
+  document.getElementById('smManualId').value='';
+};
+
+function smMarcaRientrato(id){
+  const art = smArticoli.find(a=>
+    a.id===id||a.ser===id||
+    (a.id||'').toLowerCase()===(id||'').toLowerCase()||
+    (a.ser||'').toLowerCase()===(id||'').toLowerCase()
+  );
+  if(!art){ toast('Articolo "'+id+'" non in lista lavoro','a'); return; }
+  if(art.rientrato){ toast('✓ Già verificato: '+art.nome,'a'); return; }
+  art.rientrato=true;
+  if(navigator.vibrate) navigator.vibrate([60,40,60]);
+  toast('✓ Rientrato: '+art.nome);
+  smUpdateProgress();
+  smRenderItems();
+  // Se tutto rientrato, cambia colore barra a verde
+  const allOk = smArticoli.every(a=>a.rientrato);
+  document.getElementById('smProgBar').style.background = allOk?'var(--gn)':'var(--am)';
+  if(allOk) toast('🎉 Tutti i materiali verificati!');
+}
+
+window.smToggleItem = idx => {
+  smArticoli[idx].rientrato = !smArticoli[idx].rientrato;
+  smUpdateProgress();
+  smRenderItems();
+  const allOk = smArticoli.every(a=>a.rientrato);
+  document.getElementById('smProgBar').style.background = allOk?'var(--gn)':'var(--am)';
+};
+
+function smUpdateProgress(){
+  const tot=smArticoli.length, ok=smArticoli.filter(a=>a.rientrato).length;
+  const pct=tot?Math.round(ok/tot*100):0;
+  document.getElementById('smProgTxt').textContent=ok+' / '+tot;
+  document.getElementById('smProgBar').style.width=pct+'%';
+  document.getElementById('smCntOk').textContent=ok+' ✓';
+  document.getElementById('smCntMiss').textContent=(tot-ok)+' mancanti';
+}
+
+function smRenderItems(){
+  const el=document.getElementById('smItemsList'); if(!el) return;
+  if(!smArticoli.length){el.innerHTML='<div class="empty">Nessun articolo in questo lavoro</div>';return;}
+  // Ordina: mancanti prima
+  const sorted=[...smArticoli].sort((a,b)=>a.rientrato-b.rientrato);
+  let h='';
+  sorted.forEach((a,si)=>{
+    const realIdx=smArticoli.indexOf(a);
+    h+=`<div onclick="window.smToggleItem(${realIdx})" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b);cursor:pointer;opacity:${a.rientrato?'0.5':'1'}">
+      <div style="width:28px;height:28px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;
+        background:${a.rientrato?'var(--gnb)':'var(--rdb)'};border:1px solid ${a.rientrato?'var(--gn)':'var(--rd)'}">
+        ${a.rientrato?'✓':'✕'}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${a.rientrato?'text-decoration:line-through;color:var(--tx3)':''}">${a.nome}</div>
+        <div style="font-size:11px;color:var(--tx2)">${a.cat||'—'} · ${a.ser||a.id} · ×${a.qty||1}</div>
+      </div>
+      <span class="bdg ${a.rientrato?'bg':'br'}">${a.rientrato?'Rientrato':'Mancante'}</span>
+    </div>`;
+  });
+  el.innerHTML=h;
+}
+
+// ── Genera PDF report rientro ─────────────────────
+window.smGeneraPDF = async () => {
+  smStopCamera();
+  const l=smLavoroSel; if(!l) return;
+  const ok=smArticoli.filter(a=>a.rientrato);
+  const miss=smArticoli.filter(a=>!a.rientrato);
+  const tot=smArticoli.reduce((s,a)=>s+(a.qty||1),0);
+  const okPz=ok.reduce((s,a)=>s+(a.qty||1),0);
+  const data=l.data?new Date(l.data).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('it-IT');
+  const now=new Date().toLocaleString('it-IT');
+  const tecnico=user?user.nome+' '+user.cognome:'—';
+
+  const rigaOk=ok.map((a,i)=>`<tr style="background:${i%2===0?'#fff':'#f9fff9'}">
+    <td style="padding:8px 10px;font-size:13px;font-weight:500">${a.nome}</td>
+    <td style="padding:8px 10px;font-size:12px;color:#666">${a.marca||'—'}</td>
+    <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#666">${a.ser||a.id}</td>
+    <td style="padding:8px 10px;text-align:center;font-size:14px;font-weight:700">${a.qty||1}</td>
+    <td style="padding:8px 10px;text-align:center"><span style="background:#d4edda;color:#155724;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600">✓ Rientrato</span></td>
+  </tr>`).join('');
+
+  const rigaMiss=miss.map((a,i)=>`<tr style="background:${i%2===0?'#fff8f8':'#fff0f0'}">
+    <td style="padding:8px 10px;font-size:13px;font-weight:500;color:#c0392b">${a.nome}</td>
+    <td style="padding:8px 10px;font-size:12px;color:#888">${a.marca||'—'}</td>
+    <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#888">${a.ser||a.id}</td>
+    <td style="padding:8px 10px;text-align:center;font-size:14px;font-weight:700">${a.qty||1}</td>
+    <td style="padding:8px 10px;text-align:center"><span style="background:#f8d7da;color:#721c24;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600">⚠ Mancante</span></td>
+  </tr>`).join('');
+
+  const allOk = miss.length===0;
+  const html=`<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">
+<title>Report rientro — ${l.nome}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a2e;padding:0}.page{max-width:800px;margin:0 auto;padding:32px 40px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid ${allOk?'#27ae60':'#e74c3c'}}
+.logo{font-size:22px;font-weight:700;color:${allOk?'#27ae60':'#e74c3c'}}.logo span{font-size:12px;font-weight:400;color:#888;display:block;margin-top:2px}
+.status-box{background:${allOk?'#d4edda':'#f8d7da'};border:1px solid ${allOk?'#c3e6cb':'#f5c6cb'};border-radius:10px;padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;gap:12px}
+.status-icon{font-size:32px}.status-text{font-size:16px;font-weight:700;color:${allOk?'#155724':'#721c24'}}
+.status-sub{font-size:13px;color:${allOk?'#1e7e34':'#a94442'};margin-top:2px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;background:#f8f8fc;border-radius:10px;padding:16px}
+.info-item label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#888;display:block;margin-bottom:3px}
+.info-item span{font-size:14px;font-weight:500}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+.stat{border-radius:10px;padding:12px;text-align:center}
+.stat-n{font-size:24px;font-weight:700}.stat-l{font-size:11px;margin-top:2px;opacity:.8}
+.s-tot{background:#e8eaf6;color:#3949ab}.s-ok{background:#e8f5e9;color:#2e7d32}
+.s-miss{background:#fce4ec;color:#c62828}.s-pct{background:${allOk?'#e8f5e9':'#fff8e1'};color:${allOk?'#2e7d32':'#e65100'}}
+table{width:100%;border-collapse:collapse;margin-bottom:24px;border-radius:8px;overflow:hidden;box-shadow:0 0 0 1px #e0e0e0}
+th{padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;text-align:left;background:#37474f;color:#fff}
+th:last-child,th:nth-child(4){text-align:center}
+.section-title{font-size:14px;font-weight:700;margin:20px 0 8px;padding-left:4px;border-left:4px solid}
+.st-ok{color:#155724;border-color:#27ae60}.st-miss{color:#721c24;border-color:#e74c3c}
+.firma{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:32px;padding-top:20px;border-top:1px solid #eee}
+.firma-box{border-top:1px solid #ccc;padding-top:8px;font-size:11px;color:#888}
+.footer{margin-top:24px;padding-top:14px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:10px;color:#aaa}
+@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+</style></head><body><div class="page">
+<div class="header">
+  <div><div class="logo">${allOk?'✅':'⚠️'} AV Manager<span>Report verifica rientro materiali</span></div></div>
+  <div style="text-align:right;font-size:11px;color:#888">Generato il<br><strong style="color:#444">${now}</strong></div>
+</div>
+<div class="status-box">
+  <div class="status-icon">${allOk?'✅':'⚠️'}</div>
+  <div>
+    <div class="status-text">${allOk?'Rientro COMPLETO — tutti i materiali verificati':'Rientro INCOMPLETO — materiali mancanti'}</div>
+    <div class="status-sub">${allOk?'Tutto il materiale è stato verificato e riconsegnato in magazzino':'Verificare la posizione degli articoli segnalati come mancanti'}</div>
+  </div>
+</div>
+<div class="info-grid">
+  <div class="info-item"><label>Evento / Lavoro</label><span>${l.nome||'—'}</span></div>
+  <div class="info-item"><label>Data lavoro</label><span>${data}</span></div>
+  <div class="info-item"><label>Location</label><span>${l.location||'—'}</span></div>
+  <div class="info-item"><label>Tecnico originale</label><span>${l.tecnico||'—'}</span></div>
+  <div class="info-item" style="grid-column:1/-1"><label>Verifica rientro eseguita da</label><span>${tecnico}</span></div>
+</div>
+<div class="stats">
+  <div class="stat s-tot"><div class="stat-n">${smArticoli.length}</div><div class="stat-l">Articoli totali</div></div>
+  <div class="stat s-ok"><div class="stat-n">${ok.length}</div><div class="stat-l">Rientrati ✓</div></div>
+  <div class="stat s-miss"><div class="stat-n">${miss.length}</div><div class="stat-l">Mancanti ⚠</div></div>
+  <div class="stat s-pct"><div class="stat-n">${tot?Math.round(okPz/tot*100):0}%</div><div class="stat-l">Completamento</div></div>
+</div>
+${ok.length?`<div class="section-title st-ok">✓ Materiali rientrati (${ok.length})</div>
+<table><thead><tr><th>Articolo</th><th>Marca</th><th>N° Seriale</th><th>Qtà</th><th>Stato</th></tr></thead>
+<tbody>${rigaOk}</tbody></table>`:''}
+${miss.length?`<div class="section-title st-miss">⚠ Materiali mancanti (${miss.length})</div>
+<table><thead><tr><th>Articolo</th><th>Marca</th><th>N° Seriale</th><th>Qtà</th><th>Stato</th></tr></thead>
+<tbody>${rigaMiss}</tbody></table>`:''}
+<div class="firma">
+  <div class="firma-box">Firma responsabile verifica<br><br><br>${tecnico}</div>
+  <div class="firma-box">Firma responsabile magazzino<br><br><br>___________________</div>
+</div>
+<div class="footer"><span>AV Manager · Report verifica rientro materiali</span><span>${l.nome} · ${now}</span></div>
+</div></body></html>`;
+
+  // Aggiorna stato lavoro su Firebase
+  try {
+    await updateDoc(doc(db,'lavori_preparati',l.id),{
+      rientroCompletato: allOk,
+      rientroData: new Date().toISOString(),
+      rientroTecnico: tecnico,
+      articoliRientro: smArticoli.map(a=>({...a}))
+    });
+  } catch(e){ console.warn(e); }
+
+  const w=window.open('','_blank');
+  w.document.write(html); w.document.close();
+  setTimeout(()=>{w.focus();w.print();},400);
+  window.closeMod('mSmarca');
+  toast('✓ Report generato!');
+};
+
+// Chiudi camera alla chiusura modal smarca
+const _smOrigClose = window.closeMod;
+window.closeMod = id => {
+  if(id==='mSmarca') smStopCamera();
+  _smOrigClose(id);
+};
 
 // ═══════════════════════════════════════════════════
 // QR REGISTRAZIONE
