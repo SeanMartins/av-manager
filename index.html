@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 :root {
   --bg: #0a0a0f;
@@ -751,35 +752,21 @@ textarea { resize: vertical; min-height: 72px; }
 </div>
 
 <script>
+// ─── SUPABASE CONFIG ──────────────────────────────────────
+// ⚠️  SOSTITUISCI CON I TUOI VALORI DA SUPABASE DASHBOARD
+// Settings → API → Project URL e anon public key
+const SUPABASE_URL = 'https://INSERISCI-IL-TUO-PROJECT-URL.supabase.co';
+const SUPABASE_KEY = 'INSERISCI-LA-TUA-ANON-KEY';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // ─── STATE ───────────────────────────────────────────────
 let currentUser = null;
 let punchedIn = false;
 let punchStart = null;
-
-const LOCATIONS = [
-  {id:1,nome:"Palazzo delle Stelline",indirizzo:"C.so Magenta 61, Milano",tipo:"Hotel / Congress center",tag:["WiFi","Trifase","Montacarichi"],note:"Soffitti bassi in sala A (3.2m). Ottima acustica in sala B. Accesso camion da via laterale fino 19:00.",foto:3},
-  {id:2,nome:"Villa Borromeo d'Adda",indirizzo:"Via Borromeo 1, Arcore (MB)",tipo:"Villa / Residenza storica",tag:["Buio totale","Accesso camion"],note:"Generatore obbligatorio per potenze >15kW. Interferenze RF nella sala est. Pavimento originale 1700: vietato forare.",foto:5},
-  {id:3,nome:"Superstudio Più",indirizzo:"Via Tortona 27, Milano",tipo:"Spazio industriale",tag:["Trifase","Generatore","Accesso camion"],note:"Altezza 8m. Griglia rigging disponibile. WiFi centrale spesso saturo.",foto:2},
-  {id:4,nome:"Auditorium Parco della Musica",indirizzo:"Viale De Coubertin, Roma",tipo:"Teatro / Auditorium",tag:["WiFi","Trifase","Buio totale"],note:"Sala Santa Cecilia: acustica eccezionale. Coordinamento necessario con tecnici interni.",foto:2},
-];
-
-const MAGAZZINO = [
-  {id:"TS001",cat:"traduzione",nome:"Bosch LBB 3422 ricevitore IR",marca:"Bosch",seriale:"SN-TS001",qty:24,stato:"ok"},
-  {id:"TS002",cat:"traduzione",nome:"Audipack Silent 9300 cabina regia",marca:"Audipack",seriale:"SN-TS002",qty:2,stato:"ok"},
-  {id:"TS003",cat:"traduzione",nome:"Bosch DCN-IDEQ centralina",marca:"Bosch",seriale:"SN-TS003",qty:1,stato:"out"},
-  {id:"TS004",cat:"traduzione",nome:"Sennheiser HME 26 cuffie",marca:"Sennheiser",seriale:"SN-TS004",qty:8,stato:"ok"},
-  {id:"LW001",cat:"ledwall",nome:"Absen Acclaim 3.9 Pro modulo LED",marca:"Absen",seriale:"SN-LW001",qty:48,stato:"ok"},
-  {id:"LW002",cat:"ledwall",nome:"Novastar VX6s processore video",marca:"Novastar",seriale:"SN-LW002",qty:2,stato:"ok"},
-  {id:"LW003",cat:"ledwall",nome:"Absen cabinet alluminio 500×500",marca:"Absen",seriale:"SN-LW003",qty:12,stato:"ok"},
-  {id:"LW004",cat:"ledwall",nome:"Meanwell alimentatore 5V/60A",marca:"Meanwell",seriale:"SN-LW004",qty:12,stato:"ok"},
-];
-
-const TEAM_MEMBERS = [
-  {nome:"Marco Rossi",ruolo:"Tecnico AV",email:"m.rossi@azienda.it",tel:"+39 333 111 2222",av:"MR",avc:"av-1"},
-  {nome:"Laura Bianchi",ruolo:"Interprete",email:"l.bianchi@azienda.it",tel:"+39 347 222 3333",av:"LB",avc:"av-2"},
-  {nome:"Giulia Ferrari",ruolo:"Operatore LED",email:"g.ferrari@azienda.it",tel:"+39 338 333 4444",av:"GF",avc:"av-3"},
-  {nome:"Davide Conti",ruolo:"Project Manager",email:"d.conti@azienda.it",tel:"+39 329 444 5555",av:"DC",avc:"av-4"},
-];
+let activePresenzaId = null;
+let locDb = [];
+let magDb = [];
+let teamDb = [];
 
 const CHECKLIST = [
   {cat:"Alimentazione",items:["Potenza disponibile verificata","Quadri elettrici mappati","Presenza trifase verificata","Generatore disponibile"]},
@@ -789,13 +776,12 @@ const CHECKLIST = [
 ];
 
 // ─── INIT ─────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   const saved = localStorage.getItem('av_user');
   if (saved) {
     currentUser = JSON.parse(saved);
     startApp();
   }
-  // Install prompt
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     window._installPrompt = e;
@@ -803,12 +789,67 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   updateClock();
   setInterval(updateClock, 1000);
-  renderLocations();
-  renderMagazzino();
-  renderTeam();
-  renderChecklist();
   updateDate();
+  renderChecklist();
+
+  // Carica dati da Supabase
+  await Promise.all([loadLocations(), loadMagazzino(), loadTeam()]);
 });
+
+// ─── SUPABASE HELPERS ─────────────────────────────────────
+function showToast(msg, type='ok') {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id='toast';
+    t.style.cssText='position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:20px;font-size:13px;font-weight:500;z-index:999;white-space:nowrap;transition:opacity 0.3s';
+    document.body.appendChild(t);
+  }
+  t.style.background = type==='ok' ? 'var(--green)' : type==='err' ? 'var(--red)' : 'var(--accent)';
+  t.style.color = '#fff';
+  t.textContent = msg;
+  t.style.opacity='1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.style.opacity='0', 2500);
+}
+
+async function loadLocations() {
+  const { data, error } = await sb.from('locations').select('*').order('created_at', {ascending:false});
+  if (error) { console.warn('Location error:', error); return; }
+  locDb = (data||[]).map(l => ({...l, tag: l.tags||[], foto: l.foto_count||0}));
+  renderLocations();
+}
+
+async function loadMagazzino() {
+  const { data, error } = await sb.from('magazzino').select('*').order('id');
+  if (error) { console.warn('Magazzino error:', error); return; }
+  magDb = (data||[]).map(m => ({...m, cat: m.categoria, qty: m.quantita}));
+  renderMagazzino();
+}
+
+async function loadTeam() {
+  const { data, error } = await sb.from('dipendenti').select('*').order('created_at');
+  if (error) { console.warn('Team error:', error); return; }
+  const avColors = ['av-1','av-2','av-3','av-4'];
+  teamDb = (data||[]).map((m,i) => ({
+    ...m,
+    av: (m.nome[0]+(m.cognome||'?')[0]).toUpperCase(),
+    avc: avColors[i % avColors.length],
+    tel: m.telefono,
+  }));
+  renderTeam();
+  document.getElementById('teamCount').textContent = teamDb.length;
+}
+
+// Realtime: aggiorna la lista team automaticamente quando un collega si registra
+function setupRealtime() {
+  sb.channel('dipendenti-changes')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dipendenti' }, () => {
+      loadTeam();
+      showToast('👤 Nuovo collega registrato!', 'info');
+    })
+    .subscribe();
+}
 
 // ─── CLOCK ────────────────────────────────────────────────
 function updateClock() {
@@ -843,15 +884,45 @@ function togglePrivacy() {
   const box = document.getElementById('privacyBox');
   box.classList.toggle('checked', privacyChecked);
 }
-function completeReg() {
+async function completeReg() {
   const nome = document.getElementById('regNome').value.trim();
   const cognome = document.getElementById('regCognome').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const tel = document.getElementById('regTel').value.trim();
   if (!nome || !cognome || !email) { alert('Compila nome, cognome ed email'); return; }
   if (!privacyChecked) { alert('Accetta il consenso privacy'); return; }
-  currentUser = { nome, cognome, email, tel, ruolo: selectedRole || 'Tecnico AV' };
+
+  // Mostra loader sul bottone
+  const btn = document.querySelector('#regStep1 .btn-primary');
+  const origText = btn.textContent;
+  btn.textContent = 'Salvataggio...'; btn.disabled = true;
+
+  const payload = { nome, cognome, email, telefono: tel, ruolo: selectedRole || 'Tecnico AV' };
+
+  const { data, error } = await sb.from('dipendenti')
+    .insert([payload])
+    .select()
+    .single();
+
+  btn.textContent = origText; btn.disabled = false;
+
+  if (error) {
+    if (error.code === '23505') {
+      // Email già registrata — carica il profilo esistente
+      const { data: existing } = await sb.from('dipendenti').select('*').eq('email', email).single();
+      currentUser = { nome: existing.nome, cognome: existing.cognome, email: existing.email, tel: existing.telefono, ruolo: existing.ruolo, db_id: existing.id };
+    } else {
+      // Errore reale — mostra dettaglio
+      alert(`Errore Supabase: ${error.message}\nCodice: ${error.code}\n\nVerifica che il file fix_rls.sql sia stato eseguito correttamente.`);
+      console.error('Supabase error:', error);
+      return;
+    }
+  } else {
+    currentUser = { nome, cognome, email, tel, ruolo: selectedRole||'Tecnico AV', db_id: data?.id };
+  }
+
   localStorage.setItem('av_user', JSON.stringify(currentUser));
+  await loadTeam();
   startApp();
 }
 function quickLogin() {
@@ -870,10 +941,11 @@ function startApp() {
   document.getElementById('profileRole').textContent = currentUser.ruolo;
   document.getElementById('profileEmail').textContent = currentUser.email;
   document.getElementById('profileTel').textContent = currentUser.tel || '—';
-  // Show install banner if on mobile
   if (/iPhone|iPad|iPod|Android/.test(navigator.userAgent) && !window.matchMedia('(display-mode: standalone)').matches) {
     document.getElementById('installBanner').style.display = 'flex';
   }
+  // Avvia aggiornamenti in tempo reale
+  setupRealtime();
 }
 function logout() {
   localStorage.removeItem('av_user');
@@ -892,23 +964,45 @@ function showPage(name) {
 }
 
 // ─── PUNCH ────────────────────────────────────────────────
-function punch() {
+async function punch() {
   const btn = document.getElementById('punchBtn');
   const status = document.getElementById('punchStatus');
   const now = new Date();
   const pad = n => String(n).padStart(2,'0');
   const t = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
   if (!punchedIn) {
     punchedIn = true; punchStart = Date.now();
     btn.className = 'punch-btn punch-btn-out';
     btn.textContent = '⏹ Timbra uscita';
     status.textContent = `Entrata timbrata alle ${t}`;
+    // Salva entrata su Supabase
+    if (currentUser?.db_id) {
+      const { data } = await sb.from('presenze').insert([{
+        dipendente_id: currentUser.db_id,
+        entrata: now.toISOString(),
+        tipo: 'sede'
+      }]).select().single();
+      if (data) activePresenzaId = data.id;
+    }
+    showToast('✓ Entrata timbrata');
   } else {
-    punchedIn = false; punchStart = null;
+    punchedIn = false;
     btn.className = 'punch-btn punch-btn-in';
     btn.textContent = '⏱ Timbra entrata';
     status.textContent = `Uscita timbrata alle ${t}`;
+    // Salva uscita su Supabase
+    if (activePresenzaId) {
+      const diff = (Date.now() - punchStart) / 3600000;
+      await sb.from('presenze').update({
+        uscita: now.toISOString(),
+        ore_lavorate: Math.round(diff * 100) / 100
+      }).eq('id', activePresenzaId);
+      activePresenzaId = null;
+    }
     document.getElementById('oreLavorate').textContent = '0h';
+    punchStart = null;
+    showToast('✓ Uscita timbrata');
   }
 }
 
@@ -1004,13 +1098,22 @@ function addMapPin(e, id) {
 }
 function openNewLocation() { openModal('newLocModal'); }
 function toggleTagChip(el) { el.classList.toggle('active'); }
-function salvaLocation() {
+async function salvaLocation() {
   const nome = document.getElementById('nlNome').value.trim();
   if (!nome) { alert('Inserisci il nome'); return; }
   const tags = Array.from(document.querySelectorAll('#tagChips .chip.active')).map(c=>c.textContent);
-  const newLoc = { id: locDb.length+1, nome, indirizzo: document.getElementById('nlIndirizzo').value, tipo: document.getElementById('nlTipo').value, tag: tags, note: document.getElementById('nlNote').value, foto: 0 };
-  locDb.push(newLoc);
-  renderLocations();
+  const newLoc = {
+    nome,
+    indirizzo: document.getElementById('nlIndirizzo').value,
+    tipo: document.getElementById('nlTipo').value,
+    note: document.getElementById('nlNote').value,
+    tags,
+    created_by: currentUser?.db_id || null
+  };
+  const { error } = await sb.from('locations').insert([newLoc]);
+  if (error) { showToast('Errore salvataggio','err'); return; }
+  showToast('✓ Location salvata');
+  await loadLocations();
   closeModal('newLocModal');
   document.getElementById('nlNome').value='';
   document.getElementById('nlIndirizzo').value='';
@@ -1049,22 +1152,26 @@ function renderMagazzino(filter='') {
 }
 function filterMagazzino() { renderMagazzino(document.getElementById('searchMag').value.toLowerCase()); }
 function openNewArticolo() { openModal('newArtModal'); }
-function salvaArticolo() {
+async function salvaArticolo() {
   const nome = document.getElementById('artNome').value.trim();
   if (!nome) { alert('Inserisci il nome'); return; }
+  const id = 'ART-'+Date.now().toString(36).toUpperCase().slice(-5);
   const newArt = {
-    id: 'ART-'+Date.now().toString(36).toUpperCase().slice(-5),
-    cat: document.getElementById('artCat').value,
-    nome, marca: document.getElementById('artMarca').value,
+    id,
+    categoria: document.getElementById('artCat').value,
+    nome,
+    marca: document.getElementById('artMarca').value,
     seriale: document.getElementById('artSeriale').value,
-    qty: parseInt(document.getElementById('artQty').value)||1,
+    quantita: parseInt(document.getElementById('artQty').value)||1,
     stato: document.getElementById('artStato').value,
   };
-  magDb.push(newArt);
-  renderMagazzino();
+  const { error } = await sb.from('magazzino').insert([newArt]);
+  if (error) { showToast('Errore salvataggio','err'); console.error(error); return; }
+  showToast('✓ Articolo salvato');
+  await loadMagazzino();
   closeModal('newArtModal');
-  showItemQR(newArt.id);
-  ['artNome','artMarca','artSeriale'].forEach(id=>document.getElementById(id).value='');
+  showItemQR(id);
+  ['artNome','artMarca','artSeriale'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('artQty').value='1';
 }
 function showItemQR(id) {
