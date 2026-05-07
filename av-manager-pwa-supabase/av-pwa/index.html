@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AV Manager">
+<meta name="description" content="Gestione eventi AV — presenze, location, magazzino, team">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-startup-image" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>AV Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --bg1: #111118;
+  --bg2: #1a1a24;
+  --bg3: #22222f;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #f0eff8;
+  --text2: #9998b0;
+  --text3: #5c5b72;
+  --accent: #6c63ff;
+  --accent2: #8b84ff;
+  --accent-bg: rgba(108,99,255,0.12);
+  --green: #22c55e;
+  --green-bg: rgba(34,197,94,0.12);
+  --amber: #f59e0b;
+  --amber-bg: rgba(245,158,11,0.12);
+  --red: #ef4444;
+  --red-bg: rgba(239,68,68,0.12);
+  --blue: #3b82f6;
+  --blue-bg: rgba(59,130,246,0.12);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --font: 'DM Sans', sans-serif;
+  --mono: 'DM Mono', monospace;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); }
+
+/* LAYOUT */
+.app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+.topbar {
+  padding: calc(var(--safe-top) + 14px) 20px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+  position: relative; z-index: 10;
+}
+.topbar-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+.topbar-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.avatar-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--accent-bg); border: 1px solid var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600; color: var(--accent2); cursor: pointer;
+}
+
+.content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+.page { display: none; padding: 20px 16px; padding-bottom: calc(80px + var(--safe-bottom)); min-height: 100%; }
+.page.active { display: block; }
+
+/* BOTTOM NAV */
+.bottomnav {
+  display: flex; background: var(--bg1);
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-bottom);
+  position: relative; z-index: 10;
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 10px 4px 8px; cursor: pointer; gap: 4px;
+  transition: opacity 0.15s;
+}
+.nav-item.active .nav-icon { color: var(--accent2); }
+.nav-item.active .nav-label { color: var(--accent2); }
+.nav-icon { font-size: 22px; color: var(--text3); transition: color 0.15s; line-height: 1; }
+.nav-label { font-size: 10px; color: var(--text3); font-weight: 500; letter-spacing: 0.2px; transition: color 0.15s; }
+
+/* CARDS */
+.card {
+  background: var(--bg1); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+}
+.card-sm { padding: 12px; }
+.card-title { font-size: 13px; font-weight: 600; color: var(--text2); letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 12px; }
+
+/* STAT GRID */
+.stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.stat-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 12px;
+}
+.stat-num { font-size: 26px; font-weight: 600; letter-spacing: -1px; color: var(--text); }
+.stat-lbl { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+/* BADGES */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 500; padding: 3px 9px;
+  border-radius: 20px; white-space: nowrap;
+}
+.badge-green { background: var(--green-bg); color: var(--green); }
+.badge-amber { background: var(--amber-bg); color: var(--amber); }
+.badge-red { background: var(--red-bg); color: var(--red); }
+.badge-blue { background: var(--blue-bg); color: var(--blue); }
+.badge-accent { background: var(--accent-bg); color: var(--accent2); }
+
+/* BUTTONS */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 11px 18px; border-radius: var(--radius-sm);
+  font-family: var(--font); font-size: 14px; font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border2); background: var(--bg2);
+  color: var(--text); transition: background 0.15s; -webkit-appearance: none;
+}
+.btn:active { background: var(--bg3); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:active { background: var(--accent2); }
+.btn-full { width: 100%; }
+.btn-sm { padding: 7px 13px; font-size: 12px; }
+.btn-icon { padding: 10px; border-radius: 10px; }
+
+/* INPUTS */
+.input-group { margin-bottom: 12px; }
+.input-label { font-size: 12px; color: var(--text2); margin-bottom: 5px; display: block; font-weight: 500; }
+input[type=text], input[type=email], input[type=tel], input[type=number], input[type=password], select, textarea {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 11px 13px;
+  font-family: var(--font); font-size: 14px; color: var(--text);
+  -webkit-appearance: none; outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+select option { background: var(--bg2); }
+textarea { resize: vertical; min-height: 72px; }
+
+/* DIVIDER */
+.divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+/* LIST ROW */
+.list-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.list-row:last-child { border-bottom: none; padding-bottom: 0; }
+.list-row:first-child { padding-top: 0; }
+
+/* AVATAR */
+.av {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 600;
+}
+.av-1 { background: rgba(108,99,255,0.2); color: var(--accent2); }
+.av-2 { background: rgba(34,197,94,0.15); color: var(--green); }
+.av-3 { background: rgba(245,158,11,0.15); color: var(--amber); }
+.av-4 { background: rgba(59,130,246,0.15); color: var(--blue); }
+
+/* PUNCH BUTTON */
+.punch-wrap { margin-bottom: 20px; }
+.punch-clock {
+  font-size: 48px; font-weight: 300; letter-spacing: -2px;
+  color: var(--text); text-align: center; margin-bottom: 4px;
+  font-variant-numeric: tabular-nums; font-family: var(--mono);
+}
+.punch-date { font-size: 13px; color: var(--text2); text-align: center; margin-bottom: 20px; }
+.punch-btn {
+  width: 100%; padding: 16px; border-radius: var(--radius);
+  font-family: var(--font); font-size: 16px; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.2s; letter-spacing: -0.2px;
+}
+.punch-btn-in { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+.punch-btn-out { background: var(--red-bg); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+.punch-btn:active { transform: scale(0.98); }
+
+/* PROGRESS BAR */
+.progress-bg { background: var(--bg3); border-radius: 4px; height: 4px; margin-top: 8px; }
+.progress-fill { height: 4px; border-radius: 4px; background: var(--accent); transition: width 0.3s; }
+
+/* TAG */
+.tag {
+  display: inline-block; font-size: 11px; padding: 3px 9px;
+  border-radius: 20px; margin: 3px; cursor: pointer;
+  background: var(--bg3); color: var(--text2); border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.tag.active { background: var(--accent-bg); color: var(--accent2); border-color: var(--accent); }
+
+/* UPLOAD ZONE */
+.upload-zone {
+  border: 1px dashed var(--border2); border-radius: var(--radius);
+  padding: 28px 20px; text-align: center; cursor: pointer;
+  background: var(--bg2); transition: border-color 0.15s;
+}
+.upload-zone:hover { border-color: var(--accent); }
+.upload-zone-icon { font-size: 28px; margin-bottom: 8px; }
+.upload-zone-text { font-size: 13px; color: var(--text2); }
+.upload-zone-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+/* PHOTO GRID */
+.photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.photo-thumb {
+  aspect-ratio: 1; border-radius: var(--radius-sm);
+  background: var(--bg3); overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; color: var(--text3);
+}
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+/* QR DISPLAY */
+.qr-wrap { display: flex; justify-content: center; padding: 16px; }
+.qr-inner {
+  background: #fff; border-radius: var(--radius-sm);
+  padding: 12px; display: inline-block;
+}
+
+/* SECTION HEADER */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.section-title { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+
+/* STEPPER */
+.step-row { display: flex; gap: 8px; margin-bottom: 20px; }
+.step-dot {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600;
+}
+.step-dot.done { background: var(--green-bg); color: var(--green); }
+.step-dot.active { background: var(--accent-bg); color: var(--accent2); border: 1px solid var(--accent); }
+.step-dot.todo { background: var(--bg3); color: var(--text3); }
+.step-line { flex: 1; height: 1px; background: var(--border); margin-top: 14px; }
+
+/* CHECKLIST */
+.check-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.check-row:last-child { border-bottom: none; }
+.check-box {
+  width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+  border: 1px solid var(--border2); background: var(--bg2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s; margin-top: 1px;
+}
+.check-box.checked { background: var(--green); border-color: var(--green); }
+.check-box.checked::after { content: '✓'; font-size: 13px; color: #fff; font-weight: 700; }
+.check-label { font-size: 14px; color: var(--text); line-height: 1.4; flex: 1; cursor: pointer; }
+.check-label.checked { color: var(--text3); text-decoration: line-through; }
+
+/* MAP PIN AREA */
+.pin-area {
+  background: var(--bg2); border-radius: var(--radius);
+  min-height: 180px; position: relative; cursor: crosshair;
+  border: 1px dashed var(--border2); overflow: hidden;
+}
+.pin-area-hint {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; color: var(--text3); white-space: nowrap; pointer-events: none;
+}
+.map-pin {
+  position: absolute; width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; transform: translate(-50%, -50%);
+  cursor: pointer; border: 2px solid rgba(255,255,255,0.2);
+}
+
+/* MODAL */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  align-items: flex-end; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-sheet {
+  background: var(--bg1); border-radius: 20px 20px 0 0;
+  border: 1px solid var(--border); padding: 20px 20px calc(20px + var(--safe-bottom));
+  width: 100%; max-height: 85vh; overflow-y: auto;
+  animation: slideUp 0.25s ease;
+}
+.modal-handle { width: 36px; height: 4px; background: var(--bg3); border-radius: 2px; margin: 0 auto 16px; }
+@keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* WELCOME / REGISTER SCREEN */
+.register-screen {
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 24px calc(40px + var(--safe-bottom));
+  background: var(--bg);
+}
+.register-logo {
+  width: 72px; height: 72px; border-radius: 20px;
+  background: var(--accent-bg); border: 1px solid var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; margin-bottom: 24px;
+}
+.register-title { font-size: 28px; font-weight: 600; letter-spacing: -1px; text-align: center; margin-bottom: 8px; }
+.register-sub { font-size: 15px; color: var(--text2); text-align: center; margin-bottom: 36px; line-height: 1.5; }
+
+/* CHIP SELECT */
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.chip {
+  padding: 7px 14px; border-radius: 20px; font-size: 13px;
+  border: 1px solid var(--border2); background: var(--bg2);
+  color: var(--text2); cursor: pointer; font-family: var(--font);
+  transition: all 0.15s;
+}
+.chip.active { background: var(--accent-bg); color: var(--accent2); border-color: var(--accent); }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 0; }
+
+/* ANIMATIONS */
+.fade-in { animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* INSTALL BANNER */
+.install-banner {
+  margin: 0 16px 12px; padding: 12px 14px;
+  background: var(--accent-bg); border: 1px solid var(--accent);
+  border-radius: var(--radius); display: flex; align-items: center; gap: 12px;
+}
+.install-banner-text { flex: 1; font-size: 13px; color: var(--accent2); }
+.install-banner-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+/* EMPTY STATE */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text3); }
+.empty-icon { font-size: 36px; margin-bottom: 12px; }
+.empty-text { font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- REGISTER SCREEN -->
+<div id="registerScreen" class="register-screen">
+  <div class="register-logo">🎛️</div>
+  <div class="register-title">AV Manager</div>
+  <div class="register-sub">Gestione eventi audio-video.<br>Entra nel tuo account o registrati.</div>
+
+  <div style="width:100%;max-width:360px">
+    <div id="regStep1">
+      <div class="input-group">
+        <label class="input-label">Nome</label>
+        <input type="text" id="regNome" placeholder="Mario">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Cognome</label>
+        <input type="text" id="regCognome" placeholder="Rossi">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Email</label>
+        <input type="email" id="regEmail" placeholder="mario@azienda.it">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Telefono</label>
+        <input type="tel" id="regTel" placeholder="+39 333 000 0000">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Ruolo</label>
+        <div class="chip-row" id="roleChips">
+          <span class="chip" onclick="selectChip(this)">Tecnico AV</span>
+          <span class="chip" onclick="selectChip(this)">Operatore LED</span>
+          <span class="chip" onclick="selectChip(this)">Interprete</span>
+          <span class="chip" onclick="selectChip(this)">Project Manager</span>
+          <span class="chip" onclick="selectChip(this)">Magazziniere</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:20px">
+        <div class="check-box" id="privacyBox" onclick="togglePrivacy()"></div>
+        <span style="font-size:12px;color:var(--text2);line-height:1.5;cursor:pointer" onclick="togglePrivacy()">
+          Acconsento al trattamento dei dati personali ai sensi del GDPR per uso interno aziendale.
+        </span>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="completeReg()">Inizia →</button>
+      <div style="text-align:center;margin-top:16px">
+        <span style="font-size:13px;color:var(--text3)">Hai già un account? </span>
+        <span style="font-size:13px;color:var(--accent2);cursor:pointer" onclick="quickLogin()">Accedi</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" class="app" style="display:none">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="pageTitle">Presenze</div>
+      <div class="topbar-sub" id="pageDate"></div>
+    </div>
+    <div class="topbar-right">
+      <div class="avatar-btn" id="userAvatarBtn" onclick="openProfile()">??</div>
+    </div>
+  </div>
+
+  <!-- INSTALL BANNER (shown first time) -->
+  <div class="install-banner" id="installBanner" style="display:none;margin-top:8px">
+    <span style="font-size:20px">📲</span>
+    <div>
+      <div class="install-banner-text">Installa l'app</div>
+      <div class="install-banner-sub">Premi <strong>Condividi → Aggiungi a Home</strong> su iPhone, o il banner in basso su Android</div>
+    </div>
+    <span style="font-size:18px;cursor:pointer;color:var(--text3)" onclick="document.getElementById('installBanner').style.display='none'">✕</span>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- PAGE: PRESENZE -->
+    <div class="page active fade-in" id="page-presenze">
+      <div class="punch-wrap">
+        <div class="punch-clock" id="clock">--:--:--</div>
+        <div class="punch-date" id="punchStatus">Non timbrato</div>
+        <button class="punch-btn punch-btn-in" id="punchBtn" onclick="punch()">
+          ⏱ Timbra entrata
+        </button>
+      </div>
+
+      <div class="stat-grid stat-grid-3">
+        <div class="stat-card">
+          <div class="stat-num" id="oreLavorate">0h</div>
+          <div class="stat-lbl">Ore oggi</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">4</div>
+          <div class="stat-lbl">Presenti</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">2</div>
+          <div class="stat-lbl">Smart W.</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">Team oggi</div>
+        <span class="badge badge-green">● Live</span>
+      </div>
+      <div class="card">
+        <div class="list-row">
+          <div class="av av-1">MR</div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:500">Marco Rossi</div><div style="font-size:12px;color:var(--text2)">Entrata 08:42 · Tecnico AV</div></div>
+          <span class="badge badge-green">In sede</span>
+        </div>
+        <div class="list-row">
+          <div class="av av-2">LB</div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:500">Laura Bianchi</div><div style="font-size:12px;color:var(--text2)">Entrata 09:05 · Interprete</div></div>
+          <span class="badge badge-blue">Smart W.</span>
+        </div>
+        <div class="list-row">
+          <div class="av av-3">GF</div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:500">Giulia Ferrari</div><div style="font-size:12px;color:var(--text2)">Uscita 13:10 · Operatore LED</div></div>
+          <span class="badge badge-amber">Pausa</span>
+        </div>
+        <div class="list-row">
+          <div class="av av-4">DC</div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:500">Davide Conti</div><div style="font-size:12px;color:var(--text2)">Project Manager</div></div>
+          <span class="badge badge-accent">Assente</span>
+        </div>
+      </div>
+
+      <div class="section-header" style="margin-top:4px">
+        <div class="section-title">Ticket aperti</div>
+        <span class="badge badge-red">3</span>
+      </div>
+      <div class="card">
+        <div class="list-row">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0"></div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:500">#041 — VPN non funziona</div><div style="font-size:11px;color:var(--text2)">Marco Rossi · 09:15</div></div>
+          <span class="badge badge-red">Alta</span>
+        </div>
+        <div class="list-row">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0"></div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:500">#042 — Stampante offline</div><div style="font-size:11px;color:var(--text2)">Laura Bianchi · 10:30</div></div>
+          <span class="badge badge-amber">Media</span>
+        </div>
+        <div class="list-row">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0"></div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:500">#043 — Aggiornamento Office</div><div style="font-size:11px;color:var(--text2)">D. Conti · 11:00</div></div>
+          <span class="badge badge-green">Bassa</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: LOCATION -->
+    <div class="page fade-in" id="page-location">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-num">4</div><div class="stat-lbl">Location mappate</div></div>
+        <div class="stat-card"><div class="stat-num">12</div><div class="stat-lbl">Foto caricate</div></div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">Le tue location</div>
+        <button class="btn btn-sm btn-primary" onclick="openNewLocation()">+ Nuova</button>
+      </div>
+
+      <div id="locationList"></div>
+    </div>
+
+    <!-- PAGE: MAGAZZINO -->
+    <div class="page fade-in" id="page-magazzino">
+      <div class="stat-grid stat-grid-3">
+        <div class="stat-card"><div class="stat-num">18</div><div class="stat-lbl">Articoli</div></div>
+        <div class="stat-card"><div class="stat-num">15</div><div class="stat-lbl">Disponibili</div></div>
+        <div class="stat-card"><div class="stat-num">3</div><div class="stat-lbl">In uso</div></div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">Inventario</div>
+        <button class="btn btn-sm btn-primary" onclick="openNewArticolo()">+ Articolo</button>
+      </div>
+
+      <input type="text" placeholder="🔍  Cerca articolo..." id="searchMag" oninput="filterMagazzino()" style="margin-bottom:14px">
+
+      <div id="magazzinoList"></div>
+
+      <div class="section-header" style="margin-top:8px">
+        <div class="section-title">Prepara kit evento</div>
+      </div>
+      <div class="card">
+        <div class="input-group">
+          <label class="input-label">Nome evento</label>
+          <input type="text" id="kitEvento" placeholder="Convegno Milano 15/06">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Lingue traduzione</label>
+          <select id="kitLingue">
+            <option value="0">Solo italiano</option>
+            <option value="2">2 lingue</option>
+            <option value="3">3 lingue</option>
+            <option value="4">4+ lingue</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label class="input-label">LED wall</label>
+          <select id="kitLed">
+            <option value="">Nessun LED wall</option>
+            <option value="small">Piccolo (fino 6 mq)</option>
+            <option value="medium">Medio (6–20 mq)</option>
+            <option value="large">Grande (20+ mq)</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="generaKit()">🎛 Genera lista materiali</button>
+      </div>
+      <div id="kitResult" style="display:none"></div>
+    </div>
+
+    <!-- PAGE: TEAM / REGISTRAZIONE -->
+    <div class="page fade-in" id="page-team">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-num" id="teamCount">4</div><div class="stat-lbl">Registrati</div></div>
+        <div class="stat-card"><div class="stat-num">2</div><div class="stat-lbl">In attesa</div></div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">QR registrazione</div>
+      </div>
+      <div class="card">
+        <div class="input-group">
+          <label class="input-label">Ruolo per il nuovo dipendente</label>
+          <select id="qrRole">
+            <option>Tecnico AV</option>
+            <option>Operatore LED</option>
+            <option>Interprete</option>
+            <option>Project Manager</option>
+            <option>Magazziniere</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Scadenza link</label>
+          <select id="qrExp">
+            <option value="24">24 ore</option>
+            <option value="72">72 ore</option>
+            <option value="168">7 giorni</option>
+            <option value="0">Nessuna</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="generaQRReg()">📲 Genera QR di registrazione</button>
+        <div id="qrRegOutput" style="display:none;margin-top:16px">
+          <div class="qr-wrap"><div class="qr-inner" id="qrRegCanvas"></div></div>
+          <p style="text-align:center;font-size:12px;color:var(--text2);margin-top:8px" id="qrRegMeta"></p>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-full" onclick="stampaQR()">🖨 Stampa</button>
+            <button class="btn btn-full" onclick="condividiQR()">📤 Condividi</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">Dipendenti</div>
+      </div>
+      <div class="card" id="teamList"></div>
+
+      <div class="section-header" style="margin-top:8px">
+        <div class="section-title">Checklist sopralluogo</div>
+      </div>
+      <div class="card">
+        <div id="checklistContainer"></div>
+        <div class="progress-bg"><div class="progress-fill" id="checkProgress" style="width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px">
+          <span style="font-size:12px;color:var(--text2)">Completamento</span>
+          <span style="font-size:12px;color:var(--text);font-weight:600" id="checkPct">0%</span>
+        </div>
+        <button class="btn btn-full" style="margin-top:12px" onclick="resetChecklist()">↺ Reset checklist</button>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottomnav">
+    <div class="nav-item active" id="nav-presenze" onclick="showPage('presenze')">
+      <div class="nav-icon">⏱</div>
+      <div class="nav-label">Presenze</div>
+    </div>
+    <div class="nav-item" id="nav-location" onclick="showPage('location')">
+      <div class="nav-icon">📍</div>
+      <div class="nav-label">Location</div>
+    </div>
+    <div class="nav-item" id="nav-magazzino" onclick="showPage('magazzino')">
+      <div class="nav-icon">📦</div>
+      <div class="nav-label">Magazzino</div>
+    </div>
+    <div class="nav-item" id="nav-team" onclick="showPage('team')">
+      <div class="nav-icon">👥</div>
+      <div class="nav-label">Team</div>
+    </div>
+  </div>
+
+</div><!-- /mainApp -->
+
+<!-- MODAL: LOCATION DETAIL -->
+<div class="modal-overlay" id="locModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div id="locModalContent"></div>
+  </div>
+</div>
+
+<!-- MODAL: NEW LOCATION -->
+<div class="modal-overlay" id="newLocModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="section-title" style="margin-bottom:16px">Nuova location</div>
+    <div class="input-group"><label class="input-label">Nome location</label><input type="text" id="nlNome" placeholder="Villa Borromeo, Milano"></div>
+    <div class="input-group"><label class="input-label">Indirizzo</label><input type="text" id="nlIndirizzo" placeholder="Via Roma 1, Milano"></div>
+    <div class="input-group"><label class="input-label">Tipo venue</label>
+      <select id="nlTipo">
+        <option>Teatro / Auditorium</option><option>Hotel / Congress center</option>
+        <option>Villa / Residenza storica</option><option>Spazio industriale</option><option>All'aperto</option>
+      </select>
+    </div>
+    <div class="input-group"><label class="input-label">Note tecniche</label><textarea id="nlNote" placeholder="Corrente disponibile, acustica, accesso mezzi..."></textarea></div>
+    <div class="input-group">
+      <label class="input-label">Tag rapidi</label>
+      <div class="chip-row" id="tagChips">
+        <span class="chip" onclick="toggleTagChip(this)">WiFi</span>
+        <span class="chip" onclick="toggleTagChip(this)">Generatore</span>
+        <span class="chip" onclick="toggleTagChip(this)">Trifase</span>
+        <span class="chip" onclick="toggleTagChip(this)">Buio totale</span>
+        <span class="chip" onclick="toggleTagChip(this)">Accesso camion</span>
+        <span class="chip" onclick="toggleTagChip(this)">Interferenze RF</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-full" onclick="closeModal('newLocModal')">Annulla</button>
+      <button class="btn btn-primary btn-full" onclick="salvaLocation()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NEW ARTICOLO -->
+<div class="modal-overlay" id="newArtModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="section-title" style="margin-bottom:16px">Aggiungi articolo</div>
+    <div class="input-group"><label class="input-label">Categoria</label>
+      <select id="artCat">
+        <option value="traduzione">Traduzione simultanea</option>
+        <option value="ledwall">LED wall</option>
+      </select>
+    </div>
+    <div class="input-group"><label class="input-label">Nome articolo</label><input type="text" id="artNome" placeholder="Bosch LBB 3422 ricevitore IR"></div>
+    <div class="input-group"><label class="input-label">Marca / modello</label><input type="text" id="artMarca" placeholder="Bosch"></div>
+    <div class="input-group"><label class="input-label">N° seriale</label><input type="text" id="artSeriale" placeholder="SN-001"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="input-group"><label class="input-label">Quantità</label><input type="number" id="artQty" value="1" min="1"></div>
+      <div class="input-group"><label class="input-label">Stato</label>
+        <select id="artStato"><option value="ok">Disponibile</option><option value="out">In uso</option><option value="maint">Manutenzione</option></select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-full" onclick="closeModal('newArtModal')">Annulla</button>
+      <button class="btn btn-primary btn-full" onclick="salvaArticolo()">Salva + QR</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: QR ARTICOLO -->
+<div class="modal-overlay" id="qrArtModal">
+  <div class="modal-sheet" style="text-align:center">
+    <div class="modal-handle"></div>
+    <div class="section-title" style="margin-bottom:4px">QR articolo</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px" id="qrArtLabel"></div>
+    <div class="qr-wrap"><div class="qr-inner" id="qrArtCanvas"></div></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-full" onclick="stampaQRArt()">🖨 Stampa etichetta</button>
+      <button class="btn btn-full" onclick="closeModal('qrArtModal')">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PROFILO -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+      <div class="av av-1" style="width:52px;height:52px;font-size:18px" id="profileAv">??</div>
+      <div>
+        <div style="font-size:17px;font-weight:600" id="profileName">—</div>
+        <div style="font-size:13px;color:var(--text2)" id="profileRole">—</div>
+      </div>
+    </div>
+    <div class="card card-sm">
+      <div class="list-row" style="padding:8px 0">
+        <span style="font-size:13px;color:var(--text2);width:80px">Email</span>
+        <span style="font-size:13px" id="profileEmail">—</span>
+      </div>
+      <div class="list-row" style="padding:8px 0">
+        <span style="font-size:13px;color:var(--text2);width:80px">Telefono</span>
+        <span style="font-size:13px" id="profileTel">—</span>
+      </div>
+    </div>
+    <button class="btn btn-full" style="margin-top:8px;color:var(--red);border-color:var(--red-bg)" onclick="logout()">Esci dall'account</button>
+    <button class="btn btn-full" style="margin-top:8px" onclick="closeModal('profileModal')">Chiudi</button>
+  </div>
+</div>
+
+<script>
+// ─── SUPABASE CONFIG ──────────────────────────────────────
+// ⚠️  SOSTITUISCI CON I TUOI VALORI DA SUPABASE DASHBOARD
+// Settings → API → Project URL e anon public key
+const SUPABASE_URL = https://ykhzqlkdvrximwxesgna.supabase.co/rest/v1/;
+const SUPABASE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlraHpxbGtkdnJ4aW13eGVzZ25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMzUzMjMsImV4cCI6MjA5MzcxMTMyM30.ZV8bCq8v9jiomeOmt3fLdxZ0lAmdJPPqSf-CYp8wQBQ;
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── STATE ───────────────────────────────────────────────
+let currentUser = null;
+let punchedIn = false;
+let punchStart = null;
+let activePresenzaId = null;
+let locDb = [];
+let magDb = [];
+let teamDb = [];
+
+const CHECKLIST = [
+  {cat:"Alimentazione",items:["Potenza disponibile verificata","Quadri elettrici mappati","Presenza trifase verificata","Generatore disponibile"]},
+  {cat:"Audio",items:["Acustica sala valutata","Fonti rumore rilevate","Interferenze RF scansionate","Posizione PA individuata"]},
+  {cat:"Video / Luci",items:["Altezza soffitto misurata","Punti rigging verificati","Oscuramento luce possibile","Posizione regia individuata"]},
+  {cat:"Logistica",items:["Accesso mezzi pesanti","Orario accesso confermato","Referente tecnico identificato","Planimetria ottenuta"]},
+];
+
+// ─── INIT ─────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  const saved = localStorage.getItem('av_user');
+  if (saved) {
+    currentUser = JSON.parse(saved);
+    startApp();
+  }
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    window._installPrompt = e;
+    document.getElementById('installBanner').style.display = 'flex';
+  });
+  updateClock();
+  setInterval(updateClock, 1000);
+  updateDate();
+  renderChecklist();
+
+  // Carica dati da Supabase
+  await Promise.all([loadLocations(), loadMagazzino(), loadTeam()]);
+});
+
+// ─── SUPABASE HELPERS ─────────────────────────────────────
+function showToast(msg, type='ok') {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id='toast';
+    t.style.cssText='position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:20px;font-size:13px;font-weight:500;z-index:999;white-space:nowrap;transition:opacity 0.3s';
+    document.body.appendChild(t);
+  }
+  t.style.background = type==='ok' ? 'var(--green)' : type==='err' ? 'var(--red)' : 'var(--accent)';
+  t.style.color = '#fff';
+  t.textContent = msg;
+  t.style.opacity='1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.style.opacity='0', 2500);
+}
+
+async function loadLocations() {
+  const { data, error } = await sb.from('locations').select('*').order('created_at', {ascending:false});
+  if (error) { console.warn('Location error:', error); return; }
+  locDb = (data||[]).map(l => ({...l, tag: l.tags||[], foto: l.foto_count||0}));
+  renderLocations();
+}
+
+async function loadMagazzino() {
+  const { data, error } = await sb.from('magazzino').select('*').order('id');
+  if (error) { console.warn('Magazzino error:', error); return; }
+  magDb = (data||[]).map(m => ({...m, cat: m.categoria, qty: m.quantita}));
+  renderMagazzino();
+}
+
+async function loadTeam() {
+  const { data, error } = await sb.from('dipendenti').select('*').order('created_at');
+  if (error) { console.warn('Team error:', error); return; }
+  const avColors = ['av-1','av-2','av-3','av-4'];
+  teamDb = (data||[]).map((m,i) => ({
+    ...m,
+    av: (m.nome[0]+(m.cognome||'?')[0]).toUpperCase(),
+    avc: avColors[i % avColors.length],
+    tel: m.telefono,
+  }));
+  renderTeam();
+  document.getElementById('teamCount').textContent = teamDb.length;
+}
+
+// ─── CLOCK ────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('clock').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  if (punchedIn && punchStart) {
+    const diff = Math.floor((Date.now() - punchStart) / 1000);
+    const h = Math.floor(diff/3600);
+    const m = Math.floor((diff%3600)/60);
+    document.getElementById('oreLavorate').textContent = `${h}h ${pad(m)}m`;
+  }
+}
+function updateDate() {
+  const now = new Date();
+  const days = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+  const months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  document.getElementById('pageDate').textContent = `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+// ─── AUTH ─────────────────────────────────────────────────
+let privacyChecked = false;
+let selectedRole = '';
+
+function selectChip(el) {
+  document.querySelectorAll('#roleChips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selectedRole = el.textContent;
+}
+function togglePrivacy() {
+  privacyChecked = !privacyChecked;
+  const box = document.getElementById('privacyBox');
+  box.classList.toggle('checked', privacyChecked);
+}
+async function completeReg() {
+  const nome = document.getElementById('regNome').value.trim();
+  const cognome = document.getElementById('regCognome').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const tel = document.getElementById('regTel').value.trim();
+  if (!nome || !cognome || !email) { alert('Compila nome, cognome ed email'); return; }
+  if (!privacyChecked) { alert('Accetta il consenso privacy'); return; }
+
+  // Salva su Supabase
+  const { data, error } = await sb.from('dipendenti').insert([{
+    nome, cognome, email, telefono: tel, ruolo: selectedRole || 'Tecnico AV'
+  }]).select().single();
+
+  if (error && error.code !== '23505') {
+    // 23505 = email duplicata → già registrato, procedi comunque
+    console.warn('Reg error:', error);
+  }
+
+  currentUser = { nome, cognome, email, tel, ruolo: selectedRole||'Tecnico AV', db_id: data?.id };
+  localStorage.setItem('av_user', JSON.stringify(currentUser));
+  await loadTeam();
+  startApp();
+}
+function quickLogin() {
+  // For demo: just fill mock user
+  currentUser = { nome: 'Demo', cognome: 'User', email: 'demo@av.it', tel: '+39 000 000 0000', ruolo: 'Tecnico AV' };
+  localStorage.setItem('av_user', JSON.stringify(currentUser));
+  startApp();
+}
+function startApp() {
+  document.getElementById('registerScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+  const initials = (currentUser.nome[0] + currentUser.cognome[0]).toUpperCase();
+  document.getElementById('userAvatarBtn').textContent = initials;
+  document.getElementById('profileAv').textContent = initials;
+  document.getElementById('profileName').textContent = `${currentUser.nome} ${currentUser.cognome}`;
+  document.getElementById('profileRole').textContent = currentUser.ruolo;
+  document.getElementById('profileEmail').textContent = currentUser.email;
+  document.getElementById('profileTel').textContent = currentUser.tel || '—';
+  // Show install banner if on mobile
+  if (/iPhone|iPad|iPod|Android/.test(navigator.userAgent) && !window.matchMedia('(display-mode: standalone)').matches) {
+    document.getElementById('installBanner').style.display = 'flex';
+  }
+}
+function logout() {
+  localStorage.removeItem('av_user');
+  location.reload();
+}
+function openProfile() { openModal('profileModal'); }
+
+// ─── NAVIGATION ───────────────────────────────────────────
+const PAGE_TITLES = { presenze:'Presenze', location:'Location', magazzino:'Magazzino', team:'Team & Registro' };
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  document.getElementById(`nav-${name}`).classList.add('active');
+  document.getElementById('pageTitle').textContent = PAGE_TITLES[name];
+}
+
+// ─── PUNCH ────────────────────────────────────────────────
+async function punch() {
+  const btn = document.getElementById('punchBtn');
+  const status = document.getElementById('punchStatus');
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const t = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+  if (!punchedIn) {
+    punchedIn = true; punchStart = Date.now();
+    btn.className = 'punch-btn punch-btn-out';
+    btn.textContent = '⏹ Timbra uscita';
+    status.textContent = `Entrata timbrata alle ${t}`;
+    // Salva entrata su Supabase
+    if (currentUser?.db_id) {
+      const { data } = await sb.from('presenze').insert([{
+        dipendente_id: currentUser.db_id,
+        entrata: now.toISOString(),
+        tipo: 'sede'
+      }]).select().single();
+      if (data) activePresenzaId = data.id;
+    }
+    showToast('✓ Entrata timbrata');
+  } else {
+    punchedIn = false;
+    btn.className = 'punch-btn punch-btn-in';
+    btn.textContent = '⏱ Timbra entrata';
+    status.textContent = `Uscita timbrata alle ${t}`;
+    // Salva uscita su Supabase
+    if (activePresenzaId) {
+      const diff = (Date.now() - punchStart) / 3600000;
+      await sb.from('presenze').update({
+        uscita: now.toISOString(),
+        ore_lavorate: Math.round(diff * 100) / 100
+      }).eq('id', activePresenzaId);
+      activePresenzaId = null;
+    }
+    document.getElementById('oreLavorate').textContent = '0h';
+    punchStart = null;
+    showToast('✓ Uscita timbrata');
+  }
+}
+
+// ─── LOCATIONS ────────────────────────────────────────────
+const locDb = [...LOCATIONS];
+function renderLocations() {
+  const tagColors = {WiFi:'badge-blue',Trifase:'badge-accent',Generatore:'badge-amber','Buio totale':'badge-accent','Accesso camion':'badge-green','Interferenze RF':'badge-red',Montacarichi:'badge-blue'};
+  let html = '';
+  locDb.forEach(l => {
+    html += `<div class="card" onclick="openLocation(${l.id})" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div>
+          <div style="font-size:15px;font-weight:600;margin-bottom:2px">${l.nome}</div>
+          <div style="font-size:12px;color:var(--text2)">📍 ${l.indirizzo}</div>
+        </div>
+        <span class="badge badge-accent" style="flex-shrink:0">${l.tipo.split('/')[0].trim()}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+        ${l.tag.map(t=>`<span class="badge ${tagColors[t]||'badge-blue'}">${t}</span>`).join('')}
+      </div>
+      <div style="display:flex;gap:14px;margin-top:10px">
+        <span style="font-size:12px;color:var(--text2)">📷 ${l.foto} foto</span>
+        <span style="font-size:12px;color:var(--text2)">→ Vedi dettaglio</span>
+      </div>
+    </div>`;
+  });
+  document.getElementById('locationList').innerHTML = html;
+}
+function openLocation(id) {
+  const l = locDb.find(x=>x.id===id);
+  document.getElementById('locModalContent').innerHTML = `
+    <div style="font-size:18px;font-weight:600;margin-bottom:4px">${l.nome}</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">📍 ${l.indirizzo}</div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">Mappa interattiva</div>
+      <div class="pin-area" id="pinArea${l.id}" onclick="addMapPin(event,${l.id})" style="height:160px">
+        <div class="pin-area-hint">Tocca per aggiungere un pin</div>
+      </div>
+      <div style="margin-top:8px">
+        <select id="pinType${l.id}" style="width:auto">
+          <option value="av">🔊 Audio/Video</option>
+          <option value="el">⚡ Elettrico</option>
+          <option value="pr">⚠️ Problema</option>
+          <option value="wi">📶 WiFi</option>
+        </select>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">Note tecniche</div>
+      <div style="font-size:14px;line-height:1.6;color:var(--text)">${l.note}</div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">Foto / Planimetrie</div>
+      <div class="upload-zone" onclick="document.getElementById('locFileUp${l.id}').click()">
+        <div class="upload-zone-icon">📷</div>
+        <div class="upload-zone-text">Carica foto o planimetria</div>
+        <div class="upload-zone-hint">JPG, PNG, PDF</div>
+      </div>
+      <input type="file" id="locFileUp${l.id}" accept="image/*" multiple style="display:none" onchange="handleLocPhotos(event,${l.id})">
+      <div class="photo-grid" id="locPhotos${l.id}">
+        ${Array(l.foto).fill(0).map(()=>`<div class="photo-thumb">📷</div>`).join('')}
+      </div>
+    </div>
+    <button class="btn btn-full" onclick="closeModal('locModal')">Chiudi</button>
+  `;
+  openModal('locModal');
+}
+function handleLocPhotos(e, id) {
+  const grid = document.getElementById(`locPhotos${id}`);
+  Array.from(e.target.files).forEach(f => {
+    const r = new FileReader();
+    r.onload = ev => {
+      const d = document.createElement('div'); d.className='photo-thumb';
+      const img = document.createElement('img'); img.src=ev.target.result;
+      d.appendChild(img); grid.appendChild(d);
+    };
+    r.readAsDataURL(f);
+  });
+}
+const PIN_STYLES = {av:'background:#6c63ff;color:#fff',el:'background:#f59e0b;color:#000',pr:'background:#ef4444;color:#fff',wi:'background:#3b82f6;color:#fff'};
+const PIN_LABELS = {av:'AV',el:'EL',pr:'!!',wi:'WF'};
+function addMapPin(e, id) {
+  const area = document.getElementById(`pinArea${id}`);
+  const rect = area.getBoundingClientRect();
+  const x = Math.round((e.clientX-rect.left)/rect.width*100);
+  const y = Math.round((e.clientY-rect.top)/rect.height*100);
+  const tipo = document.getElementById(`pinType${id}`).value;
+  const pin = document.createElement('div');
+  pin.className='map-pin';
+  pin.style.cssText=`left:${x}%;top:${y}%;${PIN_STYLES[tipo]}`;
+  pin.textContent = PIN_LABELS[tipo];
+  area.appendChild(pin);
+}
+function openNewLocation() { openModal('newLocModal'); }
+function toggleTagChip(el) { el.classList.toggle('active'); }
+async function salvaLocation() {
+  const nome = document.getElementById('nlNome').value.trim();
+  if (!nome) { alert('Inserisci il nome'); return; }
+  const tags = Array.from(document.querySelectorAll('#tagChips .chip.active')).map(c=>c.textContent);
+  const newLoc = {
+    nome,
+    indirizzo: document.getElementById('nlIndirizzo').value,
+    tipo: document.getElementById('nlTipo').value,
+    note: document.getElementById('nlNote').value,
+    tags,
+    created_by: currentUser?.db_id || null
+  };
+  const { error } = await sb.from('locations').insert([newLoc]);
+  if (error) { showToast('Errore salvataggio','err'); return; }
+  showToast('✓ Location salvata');
+  await loadLocations();
+  closeModal('newLocModal');
+  document.getElementById('nlNome').value='';
+  document.getElementById('nlIndirizzo').value='';
+  document.getElementById('nlNote').value='';
+  document.querySelectorAll('#tagChips .chip').forEach(c=>c.classList.remove('active'));
+}
+
+// ─── MAGAZZINO ────────────────────────────────────────────
+const magDb = [...MAGAZZINO];
+const STATO_BADGE = { ok:'badge-green', out:'badge-amber', maint:'badge-red' };
+const STATO_LABEL = { ok:'Disponibile', out:'In uso', maint:'Manutenzione' };
+function renderMagazzino(filter='') {
+  const data = filter ? magDb.filter(i=>i.nome.toLowerCase().includes(filter)||i.marca.toLowerCase().includes(filter)) : magDb;
+  let html = '';
+  ['traduzione','ledwall'].forEach(cat => {
+    const items = data.filter(i=>i.cat===cat);
+    if (!items.length) return;
+    html += `<div style="font-size:12px;font-weight:600;color:var(--text2);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px">${cat==='traduzione'?'🎧 Traduzione simultanea':'🖥 LED wall'}</div>`;
+    html += `<div class="card" style="margin-bottom:14px">`;
+    items.forEach(item => {
+      html += `<div class="list-row">
+        <div style="width:38px;height:38px;border-radius:var(--radius-sm);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;cursor:pointer" onclick="showItemQR('${item.id}')">⊞</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.nome}</div>
+          <div style="font-size:11px;color:var(--text2)">${item.marca} · ${item.seriale}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+          <span style="font-family:var(--mono);font-size:12px;color:var(--text2)">×${item.qty}</span>
+          <span class="badge ${STATO_BADGE[item.stato]}">${STATO_LABEL[item.stato]}</span>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  document.getElementById('magazzinoList').innerHTML = html || '<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Nessun articolo trovato</div></div>';
+}
+function filterMagazzino() { renderMagazzino(document.getElementById('searchMag').value.toLowerCase()); }
+function openNewArticolo() { openModal('newArtModal'); }
+async function salvaArticolo() {
+  const nome = document.getElementById('artNome').value.trim();
+  if (!nome) { alert('Inserisci il nome'); return; }
+  const id = 'ART-'+Date.now().toString(36).toUpperCase().slice(-5);
+  const newArt = {
+    id,
+    categoria: document.getElementById('artCat').value,
+    nome,
+    marca: document.getElementById('artMarca').value,
+    seriale: document.getElementById('artSeriale').value,
+    quantita: parseInt(document.getElementById('artQty').value)||1,
+    stato: document.getElementById('artStato').value,
+  };
+  const { error } = await sb.from('magazzino').insert([newArt]);
+  if (error) { showToast('Errore salvataggio','err'); console.error(error); return; }
+  showToast('✓ Articolo salvato');
+  await loadMagazzino();
+  closeModal('newArtModal');
+  showItemQR(id);
+  ['artNome','artMarca','artSeriale'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('artQty').value='1';
+}
+function showItemQR(id) {
+  const item = magDb.find(i=>i.id===id);
+  document.getElementById('qrArtLabel').textContent = `${item.id} — ${item.nome}`;
+  document.getElementById('qrArtCanvas').innerHTML='';
+  openModal('qrArtModal');
+  setTimeout(()=>{
+    try {
+      new QRCode(document.getElementById('qrArtCanvas'), {
+        text: JSON.stringify({id:item.id,nome:item.nome,seriale:item.seriale}),
+        width:160,height:160,colorDark:'#000',colorLight:'#fff',
+        correctLevel:QRCode.CorrectLevel.M
+      });
+    }catch(e){}
+  },100);
+}
+function stampaQRArt() {
+  const img = document.querySelector('#qrArtCanvas img');
+  if (!img) return;
+  const w = window.open('','_blank');
+  w.document.write(`<html><body style="text-align:center;font-family:sans-serif;padding:20px"><img src="${img.src}" width="200"><p style="margin-top:10px;font-size:13px">${document.getElementById('qrArtLabel').textContent}</p></body></html>`);
+  w.document.close(); w.print();
+}
+
+// ─── KIT EVENTO ───────────────────────────────────────────
+function generaKit() {
+  const evento = document.getElementById('kitEvento').value.trim()||'Evento';
+  const lingue = parseInt(document.getElementById('kitLingue').value)||0;
+  const led = document.getElementById('kitLed').value;
+  const items = [];
+  if (lingue>0) {
+    items.push({nome:'Ricevitore IR Bosch LBB 3422',qty:lingue*20});
+    items.push({nome:'Cabina regia Audipack 9300',qty:lingue});
+    items.push({nome:'Centralina DCN-IDEQ',qty:1});
+    items.push({nome:'Cuffie interprete Sennheiser HME 26',qty:lingue*2});
+  }
+  if (led==='small') { items.push({nome:'Moduli Absen Acclaim P3.9',qty:12}); items.push({nome:'Processore Novastar VX6s',qty:1}); }
+  if (led==='medium') { items.push({nome:'Moduli Absen Acclaim P3.9',qty:32}); items.push({nome:'Processore Novastar VX6s',qty:1}); }
+  if (led==='large') { items.push({nome:'Moduli Absen Acclaim P3.9',qty:64}); items.push({nome:'Processore Novastar VX6s',qty:2}); }
+  if (!items.length) { alert('Seleziona almeno una configurazione'); return; }
+  const total = items.reduce((s,i)=>s+i.qty,0);
+  let html = `<div class="section-header"><div class="section-title">Kit: ${evento}</div><span class="badge badge-accent">${total} pezzi</span></div><div class="card">`;
+  items.forEach(i => { html+=`<div class="list-row"><div style="flex:1;font-size:13px;font-weight:500">${i.nome}</div><span style="font-family:var(--mono);font-size:13px;color:var(--text2)">×${i.qty}</span></div>`; });
+  html += '</div>';
+  const res = document.getElementById('kitResult');
+  res.innerHTML = html;
+  res.style.display='block';
+}
+
+// ─── TEAM ────────────────────────────────────────────────
+const teamDb = [...TEAM_MEMBERS];
+function renderTeam() {
+  let html = '';
+  teamDb.forEach(m => {
+    html += `<div class="list-row">
+      <div class="av ${m.avc}">${m.av}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:500">${m.nome}</div>
+        <div style="font-size:11px;color:var(--text2)">${m.email}</div>
+      </div>
+      <span class="badge badge-accent">${m.ruolo}</span>
+    </div>`;
+  });
+  document.getElementById('teamList').innerHTML = html;
+  document.getElementById('teamCount').textContent = teamDb.length;
+}
+
+// ─── QR REGISTRAZIONE ────────────────────────────────────
+function generaQRReg() {
+  const role = document.getElementById('qrRole').value;
+  const token = 'AV'+Date.now().toString(36).toUpperCase().slice(-6);
+  const url = `${location.origin}${location.pathname}?token=${token}&role=${encodeURIComponent(role)}`;
+  document.getElementById('qrRegCanvas').innerHTML='';
+  document.getElementById('qrRegOutput').style.display='block';
+  document.getElementById('qrRegMeta').textContent = `${role} · token: ${token}`;
+  setTimeout(()=>{
+    try {
+      new QRCode(document.getElementById('qrRegCanvas'),{
+        text:url,width:180,height:180,colorDark:'#000',colorLight:'#fff',
+        correctLevel:QRCode.CorrectLevel.M
+      });
+    }catch(e){}
+  },100);
+}
+function stampaQR() {
+  const img = document.querySelector('#qrRegCanvas img');
+  if (!img) return;
+  const meta = document.getElementById('qrRegMeta').textContent;
+  const w = window.open('','_blank');
+  w.document.write(`<html><body style="text-align:center;font-family:sans-serif;padding:30px"><img src="${img.src}" width="220"><p style="margin-top:12px;font-size:14px;font-weight:bold">Scannerizza per registrarti</p><p style="font-size:12px;color:#666;margin-top:4px">${meta}</p></body></html>`);
+  w.document.close(); w.print();
+}
+function condividiQR() {
+  const meta = document.getElementById('qrRegMeta').textContent;
+  if (navigator.share) {
+    navigator.share({ title:'Registrazione AV Manager', text:`Scannerizza il QR per registrarti: ${meta}`, url: location.href });
+  } else {
+    navigator.clipboard?.writeText(location.href).then(()=>alert('Link copiato!'));
+  }
+}
+
+// ─── CHECKLIST ────────────────────────────────────────────
+function renderChecklist() {
+  let html = '';
+  CHECKLIST.forEach(cat => {
+    html += `<div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin:12px 0 4px;padding-top:4px;border-top:1px solid var(--border)">${cat.cat}</div>`;
+    cat.items.forEach((item,i)=>{
+      const key=cat.cat+i;
+      html+=`<div class="check-row">
+        <div class="check-box" id="cb-${key}" onclick="toggleCheck('${key}')"></div>
+        <span class="check-label" id="cl-${key}" onclick="toggleCheck('${key}')">${item}</span>
+      </div>`;
+    });
+  });
+  document.getElementById('checklistContainer').innerHTML=html;
+}
+function toggleCheck(key) {
+  const box=document.getElementById('cb-'+key);
+  const lbl=document.getElementById('cl-'+key);
+  box.classList.toggle('checked');
+  lbl.classList.toggle('checked');
+  updateCheckProgress();
+}
+function updateCheckProgress() {
+  const all=document.querySelectorAll('.check-box').length;
+  const done=document.querySelectorAll('.check-box.checked').length;
+  const pct=Math.round(done/all*100);
+  document.getElementById('checkProgress').style.width=pct+'%';
+  document.getElementById('checkPct').textContent=pct+'%';
+}
+function resetChecklist() {
+  document.querySelectorAll('.check-box').forEach(b=>b.classList.remove('checked'));
+  document.querySelectorAll('.check-label').forEach(l=>l.classList.remove('checked'));
+  updateCheckProgress();
+}
+
+// ─── MODALS ───────────────────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow='';
+}
+// Close modal on backdrop tap
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click', e=>{ if(e.target===m) closeModal(m.id); });
+});
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => console.log('AV Manager SW attivo — funziona offline'))
+      .catch(e => console.warn('SW:', e));
+  });
+}
+</script>
+</body>
+</html>
