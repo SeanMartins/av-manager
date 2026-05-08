@@ -907,38 +907,60 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 3000);
 });
 
-// ── Stub doReg / doQuickLogin — mostrano loader finché Firebase non è pronto ──
-// Vengono sovrascritti dal modulo non appena Firebase carica
 window._fbReady = false;
-window._fbQueue = []; // coda di azioni in attesa
+window._fbQueue = [];
 
-window.doReg = () => {
-  if(window._fbReady && window._doRegReal) { window._doRegReal(); return; }
-  const btn = document.getElementById('regBtn');
-  if(btn){ btn.textContent='Connessione...'; btn.disabled=true; }
-  window._fbQueue.push('reg');
-  setTimeout(()=>{ if(!window._fbReady){ if(btn){btn.textContent='Inizia →';btn.disabled=false;} window._showFbError(); }}, 3000);
+// doReg e doQuickLogin usano window._db direttamente — disponibile subito dopo init
+window.doReg = async () => {
+  const db = window._db;
+  if(!db){ alert('Firebase non pronto, riprova tra 2 secondi'); return; }
+  const nome=document.getElementById('rNome')?.value.trim();
+  const cognome=document.getElementById('rCognome')?.value.trim();
+  const email=document.getElementById('rEmail')?.value.trim();
+  const tel=document.getElementById('rTel')?.value.trim();
+  if(!nome||!cognome||!email){ window._toast('Compila nome, cognome ed email','r'); return; }
+  if(!window._avState.privOk){ window._toast('Accetta la privacy policy','r'); return; }
+  const btn=document.getElementById('regBtn');
+  if(btn){ btn.textContent='Salvataggio...'; btn.disabled=true; }
+  try {
+    const snap=await db.collection('team').where('email','==',email).get();
+    if(!snap.empty){ window._toast('Email già registrata — usa Accedi','a'); if(btn){btn.textContent='Inizia →';btn.disabled=false;} return; }
+    const uid='u'+Date.now();
+    const member={id:uid,nome,cognome,email,tel:tel||'',ruolo:window._avState.selRole,createdAt:new Date().toISOString()};
+    await db.collection('team').doc(uid).set(member);
+    localStorage.setItem('av_user',JSON.stringify(member));
+    window.location.reload();
+  } catch(e){ alert('Errore: '+e.message); console.error(e); }
+  if(btn){ btn.textContent='Inizia →'; btn.disabled=false; }
 };
-window.doQuickLogin = () => {
-  if(window._fbReady && window._doLoginReal) { window._doLoginReal(); return; }
-  const btn = document.querySelector('#formLogin .btn-p');
-  if(btn){ btn.textContent='Connessione...'; btn.disabled=true; }
-  window._fbQueue.push('login');
-  setTimeout(()=>{ if(!window._fbReady){ if(btn){btn.textContent='Accedi →';btn.disabled=false;} window._showFbError(); }}, 3000);
+
+window.doQuickLogin = async () => {
+  const db = window._db;
+  if(!db){ alert('Firebase non pronto, riprova tra 2 secondi'); return; }
+  const emailEl=document.getElementById('loginEmail');
+  const email=emailEl?emailEl.value.trim():'';
+  if(!email){ window._toast('Inserisci la tua email','r'); return; }
+  const btn=document.querySelector('#formLogin .btn-p');
+  if(btn){ btn.textContent='Accesso...'; btn.disabled=true; }
+  try {
+    const snap=await db.collection('team').where('email','==',email.toLowerCase()).get();
+    if(snap.empty){ window._toast('Email non trovata — registrati','r'); if(btn){btn.textContent='Accedi →';btn.disabled=false;} return; }
+    const user={id:snap.docs[0].id,...snap.docs[0].data()};
+    localStorage.setItem('av_user',JSON.stringify(user));
+    window.location.reload();
+  } catch(e){ alert('Errore: '+e.message); console.error(e); }
+  if(btn){ btn.textContent='Accedi →'; btn.disabled=false; }
 };
-window._showFbError = () => {
-  // Mostra errore dettagliato per debug
-  const fbLoaded = typeof firebase !== 'undefined';
-  const fsLoaded = fbLoaded && typeof firebase.firestore !== 'undefined';
-  let msg = 'Errore connessione Firebase.';
-  if (!fbLoaded) msg = 'Firebase SDK non caricato — problema di rete o CSP';
-  else if (!fsLoaded) msg = 'Firestore non caricato — controlla script tag';
-  else msg = 'Firebase caricato ma connessione fallita — controlla regole Firestore';
-  const t = document.getElementById('toast');
-  if(t){ t.style.background='var(--rd)'; t.style.color='#fff'; t.textContent=msg; t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',6000); }
-  console.error('Firebase debug:', {fbLoaded, fsLoaded});
-  alert('DEBUG: '+msg+'\nfirebase defined: '+fbLoaded+'\nfirestore defined: '+fsLoaded);
+
+window._toast = (msg, t='g') => {
+  const el=document.getElementById('toast'); if(!el) return;
+  el.style.background=t==='g'?'#22c55e':t==='r'?'#ef4444':'#f59e0b';
+  el.style.color='#fff'; el.textContent=msg; el.style.opacity='1';
+  clearTimeout(el._t); el._t=setTimeout(()=>el.style.opacity='0',3000);
 };
+
+window._showFbError = () => window._toast('Errore Firebase — riprova','r');
+
 </script>
 
 <!-- Firebase SDK -->
