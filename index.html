@@ -259,6 +259,7 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
       <button class="btn btn-p btn-f" id="regBtn" onclick="window.doReg()" style="padding:13px;font-size:15px;font-weight:600">
         Inizia →
       </button>
+      <div id="fbStatus" style="text-align:center;font-size:11px;color:var(--tx3);margin-top:8px">⏳ Connessione Firebase...</div>
     </div>
 
     <!-- FORM LOGIN -->
@@ -871,6 +872,18 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.mol').forEach(m=>{
     m.addEventListener('click', e=>{ if(e.target===m) window.closeMod(m.id); });
   });
+  // Controlla se Firebase SDK è caricato dopo 3 secondi
+  setTimeout(() => {
+    if (!window._fbReady) {
+      const st = document.getElementById('fbStatus');
+      if (typeof firebase === 'undefined') {
+        if(st) st.textContent = '❌ Firebase SDK non caricato — problema di rete';
+        console.error('Firebase SDK mancante — controlla connessione internet');
+      } else {
+        if(st) st.textContent = '⚠️ Firebase SDK caricato, connessione in corso...';
+      }
+    }
+  }, 3000);
 });
 
 // ── Stub doReg / doQuickLogin — mostrano loader finché Firebase non è pronto ──
@@ -895,8 +908,17 @@ window.doQuickLogin = () => {
   }
 };
 window._showFbError = () => {
+  // Mostra errore dettagliato per debug
+  const fbLoaded = typeof firebase !== 'undefined';
+  const fsLoaded = fbLoaded && typeof firebase.firestore !== 'undefined';
+  let msg = 'Errore connessione Firebase.';
+  if (!fbLoaded) msg = 'Firebase SDK non caricato — problema di rete o CSP';
+  else if (!fsLoaded) msg = 'Firestore non caricato — controlla script tag';
+  else msg = 'Firebase caricato ma connessione fallita — controlla regole Firestore';
   const t = document.getElementById('toast');
-  if(t){ t.style.background='var(--rd)'; t.style.color='#fff'; t.textContent='Connessione a Firebase fallita — riprova'; t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',4000); }
+  if(t){ t.style.background='var(--rd)'; t.style.color='#fff'; t.textContent=msg; t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',6000); }
+  console.error('Firebase debug:', {fbLoaded, fsLoaded});
+  alert('DEBUG: '+msg+'\nfirebase defined: '+fbLoaded+'\nfirestore defined: '+fsLoaded);
 };
 </script>
 
@@ -954,6 +976,9 @@ const doc         = (db2, col, id)      => db2.collection(col).doc(id);
 // ── Segnala Firebase pronto + svuota coda ──────────
 window._fbReady = true;
 const _queue = window._fbQueue || [];
+// Aggiorna indicatore stato
+const fbStatusEl = document.getElementById('fbStatus');
+if(fbStatusEl) fbStatusEl.textContent = '✅ Firebase connesso';
 
 // ── Override funzioni con versioni Firebase-ready ──
 window.doReg = async () => {
