@@ -198,6 +198,15 @@ textarea{resize:vertical;min-height:80px}
         <div class="sc"><div class="sn" id="nDisp">0</div><div class="sl">Disponibili</div></div>
         <div class="sc"><div class="sn" id="nInUso">0</div><div class="sl">In uso</div></div>
       </div>
+      <!-- Azioni principali -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <button class="btn btn-p btn-f" style="flex-direction:column;gap:4px;padding:14px" onclick="openMod('mPreparaLavoro')">
+          <span style="font-size:22px">📋</span><span style="font-size:13px">Prepara lavoro</span>
+        </button>
+        <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:14px;border-color:var(--am);color:var(--am)" onclick="openSmarca()">
+          <span style="font-size:22px">✅</span><span style="font-size:13px">Smarca rientro</span>
+        </button>
+      </div>
       <div class="sec">
         <div class="stl">Inventario</div>
         <button class="btn btn-p" style="padding:7px 14px;font-size:13px" onclick="openMod('mNewArt')">+ Articolo</button>
@@ -248,12 +257,116 @@ textarea{resize:vertical;min-height:80px}
       <div class="row" style="padding:7px 0"><span style="font-size:13px;color:var(--tx2);width:76px">Email</span><span style="font-size:13px" id="profEmail">—</span></div>
       <div class="row" style="padding:7px 0"><span style="font-size:13px;color:var(--tx2);width:76px">Telefono</span><span style="font-size:13px" id="profTel">—</span></div>
     </div>
+    <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
 
-<!-- NUOVA LOCATION -->
+<!-- PREPARA LAVORO -->
+<div class="mol" id="mPreparaLavoro" onclick="if(event.target===this){stopCam();closeMod('mPreparaLavoro')}">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div id="plStep1">
+      <div class="stl" style="margin-bottom:4px">📋 Prepara un nuovo lavoro</div>
+      <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Inserisci i dettagli poi scannerizza i QR degli articoli</div>
+      <div class="ig"><label class="il">Nome evento / lavoro</label><input type="text" id="plNome" placeholder="Convegno Milano 15/06"></div>
+      <div class="ig"><label class="il">Location</label><select id="plLoc"><option value="">-- Seleziona --</option></select></div>
+      <div class="ig"><label class="il">Data</label><input type="date" id="plData"></div>
+      <div class="ig"><label class="il">Note</label><textarea id="plNote" placeholder="Note per il tecnico..." style="min-height:60px"></textarea></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-f" onclick="stopCam();closeMod('mPreparaLavoro')">Annulla</button>
+        <button class="btn btn-p btn-f" onclick="plGoScan()">📷 Avvia scansione →</button>
+      </div>
+    </div>
+    <div id="plStep2" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <button class="btn" style="padding:6px 12px;font-size:12px" onclick="plBack()">← Torna</button>
+        <div class="stl" id="plNomeLbl">—</div>
+      </div>
+      <div style="position:relative;border-radius:var(--r);overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:1">
+        <video id="plVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+          <div style="width:60%;height:60%;border:2px solid rgba(108,99,255,.8);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>
+        </div>
+        <div style="position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:12px;color:rgba(255,255,255,.7)">Inquadra il QR code dell'articolo</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="text" id="plManualId" placeholder="Oppure inserisci ID manuale..." style="flex:1;margin:0">
+        <button class="btn btn-p" style="padding:9px 14px;flex-shrink:0" onclick="plAddManual()">+ Add</button>
+      </div>
+      <div class="sec"><div class="stl">Lista preparata</div><span class="bdg bp" id="plCount">0 articoli</span></div>
+      <div id="plItems" style="margin-bottom:14px"><div class="empty" style="padding:12px">Nessun articolo ancora</div></div>
+      <button class="btn btn-p btn-f" style="padding:14px;font-size:15px" onclick="plGeneraPDF()">📄 Genera PDF riepilogo</button>
+    </div>
+  </div>
+</div>
+
+<!-- SMARCA RIENTRO -->
+<div class="mol" id="mSmarca" onclick="if(event.target===this){smStopCam();closeMod('mSmarca')}">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div id="smStep1">
+      <div class="stl" style="margin-bottom:4px">✅ Smarca rientro materiali</div>
+      <div style="font-size:13px;color:var(--tx2);margin-bottom:14px">Seleziona il lavoro completato e verifica il rientro</div>
+      <input type="text" id="smSearch" placeholder="🔍 Cerca lavoro..." oninput="smFilter()" style="margin-bottom:10px">
+      <div id="smLavoriList" style="max-height:320px;overflow-y:auto"><div class="empty">Caricamento lavori...</div></div>
+      <button class="btn btn-f" style="margin-top:10px" onclick="smStopCam();closeMod('mSmarca')">Annulla</button>
+    </div>
+    <div id="smStep2" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <button class="btn" style="padding:6px 12px;font-size:12px" onclick="smBack()">← Torna</button>
+        <div><div class="stl" id="smNomeLbl">—</div><div style="font-size:11px;color:var(--tx2)" id="smInfoLbl">—</div></div>
+      </div>
+      <div class="card" style="padding:12px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+          <span style="font-size:13px;color:var(--tx2)">Progresso rientro</span>
+          <span style="font-size:13px;font-weight:600" id="smProgTxt">0/0</span>
+        </div>
+        <div style="background:var(--bg3);border-radius:4px;height:5px"><div id="smProgBar" style="height:5px;border-radius:4px;background:var(--am);width:0%;transition:width .3s"></div></div>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <span class="bdg bg" id="smCntOk">0 ✓</span>
+          <span class="bdg br" id="smCntMiss">0 mancanti</span>
+        </div>
+      </div>
+      <div style="position:relative;border-radius:var(--r);overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:1">
+        <video id="smVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+          <div style="width:60%;height:60%;border:2px solid rgba(245,158,11,.8);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="text" id="smManualId" placeholder="ID manuale..." style="flex:1;margin:0">
+        <button class="btn" style="padding:9px 14px;flex-shrink:0;border-color:var(--am);color:var(--am)" onclick="smAddManual()">Verifica</button>
+      </div>
+      <div id="smItemsList" style="margin-bottom:14px"></div>
+      <button class="btn btn-p btn-f" style="padding:14px;font-size:15px;background:var(--am);border-color:var(--am)" onclick="smGeneraPDF()">📄 Genera report PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT PRESENZE -->
+<div class="mol" id="mExport" onclick="if(event.target===this)closeMod('mExport')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:6px">📊 Esporta presenze</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Genera un file CSV/Excel con le timbrature del periodo.</div>
+    <div class="ig"><label class="il">Dipendente</label><select id="expDip"><option value="all">Tutti</option></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Mese</label>
+        <select id="expMese">
+          <option value="0">Gennaio</option><option value="1">Febbraio</option><option value="2">Marzo</option>
+          <option value="3">Aprile</option><option value="4">Maggio</option><option value="5">Giugno</option>
+          <option value="6">Luglio</option><option value="7">Agosto</option><option value="8">Settembre</option>
+          <option value="9">Ottobre</option><option value="10">Novembre</option><option value="11">Dicembre</option>
+        </select>
+      </div>
+      <div class="ig"><label class="il">Anno</label><select id="expAnno"></select></div>
+    </div>
+    <button class="btn btn-p btn-f" onclick="doExport()">⬇️ Scarica CSV</button>
+    <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mExport')">Chiudi</button>
+  </div>
+</div>
 <div class="mol" id="mNewLoc" onclick="if(event.target===this)closeMod('mNewLoc')">
   <div class="msh">
     <div class="mhd"></div>
@@ -857,6 +970,294 @@ async function saveArt(){
   closeMod('mNewArt');toast('✓ Articolo salvato');
   ['aNome','aMarca','aSer'].forEach(id=>{const el=$(id);if(el)el.value='';});
   $('aQty').value='1';
+}
+
+// ── PREPARA LAVORO ──
+let plArticoli=[],plStream=null,plInterval=null;
+
+function openMod(id){
+  const el=document.getElementById(id);if(!el)return;
+  el.classList.add('on');document.body.style.overflow='hidden';
+  if(id==='mPreparaLavoro'){
+    plArticoli=[];
+    document.getElementById('plStep1').style.display='block';
+    document.getElementById('plStep2').style.display='none';
+    const sel=document.getElementById('plLoc');
+    sel.innerHTML='<option value="">-- Seleziona --</option>';
+    cacheLoc.forEach(l=>{const o=document.createElement('option');o.value=l.nome;o.textContent=l.nome;sel.appendChild(o);});
+    document.getElementById('plData').value=new Date().toISOString().slice(0,10);
+    renderPlItems();
+  }
+}
+
+function plGoScan(){
+  const nome=val('plNome');if(!nome){toast('Inserisci il nome del lavoro','r');return;}
+  document.getElementById('plStep1').style.display='none';
+  document.getElementById('plStep2').style.display='block';
+  document.getElementById('plNomeLbl').textContent=nome;
+  startCam('plVideo',processPlQR);
+}
+function plBack(){stopCam();document.getElementById('plStep1').style.display='block';document.getElementById('plStep2').style.display='none';}
+
+async function startCam(videoId,onCode){
+  try{
+    plStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    const vid=document.getElementById(videoId);vid.srcObject=plStream;await vid.play();
+    plInterval=setInterval(()=>{
+      if(!vid.videoWidth)return;
+      const c=document.createElement('canvas');c.width=vid.videoWidth;c.height=vid.videoHeight;
+      c.getContext('2d').drawImage(vid,0,0);
+      if('BarcodeDetector' in window){new BarcodeDetector({formats:['qr_code']}).detect(c).then(codes=>{if(codes.length)onCode(codes[0].rawValue);}).catch(()=>{});}
+      else if(window.jsQR){const d=c.getContext('2d').getImageData(0,0,c.width,c.height);const r=jsQR(d.data,d.width,d.height);if(r)onCode(r.data);}
+    },600);
+  }catch(e){toast('Fotocamera non disponibile — usa ID manuale','a');}
+}
+function stopCam(){
+  clearInterval(plInterval);plInterval=null;
+  if(plStream){plStream.getTracks().forEach(t=>t.stop());plStream=null;}
+}
+
+function processPlQR(raw){
+  try{const d=JSON.parse(raw);plAddToList(d.id||raw,d.nome||null);}
+  catch(e){plAddToList(raw,null);}
+}
+function plAddManual(){const id=val('plManualId');if(!id){toast('Inserisci un ID','r');return;}plAddToList(id,null);document.getElementById('plManualId').value='';}
+function plAddToList(id,nomeHint){
+  const m=cacheMag.find(x=>x.id===id||(x.ser||'').toLowerCase()===id.toLowerCase());
+  if(!m&&!nomeHint){toast('"'+id+'" non trovato in magazzino','a');return;}
+  const art=m||{id,nome:nomeHint||id,cat:'—',marca:'—',ser:id,qty:1};
+  const exist=plArticoli.find(x=>(x.id||x.ser)===( art.id||art.ser));
+  if(exist){exist.qtyPrep=(exist.qtyPrep||1)+1;toast('✓ '+art.nome+' (×'+exist.qtyPrep+')');}
+  else{plArticoli.push({...art,qtyPrep:1});if(navigator.vibrate)navigator.vibrate(60);toast('✓ '+art.nome);}
+  renderPlItems();
+}
+function plRemove(i){plArticoli.splice(i,1);renderPlItems();}
+function plQty(i,d){plArticoli[i].qtyPrep=Math.max(1,(plArticoli[i].qtyPrep||1)+d);renderPlItems();}
+function renderPlItems(){
+  const el=document.getElementById('plItems');if(!el)return;
+  document.getElementById('plCount').textContent=plArticoli.length+' articoli';
+  if(!plArticoli.length){el.innerHTML='<div class="empty" style="padding:12px">Nessun articolo — scannerizza QR</div>';return;}
+  let h='';
+  plArticoli.forEach((a,i)=>{
+    h+='<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b)">'+
+      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+a.nome+'</div>'+
+      '<div style="font-size:11px;color:var(--tx2)">'+(a.ser||a.id)+'</div></div>'+
+      '<div style="display:flex;align-items:center;gap:5px;flex-shrink:0">'+
+      '<button onclick="plQty('+i+',-1)" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);color:var(--tx);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>'+
+      '<span style="font-size:14px;min-width:22px;text-align:center">'+(a.qtyPrep||1)+'</span>'+
+      '<button onclick="plQty('+i+',1)" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);color:var(--tx);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>'+
+      '<button onclick="plRemove('+i+')" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--rdb);background:var(--rdb);color:var(--rd);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>'+
+      '</div></div>';
+  });
+  el.innerHTML=h;
+}
+
+async function plGeneraPDF(){
+  if(!plArticoli.length){toast('Aggiungi almeno un articolo','r');return;}
+  stopCam();
+  const nome=val('plNome'),loc=val('plLoc'),dataRaw=val('plData');
+  const data=dataRaw?new Date(dataRaw).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('it-IT');
+  const tecnico=USER?USER.nome+' '+USER.cognome:'—',ruolo=USER?.ruolo||'';
+  const now=new Date().toLocaleString('it-IT'),tot=plArticoli.reduce((s,a)=>s+(a.qtyPrep||1),0);
+  // Raggruppa per categoria
+  const bycat={};plArticoli.forEach(a=>{const k=a.cat||'Altro';if(!bycat[k])bycat[k]=[];bycat[k].push(a);});
+  let righe='';
+  Object.entries(bycat).forEach(([cat,items])=>{
+    righe+='<tr><td colspan="4" style="background:#f0f0f8;font-weight:600;font-size:11px;text-transform:uppercase;color:#555;padding:8px 10px">'+cat+'</td></tr>';
+    items.forEach((a,i)=>{righe+='<tr style="background:'+(i%2===0?'#fff':'#fafafa')+'"><td style="padding:8px 10px;font-size:13px;font-weight:500">'+a.nome+'</td><td style="padding:8px 10px;font-size:12px;color:#666">'+(a.marca||'—')+'</td><td style="padding:8px 10px;font-size:12px;color:#666;font-family:monospace">'+(a.ser||a.id)+'</td><td style="padding:8px 10px;font-size:14px;font-weight:700;text-align:center">'+(a.qtyPrep||1)+'</td></tr>';});
+  });
+  const html='<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Lista — '+nome+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Helvetica,Arial,sans-serif;color:#1a1a2e}.page{max-width:800px;margin:0 auto;padding:32px 40px}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #6c63ff}.logo{font-size:22px;font-weight:700;color:#6c63ff}.logo span{font-size:12px;font-weight:400;color:#888;display:block;margin-top:2px}.info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;background:#f8f8fc;border-radius:10px;padding:16px}.info label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#888;display:block;margin-bottom:3px}.info span{font-size:14px;font-weight:500}table{width:100%;border-collapse:collapse;margin-bottom:20px;border-radius:8px;overflow:hidden;box-shadow:0 0 0 1px #e8e8f0}th{background:#6c63ff;color:#fff;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;text-align:left}th:last-child,td:last-child{text-align:center;width:70px}.totale{display:flex;justify-content:flex-end;gap:20px;font-size:13px;color:#666;margin-bottom:24px}.firma{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:32px;padding-top:20px;border-top:1px solid #eee}.fbox{border-top:1px solid #ccc;padding-top:8px;font-size:11px;color:#888}.footer{margin-top:24px;padding-top:14px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:10px;color:#aaa}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="page">'+
+    '<div class="header"><div><div class="logo">🎛 AV Manager<span>Sistema gestione eventi audio-video</span></div></div><div style="text-align:right;font-size:11px;color:#888">Generato il<br><strong>'+now+'</strong></div></div>'+
+    '<div style="font-size:26px;font-weight:700;margin-bottom:18px">Lista preparazione materiali</div>'+
+    '<div class="info"><div><label>Evento / Lavoro</label><span>'+nome+'</span></div><div><label>Data</label><span>'+data+'</span></div><div><label>Location</label><span>'+(loc||'—')+'</span></div><div><label>Preparato da</label><span>'+tecnico+(ruolo?' · '+ruolo:'')+'</span></div>'+(val('plNote')?'<div style="grid-column:1/-1"><label>Note</label><span>'+val('plNote')+'</span></div>':'')+'</div>'+
+    '<table><thead><tr><th>Articolo</th><th>Marca</th><th>N° Seriale</th><th>Qtà</th></tr></thead><tbody>'+righe+'</tbody></table>'+
+    '<div class="totale"><span>Totale articoli: <strong>'+plArticoli.length+'</strong></span><span>Totale pezzi: <strong>'+tot+'</strong></span></div>'+
+    '<div class="firma"><div class="fbox">Firma tecnico<br><br><br>'+tecnico+'</div><div class="fbox">Firma responsabile<br><br><br>___________________</div></div>'+
+    '<div class="footer"><span>AV Manager · Lista preparazione</span><span>'+nome+' · '+data+'</span></div></div></body></html>';
+  // Salva su Firebase
+  try{await DB.collection('lavori').add({nome,location:loc||'',data:dataRaw,tecnico,createdAt:new Date().toISOString(),articoli:plArticoli.map(a=>({id:a.id||'',nome:a.nome,cat:a.cat||'',marca:a.marca||'',ser:a.ser||'',qty:a.qtyPrep||1}))});}catch(e){console.warn(e);}
+  const w=window.open('','_blank');w.document.write(html);w.document.close();setTimeout(()=>{w.focus();w.print();},400);
+  closeMod('mPreparaLavoro');toast('✓ PDF generato!');
+}
+
+// ── SMARCA RIENTRO ──
+let smLavori=[],smSel=null,smArticoli=[],smStream=null,smInterval=null;
+
+async function openSmarca(){
+  smLavori=[];smSel=null;smArticoli=[];
+  document.getElementById('smStep1').style.display='block';
+  document.getElementById('smStep2').style.display='none';
+  document.getElementById('smSearch').value='';
+  document.getElementById('mSmarca').classList.add('on');
+  document.body.style.overflow='hidden';
+  const snap=await DB.collection('lavori').orderBy('createdAt','desc').get();
+  smLavori=snap.docs.map(d=>({id:d.id,...d.data()}));
+  smRenderLavori(smLavori);
+}
+function smRenderLavori(list){
+  const el=document.getElementById('smLavoriList');if(!el)return;
+  if(!list.length){el.innerHTML='<div class="empty">Nessun lavoro trovato</div>';return;}
+  let h='';
+  list.forEach(l=>{
+    const data=l.data?new Date(l.data).toLocaleDateString('it-IT'):new Date(l.createdAt).toLocaleDateString('it-IT');
+    const n=(l.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
+    h+='<div onclick="smSeleziона(\''+l.id+'\');event.stopPropagation()" style="padding:12px;border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px;cursor:pointer">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
+      '<div><div style="font-size:14px;font-weight:600">'+l.nome+'</div>'+
+      '<div style="font-size:11px;color:var(--tx2);margin-top:2px">📍 '+(l.location||'—')+' · 📅 '+data+' · 👤 '+l.tecnico+'</div>'+
+      '<div style="font-size:11px;color:var(--tx2)">📦 '+n+' pezzi</div></div>'+
+      '<span class="bdg '+(l.rientrato?'bg':'ba')+'">'+(l.rientrato?'✓ Rientrato':'In attesa')+'</span>'+
+      '</div></div>';
+  });
+  el.innerHTML=h;
+}
+function smFilter(){
+  const q=(document.getElementById('smSearch')?.value||'').toLowerCase();
+  smRenderLavori(q?smLavori.filter(l=>(l.nome||'').toLowerCase().includes(q)||(l.location||'').toLowerCase().includes(q)):smLavori);
+}
+function smSeleziона(id){
+  smSel=smLavori.find(l=>l.id===id);if(!smSel)return;
+  smArticoli=(smSel.articoli||[]).map(a=>({...a,rientrato:false}));
+  document.getElementById('smNomeLbl').textContent=smSel.nome;
+  const data=smSel.data?new Date(smSel.data).toLocaleDateString('it-IT'):'—';
+  document.getElementById('smInfoLbl').textContent='📅 '+data+' · 📍 '+(smSel.location||'—');
+  document.getElementById('smStep1').style.display='none';
+  document.getElementById('smStep2').style.display='block';
+  smUpdateProgress();smRenderItems();
+  startSmCam();
+}
+function smBack(){smStopCam();document.getElementById('smStep1').style.display='block';document.getElementById('smStep2').style.display='none';}
+
+async function startSmCam(){
+  try{
+    smStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    const vid=document.getElementById('smVideo');vid.srcObject=smStream;await vid.play();
+    smInterval=setInterval(()=>{
+      if(!vid.videoWidth)return;
+      const c=document.createElement('canvas');c.width=vid.videoWidth;c.height=vid.videoHeight;
+      c.getContext('2d').drawImage(vid,0,0);
+      if('BarcodeDetector' in window){new BarcodeDetector({formats:['qr_code']}).detect(c).then(codes=>{if(codes.length)smProcessQR(codes[0].rawValue);}).catch(()=>{});}
+      else if(window.jsQR){const d=c.getContext('2d').getImageData(0,0,c.width,c.height);const r=jsQR(d.data,d.width,d.height);if(r)smProcessQR(r.data);}
+    },600);
+  }catch(e){toast('Fotocamera non disponibile','a');}
+}
+function smStopCam(){clearInterval(smInterval);smInterval=null;if(smStream){smStream.getTracks().forEach(t=>t.stop());smStream=null;}}
+function smProcessQR(raw){try{const d=JSON.parse(raw);smMarca(d.id||raw);}catch(e){smMarca(raw);}}
+function smAddManual(){const id=val('smManualId');if(!id){toast('Inserisci ID','r');return;}smMarca(id);document.getElementById('smManualId').value='';}
+function smMarca(id){
+  const art=smArticoli.find(a=>(a.id===id||a.ser===id||(a.id||'').toLowerCase()===id.toLowerCase()||(a.ser||'').toLowerCase()===id.toLowerCase()));
+  if(!art){toast('"'+id+'" non in lista','a');return;}
+  if(art.rientrato){toast('Già verificato','a');return;}
+  art.rientrato=true;if(navigator.vibrate)navigator.vibrate([60,40,60]);
+  toast('✓ Rientrato: '+art.nome);smUpdateProgress();smRenderItems();
+  if(smArticoli.every(a=>a.rientrato)){document.getElementById('smProgBar').style.background='var(--gn)';toast('🎉 Tutto verificato!');}
+}
+function smToggle(i){smArticoli[i].rientrato=!smArticoli[i].rientrato;smUpdateProgress();smRenderItems();}
+function smUpdateProgress(){
+  const tot=smArticoli.length,ok=smArticoli.filter(a=>a.rientrato).length;
+  const pct=tot?Math.round(ok/tot*100):0;
+  document.getElementById('smProgTxt').textContent=ok+'/'+tot;
+  document.getElementById('smProgBar').style.width=pct+'%';
+  document.getElementById('smCntOk').textContent=ok+' ✓';
+  document.getElementById('smCntMiss').textContent=(tot-ok)+' mancanti';
+}
+function smRenderItems(){
+  const el=document.getElementById('smItemsList');if(!el)return;
+  const sorted=[...smArticoli].sort((a,b)=>a.rientrato-b.rientrato);
+  let h='';
+  sorted.forEach(a=>{
+    const i=smArticoli.indexOf(a);
+    h+='<div onclick="smToggle('+i+')" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b);cursor:pointer;opacity:'+(a.rientrato?'0.5':'1')+'">'+
+      '<div style="width:28px;height:28px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;background:'+(a.rientrato?'var(--gnb)':'var(--rdb)')+';border:1px solid '+(a.rientrato?'var(--gn)':'var(--rd)')+'">'+
+      (a.rientrato?'✓':'✕')+'</div>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'+(a.rientrato?'text-decoration:line-through;color:var(--tx3)':'')+'">'+a.nome+'</div>'+
+      '<div style="font-size:11px;color:var(--tx2)">'+(a.ser||a.id)+' · ×'+(a.qty||1)+'</div></div>'+
+      '<span class="bdg '+(a.rientrato?'bg':'br')+'">'+(a.rientrato?'Rientrato':'Mancante')+'</span></div>';
+  });
+  el.innerHTML=h||'<div class="empty">Nessun articolo</div>';
+}
+
+async function smGeneraPDF(){
+  if(!smSel)return;smStopCam();
+  const l=smSel,ok=smArticoli.filter(a=>a.rientrato),miss=smArticoli.filter(a=>!a.rientrato);
+  const allOk=miss.length===0;
+  const data=l.data?new Date(l.data).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('it-IT');
+  const tecnico=USER?USER.nome+' '+USER.cognome:'—',now=new Date().toLocaleString('it-IT');
+  const rigaOk=ok.map((a,i)=>'<tr style="background:'+(i%2===0?'#fff':'#f9fff9')+'"><td style="padding:8px 10px;font-size:13px;font-weight:500">'+a.nome+'</td><td style="padding:8px 10px;font-size:12px;color:#666">'+(a.marca||'—')+'</td><td style="padding:8px 10px;font-size:12px;color:#666;font-family:monospace">'+(a.ser||a.id)+'</td><td style="padding:8px 10px;text-align:center"><span style="background:#d4edda;color:#155724;padding:2px 10px;border-radius:20px;font-size:11px">✓</span></td></tr>').join('');
+  const rigaMiss=miss.map((a,i)=>'<tr style="background:'+(i%2===0?'#fff8f8':'#fff0f0')+'"><td style="padding:8px 10px;font-size:13px;font-weight:500;color:#c0392b">'+a.nome+'</td><td style="padding:8px 10px;font-size:12px;color:#888">'+(a.marca||'—')+'</td><td style="padding:8px 10px;font-size:12px;color:#888;font-family:monospace">'+(a.ser||a.id)+'</td><td style="padding:8px 10px;text-align:center"><span style="background:#f8d7da;color:#721c24;padding:2px 10px;border-radius:20px;font-size:11px">⚠</span></td></tr>').join('');
+  const html='<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Report rientro — '+l.nome+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Helvetica,Arial,sans-serif;color:#1a1a2e}.page{max-width:800px;margin:0 auto;padding:32px 40px}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid '+(allOk?'#27ae60':'#e74c3c')+'}.logo{font-size:22px;font-weight:700;color:'+(allOk?'#27ae60':'#e74c3c')+'}.logo span{font-size:12px;font-weight:400;color:#888;display:block}.status{background:'+(allOk?'#d4edda':'#f8d7da')+';border-radius:10px;padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;gap:12px;font-size:16px;font-weight:700;color:'+(allOk?'#155724':'#721c24')+'}.info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;background:#f8f8fc;border-radius:10px;padding:16px}.info label{font-size:10px;font-weight:600;text-transform:uppercase;color:#888;display:block;margin-bottom:3px}.info span{font-size:14px;font-weight:500}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}.stat{border-radius:10px;padding:12px;text-align:center}.sn{font-size:24px;font-weight:700}.sl{font-size:11px;margin-top:2px}table{width:100%;border-collapse:collapse;margin-bottom:20px;border-radius:8px;overflow:hidden;box-shadow:0 0 0 1px #e0e0e0}th{padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;text-align:left;background:#37474f;color:#fff}.st{font-size:14px;font-weight:700;margin:16px 0 8px;padding-left:4px;border-left:4px solid}.firma{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:32px;padding-top:20px;border-top:1px solid #eee}.fbox{border-top:1px solid #ccc;padding-top:8px;font-size:11px;color:#888}.footer{margin-top:24px;padding-top:14px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:10px;color:#aaa}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="page">'+
+    '<div class="header"><div><div class="logo">🎛 AV Manager<span>Report verifica rientro materiali</span></div></div><div style="text-align:right;font-size:11px;color:#888">'+now+'</div></div>'+
+    '<div class="status"><span>'+(allOk?'✅':'⚠️')+'</span>'+(allOk?'Rientro COMPLETO — tutti i materiali verificati':'Rientro INCOMPLETO — materiali mancanti')+'</div>'+
+    '<div class="info"><div><label>Evento</label><span>'+l.nome+'</span></div><div><label>Data</label><span>'+data+'</span></div><div><label>Location</label><span>'+(l.location||'—')+'</span></div><div><label>Verifica eseguita da</label><span>'+tecnico+'</span></div></div>'+
+    '<div class="stats">'+
+      '<div class="stat" style="background:#e8eaf6;color:#3949ab"><div class="sn">'+smArticoli.length+'</div><div class="sl">Totali</div></div>'+
+      '<div class="stat" style="background:#e8f5e9;color:#2e7d32"><div class="sn">'+ok.length+'</div><div class="sl">Rientrati</div></div>'+
+      '<div class="stat" style="background:#fce4ec;color:#c62828"><div class="sn">'+miss.length+'</div><div class="sl">Mancanti</div></div>'+
+      '<div class="stat" style="background:'+(allOk?'#e8f5e9':'#fff8e1')+';color:'+(allOk?'#2e7d32':'#e65100')+'"><div class="sn">'+Math.round(ok.length/smArticoli.length*100)+'%</div><div class="sl">Completamento</div></div>'+
+    '</div>'+
+    (ok.length?'<div class="st" style="color:#155724;border-color:#27ae60">✓ Rientrati ('+ok.length+')</div><table><thead><tr><th>Articolo</th><th>Marca</th><th>Seriale</th><th>Stato</th></tr></thead><tbody>'+rigaOk+'</tbody></table>':'')+
+    (miss.length?'<div class="st" style="color:#721c24;border-color:#e74c3c">⚠ Mancanti ('+miss.length+')</div><table><thead><tr><th>Articolo</th><th>Marca</th><th>Seriale</th><th>Stato</th></tr></thead><tbody>'+rigaMiss+'</tbody></table>':'')+
+    '<div class="firma"><div class="fbox">Firma responsabile verifica<br><br><br>'+tecnico+'</div><div class="fbox">Firma responsabile magazzino<br><br><br>___________________</div></div>'+
+    '<div class="footer"><span>AV Manager · Report rientro</span><span>'+l.nome+' · '+now+'</span></div></div></body></html>';
+  try{await DB.collection('lavori').doc(l.id).update({rientrato:allOk,rientroData:new Date().toISOString(),rientroTecnico:tecnico});}catch(e){console.warn(e);}
+  const w=window.open('','_blank');w.document.write(html);w.document.close();setTimeout(()=>{w.focus();w.print();},400);
+  closeMod('mSmarca');toast('✓ Report generato!');
+}
+
+// ── EXPORT PRESENZE ──
+function openExport(){
+  closeMod('mProfile');
+  const sel=document.getElementById('expDip');
+  sel.innerHTML='<option value="all">Tutti i dipendenti</option>';
+  cacheTeam.forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.nome+' '+m.cognome;sel.appendChild(o);});
+  const now=new Date();
+  document.getElementById('expMese').value=now.getMonth();
+  const sa=document.getElementById('expAnno');sa.innerHTML='';
+  for(let y=now.getFullYear();y>=now.getFullYear()-2;y--){const o=document.createElement('option');o.value=y;o.textContent=y;sa.appendChild(o);}
+  openMod('mExport');
+}
+
+async function doExport(){
+  const mese=parseInt(document.getElementById('expMese').value);
+  const anno=parseInt(document.getElementById('expAnno').value);
+  const dipId=document.getElementById('expDip').value;
+  const mesiN=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  toast('⏳ Caricamento...','a');
+  const start=new Date(anno,mese,1).toISOString();
+  const end=new Date(anno,mese+1,0,23,59,59).toISOString();
+  let snap;
+  try{snap=await DB.collection('presenze').where('entrata','>=',start).where('entrata','<=',end).orderBy('entrata').get();}
+  catch(e){alert('Errore: '+e.message);return;}
+  let rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+  if(dipId!=='all')rows=rows.filter(r=>r.uid===dipId);
+  if(!rows.length){toast('Nessuna timbratura trovata','a');return;}
+  const pad2=n=>String(n).padStart(2,'0');
+  const dd=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const data=rows.map(r=>{
+    const ent=new Date(r.entrata),usc=r.uscita?new Date(r.uscita):null;
+    const ore=usc?((usc-ent)/3600000).toFixed(2):'—';
+    return{nome:r.nome||'—',data:pad2(ent.getDate())+'/'+pad2(ent.getMonth()+1)+'/'+ent.getFullYear(),giorno:dd[ent.getDay()],luogo:r.luogo||'In sede',entrata:pad2(ent.getHours())+':'+pad2(ent.getMinutes()),uscita:usc?pad2(usc.getHours())+':'+pad2(usc.getMinutes()):'—',ore_lav:ore};
+  });
+  // Calcola totali
+  const totali={};data.forEach(r=>{if(!totali[r.nome])totali[r.nome]=0;const h=parseFloat(r.ore_lav);if(!isNaN(h))totali[r.nome]+=h;});
+  let csv='\uFEFF';
+  csv+=['Nome','Data','Giorno','Luogo','Entrata','Uscita','Ore lavorate'].join(';')+'\n';
+  data.forEach(r=>{csv+=[r.nome,r.data,r.giorno,r.luogo,r.entrata,r.uscita,r.ore_lav].map(c=>'"'+c+'"').join(';')+'\n';});
+  csv+='\n"TOTALE ORE PER DIPENDENTE"\n';
+  Object.entries(totali).forEach(([n,o])=>{csv+='"'+n+'";"'+o.toFixed(2)+' ore"\n';});
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='presenze_'+mesiN[mese]+'_'+anno+'.csv';a.click();
+  toast('✓ '+data.length+' righe esportate!');closeMod('mExport');
+}
+
+// Override closeMod to stop cameras
+const _closeMod=window.closeMod;
+function closeMod(id){
+  if(id==='mPreparaLavoro'){stopCam();}
+  if(id==='mSmarca'){smStopCam();}
+  document.getElementById(id)&&document.getElementById(id).classList.remove('on');
+  document.body.style.overflow='';
 }
 
 // ── CLOCK ──
