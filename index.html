@@ -872,21 +872,20 @@ window.testFirebase = async () => {
   const results = [];
   results.push('firebase defined: ' + (typeof firebase !== 'undefined'));
   results.push('firestore defined: ' + (typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined'));
-  if (typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined') {
+  results.push('window._db defined: ' + (typeof window._db !== 'undefined'));
+  if (window._db) {
     try {
-      const db2 = firebase.firestore();
-      results.push('db created: true');
-      // Prova una lettura semplice
-      const snap = await db2.collection('team').limit(1).get();
+      const snap = await window._db.collection('team').limit(1).get();
       results.push('read OK: ' + snap.size + ' docs');
-      // Prova una scrittura di test
-      await db2.collection('_test').doc('ping').set({t: Date.now()});
+      await window._db.collection('_test').doc('ping').set({t: Date.now()});
       results.push('write OK');
-      await db2.collection('_test').doc('ping').delete();
-      results.push('delete OK');
+      await window._db.collection('_test').doc('ping').delete();
+      results.push('delete OK — tutto funziona!');
     } catch(e) {
       results.push('ERROR: ' + e.code + ' — ' + e.message);
     }
+  } else {
+    results.push('_db non pronto — Firebase non inizializzato');
   }
   alert(results.join('\n'));
 };
@@ -944,30 +943,29 @@ window._showFbError = () => {
 };
 </script>
 
-<!-- Firebase SDK — caricato prima del codice app per massima compatibilità -->
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+<!-- Inizializza Firebase SUBITO — fuori da qualsiasi funzione async -->
 <script>
-// ═══════════════════════════════════════════════════
-// APP — eseguito dopo che Firebase compat SDK è caricato
-// ═══════════════════════════════════════════════════
-(async function avApp() {
-
-// ── Firebase Config ────────────────────────────────
-const firebaseConfig = {
+firebase.initializeApp({
   apiKey:            "AIzaSyDxxvnjtKdybQStd0yUT8xKE0MBgwYPZTo",
   authDomain:        "av-manager-41c40.firebaseapp.com",
   projectId:         "av-manager-41c40",
   storageBucket:     "av-manager-41c40.firebasestorage.app",
   messagingSenderId: "1047072296195",
   appId:             "1:1047072296195:web:d220ed9c196b185d016d36"
-};
+});
+window._db = firebase.firestore();
+console.log('✅ Firebase inizializzato, db pronto');
+</script>
 
-const app = firebase.initializeApp(firebaseConfig);
-const db  = firebase.firestore();
+<script>
+(async function avApp() {
 
-// compat aliases handled below with C collections
+// db già inizializzato globalmente — lo usiamo direttamente
+const db = window._db;
 
 // ─── Use shared state from pre-module script ───────
 const avState = window._avState;
