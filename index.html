@@ -527,8 +527,10 @@ function tick(){
 function setDate(){const n=new Date();const dd=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];const mm=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];const pd=$('pdate');if(pd)pd.textContent=dd[n.getDay()]+' '+n.getDate()+' '+mm[n.getMonth()]+' '+n.getFullYear();}
 
 tick();setInterval(tick,1000);setDate();
-const saved=localStorage.getItem('av_user');
-if(saved){USER=JSON.parse(saved);startApp();}
+try {
+  const saved=localStorage.getItem('av_user');
+  if(saved){USER=JSON.parse(saved);if(USER&&USER.nome&&USER.cognome)startApp();else{localStorage.removeItem('av_user');}}
+} catch(e){localStorage.removeItem('av_user');}
 </script>
 </body>
 </html>
