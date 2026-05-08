@@ -405,7 +405,7 @@ textarea{resize:vertical;min-height:80px}
     <div class="mhd"></div>
     <div class="stl" style="margin-bottom:14px">📦 Nuovo articolo</div>
     <div class="ig"><label class="il">Categoria</label>
-      <select id="aCat"><option value="traduzione">🎧 Traduzione simultanea</option><option value="ledwall">🖥 LED wall</option><option value="altro">📦 Altro</option></select>
+      <select id="aCat"><option value="audio">🎙 Audio</option><option value="luci">💡 Luci</option><option value="ledwall">🖥 LED wall</option><option value="traduzione">🎧 Traduzione simultanea</option><option value="video">📽 Video / Proiezione</option><option value="strutture">🏗 Strutture</option><option value="altro">📦 Altro</option></select>
     </div>
     <div class="ig"><label class="il">Nome articolo</label><input type="text" id="aNome" placeholder="Bosch LBB 3422 ricevitore IR"></div>
     <div class="ig"><label class="il">Marca / modello</label><input type="text" id="aMarca" placeholder="Bosch"></div>
@@ -567,6 +567,7 @@ function startApp(){
   $('profTel').textContent=USER.tel||'—';
   appStarted=true;
   startListeners();startLocListener();startMagListener();restorePunch();
+  seedMagazzino();
 }
 
 // ── LISTENERS ──
@@ -940,9 +941,9 @@ function renderMag(){
   $('nInUso').textContent=cacheMag.filter(m=>m.stato!=='ok').length;
   const sc={ok:['bg','Disponibile'],out:['ba','In uso'],maint:['br','Manutenzione']};
   let h='';
-  ['traduzione','ledwall','altro'].forEach(cat=>{
+  ['audio','luci','ledwall','traduzione','video','strutture'].forEach(cat=>{
     const items=fil.filter(m=>m.cat===cat);if(!items.length)return;
-    const label={traduzione:'🎧 Traduzione simultanea',ledwall:'🖥 LED wall',altro:'📦 Altro'}[cat];
+    const label={audio:'🎙 Audio',luci:'💡 Luci',ledwall:'🖥 LED wall',traduzione:'🎧 Traduzione simultanea',video:'📽 Video / Proiezione',strutture:'🏗 Strutture'}[cat]||cat;
     h+='<div style="font-size:11px;font-weight:600;color:var(--tx2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:7px">'+label+'</div><div class="card" style="margin-bottom:13px">';
     items.forEach(m=>{
       const [bc,bl]=sc[m.stato]||sc.ok;
@@ -1258,6 +1259,67 @@ function closeMod(id){
   if(id==='mSmarca'){smStopCam();}
   document.getElementById(id)&&document.getElementById(id).classList.remove('on');
   document.body.style.overflow='';
+}
+
+// ── SEED MAGAZZINO DEMO ──
+async function seedMagazzino(){
+  const snap=await DB.collection('magazzino').limit(1).get();
+  if(!snap.empty)return; // già popolato
+  const articoli=[
+    // AUDIO
+    {cat:'audio',nome:'Shure QLX-D ricevitore wireless',marca:'Shure',ser:'SH-001',qty:4,stato:'ok'},
+    {cat:'audio',nome:'Shure QLX-D trasmettitore palmare',marca:'Shure',ser:'SH-002',qty:4,stato:'ok'},
+    {cat:'audio',nome:'Shure Beta 58A microfono',marca:'Shure',ser:'SH-003',qty:6,stato:'ok'},
+    {cat:'audio',nome:'Sennheiser EW 300 ricevitore IEM',marca:'Sennheiser',ser:'SE-001',qty:2,stato:'ok'},
+    {cat:'audio',nome:'Yamaha QL5 mixer digitale',marca:'Yamaha',ser:'YA-001',qty:1,stato:'ok'},
+    {cat:'audio',nome:'QSC K12.2 diffusore attivo',marca:'QSC',ser:'QS-001',qty:4,stato:'ok'},
+    {cat:'audio',nome:'QSC KSub subwoofer attivo',marca:'QSC',ser:'QS-002',qty:2,stato:'ok'},
+    {cat:'audio',nome:'Radial DI box passiva',marca:'Radial',ser:'RA-001',qty:8,stato:'ok'},
+    {cat:'audio',nome:'Cavo XLR 10m',marca:'Neutrik',ser:'CA-001',qty:20,stato:'ok'},
+    {cat:'audio',nome:'Cavo XLR 5m',marca:'Neutrik',ser:'CA-002',qty:15,stato:'ok'},
+    // LUCI
+    {cat:'luci',nome:'Robe BMFL Spot faro moving head',marca:'Robe',ser:'RO-001',qty:4,stato:'ok'},
+    {cat:'luci',nome:'Chauvet COLORdash Par H7X par LED',marca:'Chauvet',ser:'CH-001',qty:12,stato:'ok'},
+    {cat:'luci',nome:'Elation Cuepix Blinder WW2',marca:'Elation',ser:'EL-001',qty:8,stato:'ok'},
+    {cat:'luci',nome:'GrandMA2 Light console luci',marca:'MA Lighting',ser:'MA-001',qty:1,stato:'ok'},
+    {cat:'luci',nome:'Dimmer rack 12 canali',marca:'Zero88',ser:'ZE-001',qty:2,stato:'ok'},
+    {cat:'luci',nome:'Cavo DMX 3pin 10m',marca:'Vari',ser:'DM-001',qty:20,stato:'ok'},
+    {cat:'luci',nome:'Stativo per par LED 3m',marca:'Soundsation',ser:'ST-001',qty:8,stato:'ok'},
+    // LED WALL
+    {cat:'ledwall',nome:'Absen Acclaim 3.9 Pro modulo LED',marca:'Absen',ser:'LW-001',qty:48,stato:'ok'},
+    {cat:'ledwall',nome:'Novastar VX6s processore video',marca:'Novastar',ser:'LW-002',qty:2,stato:'ok'},
+    {cat:'ledwall',nome:'Cabinet strutturale alluminio 500x500',marca:'Absen',ser:'LW-003',qty:12,stato:'ok'},
+    {cat:'ledwall',nome:'Meanwell alimentatore 5V/60A',marca:'Meanwell',ser:'LW-004',qty:12,stato:'ok'},
+    {cat:'ledwall',nome:'Cavo fiber HDMI 30m',marca:'Lindy',ser:'LW-005',qty:4,stato:'ok'},
+    {cat:'ledwall',nome:'Cavo alimentazione LED link',marca:'Vari',ser:'LW-006',qty:30,stato:'ok'},
+    // TRADUZIONE SIMULTANEA
+    {cat:'traduzione',nome:'Bosch LBB 3422 ricevitore IR',marca:'Bosch',ser:'TR-001',qty:50,stato:'ok'},
+    {cat:'traduzione',nome:'Bosch LBB 3011 trasmettitore IR',marca:'Bosch',ser:'TR-002',qty:4,stato:'ok'},
+    {cat:'traduzione',nome:'Audipack Silent 9300 cabina regia',marca:'Audipack',ser:'TR-003',qty:2,stato:'ok'},
+    {cat:'traduzione',nome:'Bosch DCN-IDEQ centralina',marca:'Bosch',ser:'TR-004',qty:1,stato:'ok'},
+    {cat:'traduzione',nome:'Sennheiser HME 26 cuffie interprete',marca:'Sennheiser',ser:'TR-005',qty:8,stato:'ok'},
+    {cat:'traduzione',nome:'Microfono consolle interprete',marca:'Bosch',ser:'TR-006',qty:4,stato:'ok'},
+    // VIDEO / PROIEZIONE
+    {cat:'video',nome:'Panasonic PT-RZ21K proiettore laser 20k',marca:'Panasonic',ser:'VI-001',qty:2,stato:'ok'},
+    {cat:'video',nome:'Barco E2 screen management',marca:'Barco',ser:'VI-002',qty:1,stato:'ok'},
+    {cat:'video',nome:'Blackmagic ATEM 2 M/E switcher',marca:'Blackmagic',ser:'VI-003',qty:1,stato:'ok'},
+    {cat:'video',nome:'Schermo proiezione 4x3m',marca:'Stumpfl',ser:'VI-004',qty:2,stato:'ok'},
+    {cat:'video',nome:'Cavo HDMI 2.0 10m',marca:'Vari',ser:'VI-005',qty:8,stato:'ok'},
+    {cat:'video',nome:'Cavo SDI 3G 10m',marca:'Belden',ser:'VI-006',qty:10,stato:'ok'},
+    // STRUTTURE
+    {cat:'strutture',nome:'Truss Q30L sezione 1m',marca:'Global Truss',ser:'ST-001',qty:20,stato:'ok'},
+    {cat:'strutture',nome:'Truss Q30L sezione 2m',marca:'Global Truss',ser:'ST-002',qty:10,stato:'ok'},
+    {cat:'strutture',nome:'Stager 1x1m praticabile',marca:'Layher',ser:'ST-003',qty:16,stato:'ok'},
+    {cat:'strutture',nome:'Basamento per stager h50cm',marca:'Layher',ser:'ST-004',qty:16,stato:'ok'},
+    {cat:'strutture',nome:'Conficcatore base per truss',marca:'Global Truss',ser:'ST-005',qty:8,stato:'ok'},
+  ];
+  const batch=DB.batch();
+  articoli.forEach(a=>{
+    const ref=DB.collection('magazzino').doc();
+    batch.set(ref,{...a,createdAt:new Date().toISOString()});
+  });
+  await batch.commit();
+  toast('✓ Database demo caricato — '+articoli.length+' articoli');
 }
 
 // ── CLOCK ──
