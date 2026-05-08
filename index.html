@@ -913,20 +913,18 @@ window._fbReady = false;
 window._fbQueue = []; // coda di azioni in attesa
 
 window.doReg = () => {
+  if(window._fbReady && window._doRegReal) { window._doRegReal(); return; }
   const btn = document.getElementById('regBtn');
   if(btn){ btn.textContent='Connessione...'; btn.disabled=true; }
-  if(!window._fbReady){
-    window._fbQueue.push('reg');
-    setTimeout(()=>{ if(!window._fbReady){ if(btn){btn.textContent='Inizia →';btn.disabled=false;} window._showFbError(); }}, 3000);
-  }
+  window._fbQueue.push('reg');
+  setTimeout(()=>{ if(!window._fbReady){ if(btn){btn.textContent='Inizia →';btn.disabled=false;} window._showFbError(); }}, 3000);
 };
 window.doQuickLogin = () => {
+  if(window._fbReady && window._doLoginReal) { window._doLoginReal(); return; }
   const btn = document.querySelector('#formLogin .btn-p');
   if(btn){ btn.textContent='Connessione...'; btn.disabled=true; }
-  if(!window._fbReady){
-    window._fbQueue.push('login');
-    setTimeout(()=>{ if(!window._fbReady){ if(btn){btn.textContent='Accedi →';btn.disabled=false;} window._showFbError(); }}, 3000);
-  }
+  window._fbQueue.push('login');
+  setTimeout(()=>{ if(!window._fbReady){ if(btn){btn.textContent='Accedi →';btn.disabled=false;} window._showFbError(); }}, 3000);
 };
 window._showFbError = () => {
   // Mostra errore dettagliato per debug
@@ -1004,7 +1002,7 @@ const fbStatusEl = document.getElementById('fbStatus');
 if(fbStatusEl) fbStatusEl.textContent = '✅ Firebase connesso';
 
 // ── Override funzioni con versioni Firebase-ready ──
-window.doReg = async () => {
+window.doReg = window._doRegReal = async () => {
   const nome=v('rNome'), cognome=v('rCognome'), email=v('rEmail'), tel=v('rTel');
   if(!nome||!cognome||!email){ toast('Compila nome, cognome ed email','r'); return; }
   if(!avState.privOk){ toast('Accetta la privacy policy','r'); return; }
@@ -1022,7 +1020,7 @@ window.doReg = async () => {
   if(btn){ btn.textContent='Inizia →'; btn.disabled=false; }
 };
 
-window.doQuickLogin = async () => {
+window.doQuickLogin = window._doLoginReal = async () => {
   const emailEl=document.getElementById('loginEmail');
   const email=emailEl?emailEl.value.trim():'';
   if(!email){ toast('Inserisci la tua email','r'); return; }
