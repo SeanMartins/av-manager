@@ -260,6 +260,7 @@ select option{background:var(--bg2)} textarea{resize:vertical;min-height:68px}
         Inizia →
       </button>
       <div id="fbStatus" style="text-align:center;font-size:11px;color:var(--tx3);margin-top:8px">⏳ Connessione Firebase...</div>
+      <button onclick="window.testFirebase()" style="width:100%;margin-top:8px;padding:8px;background:transparent;border:1px solid var(--b2);border-radius:var(--rs);font-family:var(--font);font-size:12px;color:var(--tx2);cursor:pointer">🔧 Test connessione Firebase</button>
     </div>
 
     <!-- FORM LOGIN -->
@@ -867,7 +868,28 @@ window.resetCheck = () => {
   if(pctEl) pctEl.textContent='0%';
 };
 
-// Close modals on backdrop tap
+window.testFirebase = async () => {
+  const results = [];
+  results.push('firebase defined: ' + (typeof firebase !== 'undefined'));
+  results.push('firestore defined: ' + (typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined'));
+  if (typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined') {
+    try {
+      const db2 = firebase.firestore();
+      results.push('db created: true');
+      // Prova una lettura semplice
+      const snap = await db2.collection('team').limit(1).get();
+      results.push('read OK: ' + snap.size + ' docs');
+      // Prova una scrittura di test
+      await db2.collection('_test').doc('ping').set({t: Date.now()});
+      results.push('write OK');
+      await db2.collection('_test').doc('ping').delete();
+      results.push('delete OK');
+    } catch(e) {
+      results.push('ERROR: ' + e.code + ' — ' + e.message);
+    }
+  }
+  alert(results.join('\n'));
+};
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.mol').forEach(m=>{
     m.addEventListener('click', e=>{ if(e.target===m) window.closeMod(m.id); });
