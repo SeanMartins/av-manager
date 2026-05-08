@@ -917,7 +917,7 @@ window.doReg = () => {
   if(btn){ btn.textContent='Connessione...'; btn.disabled=true; }
   if(!window._fbReady){
     window._fbQueue.push('reg');
-    setTimeout(()=>{ if(!window._fbReady){ if(btn){btn.textContent='Inizia →';btn.disabled=false;} window._showFbError(); }}, 8000);
+    setTimeout(()=>{ if(!window._fbReady){ if(btn){btn.textContent='Inizia →';btn.disabled=false;} window._showFbError(); }}, 3000);
   }
 };
 window.doQuickLogin = () => {
@@ -925,7 +925,7 @@ window.doQuickLogin = () => {
   if(btn){ btn.textContent='Connessione...'; btn.disabled=true; }
   if(!window._fbReady){
     window._fbQueue.push('login');
-    setTimeout(()=>{ if(!window._fbReady){ if(btn){btn.textContent='Accedi →';btn.disabled=false;} window._showFbError(); }}, 8000);
+    setTimeout(()=>{ if(!window._fbReady){ if(btn){btn.textContent='Accedi →';btn.disabled=false;} window._showFbError(); }}, 3000);
   }
 };
 window._showFbError = () => {
@@ -958,6 +958,9 @@ firebase.initializeApp({
   appId:             "1:1047072296195:web:d220ed9c196b185d016d36"
 });
 window._db = firebase.firestore();
+window._fbReady = true; // Firebase pronto subito
+const fbStatusEl = document.getElementById('fbStatus');
+if(fbStatusEl) fbStatusEl.textContent = '✅ Firebase connesso';
 console.log('✅ Firebase inizializzato, db pronto');
 </script>
 
@@ -994,9 +997,9 @@ const where       = (f, op, val)        => q => q.where(f, op, val);
 const doc         = (db2, col, id)      => db2.collection(col).doc(id);
 
 // ── Segnala Firebase pronto + svuota coda ──────────
-window._fbReady = true;
+// _fbReady già impostato nel blocco di init sincrono
 const _queue = window._fbQueue || [];
-// Aggiorna indicatore stato
+// Aggiorna indicatore stato (già fatto nel blocco init, ma per sicurezza)
 const fbStatusEl = document.getElementById('fbStatus');
 if(fbStatusEl) fbStatusEl.textContent = '✅ Firebase connesso';
 
