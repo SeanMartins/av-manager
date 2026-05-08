@@ -900,16 +900,17 @@ window._showFbError = () => {
 };
 </script>
 
-<script>
-(async () => {
-// ═══════════════════════════════════════════════════
-// FIREBASE — dynamic import (max compatibility)
-// ═══════════════════════════════════════════════════
-const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
-const { getFirestore, collection, doc, addDoc, setDoc, updateDoc,
-        onSnapshot, query, orderBy, where, getDocs }
-  = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+<!-- Firebase SDK — caricato prima del codice app per massima compatibilità -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+<script>
+// ═══════════════════════════════════════════════════
+// APP — eseguito dopo che Firebase compat SDK è caricato
+// ═══════════════════════════════════════════════════
+(async function avApp() {
+
+// ── Firebase Config ────────────────────────────────
 const firebaseConfig = {
   apiKey:            "AIzaSyDxxvnjtKdybQStd0yUT8xKE0MBgwYPZTo",
   authDomain:        "av-manager-41c40.firebaseapp.com",
@@ -919,29 +920,54 @@ const firebaseConfig = {
   appId:             "1:1047072296195:web:d220ed9c196b185d016d36"
 };
 
-const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
+const app = firebase.initializeApp(firebaseConfig);
+const db  = firebase.firestore();
+
+// compat aliases handled below with C collections
 
 // ─── Use shared state from pre-module script ───────
 const avState = window._avState;
 
-// ── Segnala che Firebase è pronto e svuota la coda ──
+// ── Collezioni Firestore ───────────────────────────
+const C = {
+  team:      () => db.collection('team'),
+  locations: () => db.collection('locations'),
+  magazzino: () => db.collection('magazzino'),
+  tickets:   () => db.collection('tickets'),
+  presenze:  () => db.collection('presenze'),
+  forum:     () => db.collection('forum'),
+  replies:   (tid) => db.collection('forum').doc(tid).collection('replies'),
+};
+const C_lavori = () => db.collection('lavori_preparati');
+
+// ── Helper aliases (compat API) ────────────────────
+const addDoc      = (ref, data)         => ref.add(data);
+const setDoc      = (ref, data)         => ref.set(data);
+const updateDoc   = (ref, data)         => ref.update(data);
+const getDocs     = (q)                 => q.get();
+const onSnapshot  = (q, cb)             => q.onSnapshot(cb);
+const query       = (col, ...fns)       => { let q=col; fns.forEach(f=>{q=f(q);}); return q; };
+const orderBy     = (field, dir='asc')  => q => q.orderBy(field, dir);
+const where       = (f, op, val)        => q => q.where(f, op, val);
+const doc         = (db2, col, id)      => db2.collection(col).doc(id);
+
+// ── Segnala Firebase pronto + svuota coda ──────────
 window._fbReady = true;
 const _queue = window._fbQueue || [];
 
-// Override definitivo delle funzioni con quelle Firebase-ready
+// ── Override funzioni con versioni Firebase-ready ──
 window.doReg = async () => {
   const nome=v('rNome'), cognome=v('rCognome'), email=v('rEmail'), tel=v('rTel');
   if(!nome||!cognome||!email){ toast('Compila nome, cognome ed email','r'); return; }
   if(!avState.privOk){ toast('Accetta la privacy policy','r'); return; }
-  const btn = document.getElementById('regBtn');
+  const btn=document.getElementById('regBtn');
   if(btn){ btn.textContent='Salvataggio...'; btn.disabled=true; }
   try {
-    const snap = await getDocs(query(C.team(), where('email','==',email)));
+    const snap=await db.collection('team').where('email','==',email).get();
     if(!snap.empty){ toast('Email già registrata — usa Accedi','a'); if(btn){btn.textContent='Inizia →';btn.disabled=false;} return; }
     const uid='u'+Date.now();
     const member={id:uid,nome,cognome,email,tel:tel||'',ruolo:avState.selRole,createdAt:new Date().toISOString()};
-    await setDoc(doc(db,'team',uid),member);
+    await db.collection('team').doc(uid).set(member);
     user=member; localStorage.setItem('av_user',JSON.stringify(user));
     await seedIfEmpty(); launchApp(); toast('✓ Benvenuto '+nome+'!');
   } catch(e){ toast('Errore: '+e.message,'r'); console.error(e); }
@@ -955,7 +981,7 @@ window.doQuickLogin = async () => {
   const btn=document.querySelector('#formLogin .btn-p');
   if(btn){ btn.textContent='Accesso...'; btn.disabled=true; }
   try {
-    const snap=await getDocs(query(C.team(),where('email','==',email.toLowerCase())));
+    const snap=await db.collection('team').where('email','==',email.toLowerCase()).get();
     if(snap.empty){ toast('Email non trovata — registrati','r'); if(btn){btn.textContent='Accedi →';btn.disabled=false;} return; }
     user={id:snap.docs[0].id,...snap.docs[0].data()};
     localStorage.setItem('av_user',JSON.stringify(user)); launchApp();
@@ -963,27 +989,14 @@ window.doQuickLogin = async () => {
   if(btn){ btn.textContent='Accedi →'; btn.disabled=false; }
 };
 
-// Esegui azioni in coda (premute prima che Firebase fosse pronto)
+// Esegui azioni in coda
 if(_queue.length){
   setTimeout(()=>{
     if(_queue.includes('reg')) window.doReg();
     else if(_queue.includes('login')) window.doQuickLogin();
     window._fbQueue=[];
-  },100);
+  },200);
 }
-// Getters for convenience
-const getPrivOk  = () => avState.privOk;
-const getSelRole = () => avState.selRole;
-const getSelLuogo= () => avState.selLuogo;
-const C = {
-  team:      () => collection(db, 'team'),
-  locations: () => collection(db, 'locations'),
-  magazzino: () => collection(db, 'magazzino'),
-  tickets:   () => collection(db, 'tickets'),
-  presenze:  () => collection(db, 'presenze'),
-  forum:     () => collection(db, 'forum'),
-  replies:   (tid) => collection(db, 'forum', tid, 'replies'),
-};
 
 // ═══════════════════════════════════════════════════
 // STATE
@@ -1245,7 +1258,7 @@ window.punch = async () => {
     btn.className='pbtn pin'; btn.textContent='⏱ Timbra entrata';
     stat.textContent=`Uscita timbrata alle ${t}`;
     document.getElementById('oreOggi').textContent='0h';
-    if(punchDocId) await updateDoc(doc(db,'presenze',punchDocId),{uscita:now.toISOString()});
+    if(punchDocId) await db.collection('presenze').doc(punchDocId).update({uscita:now.toISOString()});
     punchStart=null; punchDocId=null; gpsCoords=null;
     localStorage.removeItem('av_active_punch');
     // Riabilita selezione luogo
@@ -1435,7 +1448,7 @@ window.addPin = async (e, lid) => {
   area.appendChild(pin);
   const l=cacheLoc.find(x=>x.id===lid); if(!l) return;
   const pins=[...(l.pins||[]),{x,y,t}];
-  await updateDoc(doc(db,'locations',lid),{pins});
+  await db.collection('locations').doc(lid).update({pins});
 };
 
 window.handlePhotos = async (e, lid) => {
@@ -1448,7 +1461,7 @@ window.handlePhotos = async (e, lid) => {
     }; r.readAsDataURL(f);
   });
   const l=cacheLoc.find(x=>x.id===lid); if(l){
-    await updateDoc(doc(db,'locations',lid),{foto:(l.foto||0)+e.target.files.length});
+    await db.collection('locations').doc(lid).update({foto:(l.foto||0)+e.target.files.length});
   }
 };
 
@@ -1902,7 +1915,7 @@ window.sendReply = async tid => {
   btn.textContent='Invio...'; btn.disabled=true;
   await addDoc(C.replies(tid),{testo,uid:user?.id,foto:replyFotoBase64,createdAt:new Date().toISOString()});
   // Incrementa contatore risposte
-  await updateDoc(doc(db,'forum',tid),{replyCount:(cacheForum.find(p=>p.id===tid)?.replyCount||0)+1});
+  await db.collection('forum').doc(tid).update({replyCount:(cacheForum.find(p=>p.id===tid)?.replyCount||0)+1});
   btn.textContent='Invia risposta'; btn.disabled=false;
   document.getElementById('replyText').value='';
   document.getElementById('replyFotoPreview').innerHTML='';
@@ -1912,13 +1925,13 @@ window.sendReply = async tid => {
 };
 
 window.markRisolto = async tid => {
-  await updateDoc(doc(db,'forum',tid),{risolto:true});
+  await db.collection('forum').doc(tid).update({risolto:true});
   window.closeMod('mThread');
   toast('✓ Discussione segnata come risolta');
 };
 
 window.closeTicket = async id => {
-  await updateDoc(doc(db,'tickets',id),{stato:'risolto'});
+  await db.collection('tickets').doc(id).update({stato:'risolto'});
   toast('✓ Risolto');
 };
 
@@ -2368,7 +2381,7 @@ ${miss.length?`<div class="section-title st-miss">⚠ Materiali mancanti (${miss
 
   // Aggiorna stato lavoro su Firebase
   try {
-    await updateDoc(doc(db,'lavori_preparati',l.id),{
+    await db.collection('lavori_preparati').doc(l.id).update({
       rientroCompletato: allOk,
       rientroData: new Date().toISOString(),
       rientroTecnico: tecnico,
@@ -2493,7 +2506,7 @@ if ('serviceWorker' in navigator) {
   }).catch(() => {});
 }
 
-})(); // chiude l'IIFE async
+})(); // fine avApp
 </script>
 </body>
 </html>
