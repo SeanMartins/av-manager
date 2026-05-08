@@ -1,23 +1,15 @@
 {
-  "name": "AV Manager",
-  "short_name": "AV Manager",
-  "description": "Gestione eventi audio-video — presenze, location, magazzino, team",
+  "name": "MMG — Multimedia Meeting Group",
+  "short_name": "MMG",
+  "description": "Gestione eventi audio-video",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0f",
-  "theme_color": "#0a0a0f",
+  "theme_color": "#1a1a6e",
   "orientation": "portrait-primary",
   "lang": "it",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
-  ],
-  "screenshots": [
-    { "src": "screenshot1.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow" }
-  ],
-  "categories": ["business", "productivity"],
-  "shortcuts": [
-    { "name": "Timbra entrata", "short_name": "Timbra", "description": "Timbra entrata/uscita rapidamente", "url": "/?page=presenze", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
-    { "name": "Magazzino", "short_name": "Magazzino", "description": "Controlla il magazzino AV", "url": "/?page=magazzino", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
