@@ -503,10 +503,19 @@ function previewFoto(e,gridId){
   fotoBase64=[];const grid=$(gridId);if(!grid)return;grid.innerHTML='';
   Array.from(e.target.files).slice(0,4).forEach(f=>{
     const r=new FileReader();r.onload=ev=>{
-      fotoBase64.push(ev.target.result);
-      const d=document.createElement('div');d.className='pth';
-      const img=document.createElement('img');img.src=ev.target.result;
-      d.appendChild(img);grid.appendChild(d);
+      // Ridimensiona a max 800px e comprimi
+      const img=new Image();img.onload=()=>{
+        const max=800;let w=img.width,h=img.height;
+        if(w>max){h=Math.round(h*max/w);w=max;}
+        if(h>max){w=Math.round(w*max/h);h=max;}
+        const c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        const compressed=c.toDataURL('image/jpeg',0.65);
+        fotoBase64.push(compressed);
+        const d=document.createElement('div');d.className='pth';
+        const i=document.createElement('img');i.src=compressed;
+        d.appendChild(i);grid.appendChild(d);
+      };img.src=ev.target.result;
     };r.readAsDataURL(f);
   });
 }
@@ -616,6 +625,26 @@ function setDate(){
 
 // ── BOOT ──
 tick();setInterval(tick,1000);setDate();
+
+// Reset timbratura a mezzanotte
+function schedMidnightReset(){
+  const now=new Date();
+  const msToMidnight=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)-now;
+  setTimeout(()=>{
+    if(punchedIn){
+      // Auto-uscita a mezzanotte
+      DB.collection('presenze').doc(punchDocId).update({uscita:new Date().toISOString()}).catch(()=>{});
+    }
+    localStorage.removeItem('av_punch');
+    punchedIn=false;punchStart=null;punchDocId=null;
+    const btn=$('pbtn');if(btn){btn.className='pbtn pin';btn.textContent='⏱ Timbra entrata';}
+    const stat=$('pstat');if(stat)stat.textContent='Non timbrato';
+    const oe=$('nOre');if(oe)oe.textContent='0h';
+    const lw=$('luogoWrap');if(lw){lw.style.opacity='1';lw.style.pointerEvents='auto';}
+    schedMidnightReset();
+  },msToMidnight);
+}
+schedMidnightReset();
 try{
   const saved=localStorage.getItem('av_user');
   if(saved){
