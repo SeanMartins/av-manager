@@ -156,7 +156,17 @@ select option{background:var(--bg2)}
       <div class="sec"><div class="stl">Team oggi</div><span class="bdg bg">● Live</span></div>
       <div class="card" id="teamToday"><div class="empty">Caricamento...</div></div>
     </div>
-    <div class="page" id="p-location"><div class="empty" style="padding-top:60px">📍 Location — prossimo blocco</div></div>
+    <div class="page" id="p-location">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="sc"><div class="sn" id="nLoc">0</div><div class="sl">Location</div></div>
+        <div class="sc"><div class="sn" id="nFoto">0</div><div class="sl">Foto totali</div></div>
+      </div>
+      <div class="sec">
+        <div class="stl">Le tue location</div>
+        <button class="btn btn-p" style="padding:7px 14px;font-size:13px" onclick="openMod('mNewLoc')">+ Nuova</button>
+      </div>
+      <div id="locList"><div class="empty">Nessuna location salvata</div></div>
+    </div>
     <div class="page" id="p-magazzino"><div class="empty" style="padding-top:60px">📦 Magazzino — prossimo blocco</div></div>
     <div class="page" id="p-team">
       <div class="sec"><div class="stl">Dipendenti registrati</div></div>
@@ -189,8 +199,172 @@ select option{background:var(--bg2)}
   </div>
 </div>
 
+<!-- MODAL NUOVA LOCATION -->
+<div class="mol" id="mNewLoc" onclick="if(event.target===this)closeMod('mNewLoc')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px">📍 Nuova location</div>
+    <div class="ig"><label class="il">Nome</label><input type="text" id="lNome" placeholder="Villa Borromeo, Milano"></div>
+    <div class="ig"><label class="il">Indirizzo</label><input type="text" id="lAddr" placeholder="Via Roma 1, Milano"></div>
+    <div class="ig"><label class="il">Tipo venue</label>
+      <select id="lTipo">
+        <option>Teatro / Auditorium</option>
+        <option>Hotel / Congress center</option>
+        <option>Villa / Residenza storica</option>
+        <option>Spazio industriale</option>
+        <option>All'aperto</option>
+      </select>
+    </div>
+    <div class="ig"><label class="il">Note tecniche</label>
+      <textarea id="lNote" placeholder="Corrente, acustica, accesso mezzi..." style="width:100%;background:var(--bg2);border:1px solid var(--b2);border-radius:var(--rs);padding:11px 12px;font-family:var(--font);font-size:14px;color:var(--tx);resize:vertical;min-height:68px;outline:none"></textarea>
+    </div>
+    <div class="ig">
+      <label class="il">Tag</label>
+      <div class="chips" id="locTags">
+        <span class="chip" onclick="this.classList.toggle('on')">WiFi</span>
+        <span class="chip" onclick="this.classList.toggle('on')">Generatore</span>
+        <span class="chip" onclick="this.classList.toggle('on')">Trifase</span>
+        <span class="chip" onclick="this.classList.toggle('on')">Buio totale</span>
+        <span class="chip" onclick="this.classList.toggle('on')">Accesso camion</span>
+        <span class="chip" onclick="this.classList.toggle('on')">Interferenze RF</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mNewLoc')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="saveLoc()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETTAGLIO LOCATION -->
+<div class="mol" id="mLocDet" onclick="if(event.target===this)closeMod('mLocDet')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div id="mLocDetBody"></div>
+  </div>
+</div>
+
+<style>
+.upz{border:1px dashed var(--b2);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;background:var(--bg2);margin-bottom:10px}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.pth{aspect-ratio:1;border-radius:var(--rs);background:var(--bg3);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--tx3)}
+.pth img{width:100%;height:100%;object-fit:cover}
+.pina{background:var(--bg2);border-radius:var(--r);min-height:160px;position:relative;cursor:crosshair;border:1px dashed var(--b2);overflow:hidden;margin-bottom:8px}
+.pinh{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--tx3);white-space:nowrap;pointer-events:none}
+.mpin{position:absolute;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;transform:translate(-50%,-50%);border:2px solid rgba(255,255,255,.25)}
+</style>
+
 <script>
-firebase.initializeApp({
+// ── LOCATION ──
+let cacheLoc = [];
+
+function startLocListener() {
+  DB.collection('locations').orderBy('createdAt','desc').onSnapshot(snap => {
+    cacheLoc = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderLoc();
+  });
+}
+
+function renderLoc() {
+  const nL = $('nLoc'); if(nL) nL.textContent = cacheLoc.length;
+  const nF = $('nFoto'); if(nF) nF.textContent = cacheLoc.reduce((s,l) => s+(l.foto||0), 0);
+  const tagC = {WiFi:'bb',Trifase:'bp',Generatore:'ba','Buio totale':'bp','Accesso camion':'bg','Interferenze RF':'br'};
+  let h = '';
+  if (!cacheLoc.length) { h = '<div class="empty">Nessuna location salvata</div>'; }
+  else cacheLoc.forEach(l => {
+    const tags = (l.tags||[]).map(t => '<span class="bdg '+(tagC[t]||'bp')+'">'+t+'</span>').join('');
+    h += '<div class="card" style="cursor:pointer" onclick="openLocDet(\''+l.id+'\')">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
+      '<div><div style="font-size:15px;font-weight:600;margin-bottom:2px">'+l.nome+'</div>'+
+      '<div style="font-size:12px;color:var(--tx2)">📍 '+(l.indirizzo||'—')+'</div></div>'+
+      '<span class="bdg bp">'+((l.tipo||'').split('/')[0].trim())+'</span></div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:9px">'+tags+'</div>'+
+      '<div style="font-size:12px;color:var(--tx2);margin-top:8px">📷 '+(l.foto||0)+' foto</div></div>';
+  });
+  const ll = $('locList'); if(ll) ll.innerHTML = h;
+}
+
+async function saveLoc() {
+  const nome = val('lNome'); if (!nome) { toast('Inserisci il nome','r'); return; }
+  const tags = Array.from(document.querySelectorAll('#locTags .chip.on')).map(c => c.textContent.trim());
+  await DB.collection('locations').add({
+    nome, indirizzo: val('lAddr'), tipo: val('lTipo'),
+    note: val('lNote'), tags, foto: 0, pins: [],
+    createdAt: new Date().toISOString()
+  });
+  closeMod('mNewLoc'); toast('✓ Location salvata');
+  ['lNome','lAddr','lNote'].forEach(id => { const el=$(id); if(el) el.value=''; });
+  document.querySelectorAll('#locTags .chip').forEach(c => c.classList.remove('on'));
+}
+
+function openLocDet(lid) {
+  const l = cacheLoc.find(x => x.id === lid); if (!l) return;
+  const tagC = {WiFi:'bb',Trifase:'bp',Generatore:'ba','Buio totale':'bp','Accesso camion':'bg','Interferenze RF':'br'};
+  const pinS = {av:'background:#6c63ff;color:#fff',el:'background:#f59e0b;color:#000',pr:'background:#ef4444;color:#fff',wi:'background:#3b82f6;color:#fff'};
+  const pinL = {av:'AV',el:'EL',pr:'!!',wi:'WF'};
+  const pins = (l.pins||[]).map(p => '<div class="mpin" style="left:'+p.x+'%;top:'+p.y+'%;'+pinS[p.t]+'">'+pinL[p.t]+'</div>').join('');
+  const tags = (l.tags||[]).map(t => '<span class="bdg '+(tagC[t]||'bp')+'">'+t+'</span>').join('');
+  $('mLocDetBody').innerHTML =
+    '<div style="font-size:17px;font-weight:600;margin-bottom:2px">'+l.nome+'</div>'+
+    '<div style="font-size:13px;color:var(--tx2);margin-bottom:14px">📍 '+(l.indirizzo||'—')+'</div>'+
+    '<div class="card" style="margin-bottom:12px">'+
+      '<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">MAPPA INTERATTIVA</div>'+
+      '<div class="pina" id="pina_'+lid+'" style="height:160px">'+pins+'<div class="pinh">Tocca per aggiungere pin</div></div>'+
+      '<select id="pinT_'+lid+'" style="width:auto;margin-top:6px">'+
+        '<option value="av">🔊 AV</option><option value="el">⚡ Elettrico</option>'+
+        '<option value="pr">⚠️ Problema</option><option value="wi">📶 WiFi</option>'+
+      '</select>'+
+    '</div>'+
+    '<div class="card" style="margin-bottom:12px">'+
+      '<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">NOTE TECNICHE</div>'+
+      '<div style="font-size:14px;line-height:1.6">'+(l.note||'Nessuna nota.')+'</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:9px">'+tags+'</div>'+
+    '</div>'+
+    '<div class="card" style="margin-bottom:12px">'+
+      '<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">FOTO / PLANIMETRIE</div>'+
+      '<div class="upz" onclick="document.getElementById(\'fu_'+lid+'\').click()">'+
+        '<div style="font-size:24px;margin-bottom:6px">📷</div>'+
+        '<div style="font-size:13px;color:var(--tx2)">Carica foto o planimetria</div>'+
+      '</div>'+
+      '<input type="file" id="fu_'+lid+'" accept="image/*" multiple style="display:none" onchange="handlePhotos(event,\''+lid+'\')">'+
+      '<div class="pgrid" id="pg_'+lid+'">'+Array(l.foto||0).fill('<div class="pth">📷</div>').join('')+'</div>'+
+    '</div>'+
+    '<button class="btn btn-f" onclick="closeMod(\'mLocDet\')">Chiudi</button>';
+  setTimeout(() => {
+    const area = $('pina_'+lid);
+    if (area) area.onclick = e => addPin(e, lid);
+  }, 50);
+  openMod('mLocDet');
+}
+
+async function addPin(e, lid) {
+  const area = $('pina_'+lid); if (!area) return;
+  const r = area.getBoundingClientRect();
+  const x = Math.round((e.clientX-r.left)/r.width*100);
+  const y = Math.round((e.clientY-r.top)/r.height*100);
+  const t = $('pinT_'+lid)?.value || 'av';
+  const pinS = {av:'background:#6c63ff;color:#fff',el:'background:#f59e0b;color:#000',pr:'background:#ef4444;color:#fff',wi:'background:#3b82f6;color:#fff'};
+  const pinL = {av:'AV',el:'EL',pr:'!!',wi:'WF'};
+  const pin = document.createElement('div'); pin.className='mpin';
+  pin.style.cssText = 'left:'+x+'%;top:'+y+'%;'+pinS[t]; pin.textContent=pinL[t];
+  area.appendChild(pin);
+  const l = cacheLoc.find(x => x.id===lid);
+  if (l) await DB.collection('locations').doc(lid).update({pins:[...(l.pins||[]),{x,y,t}]});
+}
+
+async function handlePhotos(e, lid) {
+  const grid = $('pg_'+lid); if (!grid) return;
+  Array.from(e.target.files).forEach(f => {
+    const r = new FileReader(); r.onload = ev => {
+      const d = document.createElement('div'); d.className='pth';
+      const img = document.createElement('img'); img.src=ev.target.result;
+      d.appendChild(img); grid.appendChild(d);
+    }; r.readAsDataURL(f);
+  });
+  const l = cacheLoc.find(x => x.id===lid);
+  if (l) await DB.collection('locations').doc(lid).update({foto:(l.foto||0)+e.target.files.length});
+}
+</script>
   apiKey:"AIzaSyDxxvnjtKdybQStd0yUT8xKE0MBgwYPZTo",
   authDomain:"av-manager-41c40.firebaseapp.com",
   projectId:"av-manager-41c40",
@@ -258,7 +432,7 @@ function startApp(){
   $('profRole').textContent=USER.ruolo;
   $('profEmail').textContent=USER.email;
   $('profTel').textContent=USER.tel||'—';
-  startListeners();restorePunch();
+  startListeners();startLocListener();restorePunch();
 }
 
 function startListeners(){
