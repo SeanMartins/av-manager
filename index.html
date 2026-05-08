@@ -230,6 +230,21 @@ textarea{resize:vertical;min-height:80px}
       <div class="card" id="teamList"><div class="empty">Caricamento...</div></div>
     </div>
 
+    <!-- DICHIARAZIONE -->
+    <div class="page" id="p-dichiarazione">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="sc"><div class="sn" id="nDichPrep">0</div><div class="sl">Preparazioni</div></div>
+        <div class="sc"><div class="sn" id="nDichRient">0</div><div class="sl">Rientri</div></div>
+      </div>
+      <!-- Filtro -->
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="btn" id="dfAll" onclick="dichFilter('all')" style="flex:1;font-size:13px;background:var(--acb);border-color:var(--ac);color:var(--ac2)">Tutti</button>
+        <button class="btn" id="dfPrep" onclick="dichFilter('prep')" style="flex:1;font-size:13px">📋 Preparazioni</button>
+        <button class="btn" id="dfRient" onclick="dichFilter('rient')" style="flex:1;font-size:13px">✅ Rientri</button>
+      </div>
+      <div id="dichList"><div class="empty">Caricamento...</div></div>
+    </div>
+
   </div>
   <div id="nav">
     <div class="ni on" id="n-presenze" onclick="goPage('presenze')"><div class="ic">⏱</div><div class="lb">Presenze</div></div>
@@ -239,7 +254,7 @@ textarea{resize:vertical;min-height:80px}
       <div class="ic">💬</div><div class="lb">Forum</div>
       <div class="notif-dot" id="notifDot" style="display:none"></div>
     </div>
-    <div class="ni" id="n-team" onclick="goPage('team')"><div class="ic">👥</div><div class="lb">Team</div></div>
+    <div class="ni" id="n-dichiarazione" onclick="goPage('dichiarazione')"><div class="ic">📁</div><div class="lb">Archivio</div></div>
   </div>
 </div>
 
@@ -508,7 +523,7 @@ function goPage(n){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(b=>b.classList.remove('on'));
   $('p-'+n)&&$('p-'+n).classList.add('on');$('n-'+n)&&$('n-'+n).classList.add('on');
-  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',forum:'Forum discussioni',team:'Team'};
+  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti'};
   $('ptitle').textContent=t[n]||n;
 }
 
@@ -570,7 +585,7 @@ function startApp(){
   $('profEmail').textContent=USER.email;
   $('profTel').textContent=USER.tel||'—';
   appStarted=true;
-  startListeners();startLocListener();startMagListener();restorePunch();
+  startListeners();startLocListener();startMagListener();startDichListener();restorePunch();
   seedMagazzino();
 }
 
@@ -1361,6 +1376,162 @@ async function seedMagazzino(){
   });
   await batch.commit();
   toast('✓ Database demo caricato — '+articoli.length+' articoli');
+}
+
+// ── DICHIARAZIONE / ARCHIVIO ──
+let cacheDich=[], dichCurrentFilter='all';
+
+function startDichListener(){
+  DB.collection('lavori').orderBy('createdAt','desc').onSnapshot(snap=>{
+    cacheDich=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderDich();
+  });
+}
+
+function dichFilter(f){
+  dichCurrentFilter=f;
+  ['all','prep','rient'].forEach(k=>{
+    const btn=$('df'+k.charAt(0).toUpperCase()+k.slice(1));
+    if(!btn)return;
+    if(k===f){btn.style.background='var(--acb)';btn.style.borderColor='var(--ac)';btn.style.color='var(--ac2)';}
+    else{btn.style.background='';btn.style.borderColor='';btn.style.color='';}
+  });
+  renderDich();
+}
+
+function renderDich(){
+  const prep=cacheDich.filter(d=>!d.rientroData);
+  const rient=cacheDich.filter(d=>d.rientroData);
+  const nd=$('nDichPrep');if(nd)nd.textContent=prep.length;
+  const nr=$('nDichRient');if(nr)nr.textContent=rient.length;
+
+  let list=[];
+  if(dichCurrentFilter==='all')list=[...cacheDich];
+  else if(dichCurrentFilter==='prep')list=prep;
+  else list=rient;
+
+  const el=$('dichList');if(!el)return;
+  if(!list.length){el.innerHTML='<div class="empty">Nessun documento ancora</div>';return;}
+
+  // Raggruppa per mese
+  const byMese={};
+  list.forEach(d=>{
+    const date=new Date(d.rientroData||d.createdAt);
+    const key=date.toLocaleDateString('it-IT',{month:'long',year:'numeric'});
+    if(!byMese[key])byMese[key]=[];
+    byMese[key].push(d);
+  });
+
+  let h='';
+  Object.entries(byMese).forEach(([mese,docs])=>{
+    h+='<div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;padding-top:4px;border-top:1px solid var(--b)">'+mese+'</div>';
+    docs.forEach(d=>{
+      const isRient=!!d.rientroData;
+      const data=new Date(d.rientroData||d.createdAt).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
+      const stato=isRient?(d.rientrato?'bg':'br'):'bp';
+      const statoTxt=isRient?(d.rientrato?'✓ Rientro completo':'⚠ Rientro incompleto'):'📋 Preparazione';
+      const nPezzi=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
+      h+='<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="dichOpenDoc(\''+d.id+'\')">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:14px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.nome+'</div>'+
+            '<div style="font-size:12px;color:var(--tx2)">📅 '+data+' · 📍 '+(d.location||'—')+'</div>'+
+            '<div style="font-size:12px;color:var(--tx2)">👤 '+d.tecnico+' · 📦 '+nPezzi+' pezzi</div>'+
+          '</div>'+
+          '<span class="bdg '+stato+'" style="flex-shrink:0">'+statoTxt+'</span>'+
+        '</div>'+
+      '</div>';
+    });
+  });
+  el.innerHTML=h;
+}
+
+function dichOpenDoc(id){
+  const d=cacheDich.find(x=>x.id===id);if(!d)return;
+  const isRient=!!d.rientroData;
+  // Rigenera il PDF del documento
+  if(isRient) dichGeneraPDFRientro(d);
+  else dichGeneraPDFPrep(d);
+}
+
+function dichGeneraPDFPrep(d){
+  const nome=d.nome||'—',loc=d.location||'—';
+  const data=d.data?new Date(d.data).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
+  const tecnico=d.tecnico||'—';
+  const now=new Date(d.createdAt).toLocaleString('it-IT');
+  const tot=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
+  const bycat={};(d.articoli||[]).forEach(a=>{const k=a.cat||'Altro';if(!bycat[k])bycat[k]=[];bycat[k].push(a);});
+  let righe='';
+  Object.entries(bycat).forEach(([cat,items])=>{
+    righe+='<tr><td colspan="4" style="background:#f0f0f8;font-weight:600;font-size:11px;text-transform:uppercase;color:#555;padding:8px 10px">'+cat+'</td></tr>';
+    items.forEach((a,i)=>{righe+='<tr style="background:'+(i%2===0?'#fff':'#fafafa')+'"><td style="padding:8px 10px;font-size:13px;font-weight:500">'+a.nome+'</td><td style="padding:8px 10px;font-size:12px;color:#666">'+(a.marca||'—')+'</td><td style="padding:8px 10px;font-size:12px;color:#666;font-family:monospace">'+(a.ser||'—')+'</td><td style="padding:8px 10px;font-size:14px;font-weight:700;text-align:center">'+(a.qty||1)+'</td></tr>';});
+  });
+  const html=dichHTMLBase('Lista preparazione materiali',nome,'#6c63ff')+
+    '<div style="font-size:26px;font-weight:700;margin-bottom:18px">Lista preparazione materiali</div>'+
+    dichInfoGrid(nome,data,loc,tecnico,'')+
+    '<table><thead><tr><th>Articolo</th><th>Marca</th><th>N° Seriale</th><th>Qtà</th></tr></thead><tbody>'+righe+'</tbody></table>'+
+    '<div style="display:flex;justify-content:flex-end;gap:20px;font-size:13px;color:#666;margin-bottom:24px"><span>Totale articoli: <strong>'+(d.articoli||[]).length+'</strong></span><span>Totale pezzi: <strong>'+tot+'</strong></span></div>'+
+    dichFirme(tecnico)+'</div></body></html>';
+  dichOpenPDF(html,'prep_'+nome);
+}
+
+function dichGeneraPDFRientro(d){
+  const allOk=d.rientrato;
+  const nome=d.nome||'—',loc=d.location||'—';
+  const data=d.data?new Date(d.data).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
+  const tecnico=d.rientroTecnico||d.tecnico||'—';
+  const now=new Date(d.rientroData||d.createdAt).toLocaleString('it-IT');
+  const arts=d.articoliRientro||d.articoli||[];
+  const ok=arts.filter(a=>a.rientrato!==false);
+  const miss=arts.filter(a=>a.rientrato===false);
+  const rigaOk=ok.map((a,i)=>'<tr style="background:'+(i%2===0?'#fff':'#f9fff9')+'"><td style="padding:8px 10px;font-size:13px;font-weight:500">'+a.nome+'</td><td style="padding:8px 10px;font-size:12px;color:#666">'+(a.marca||'—')+'</td><td style="padding:8px 10px;font-size:12px;color:#666;font-family:monospace">'+(a.ser||'—')+'</td><td style="padding:8px 10px;text-align:center"><span style="background:#d4edda;color:#155724;padding:2px 10px;border-radius:20px;font-size:11px">✓</span></td></tr>').join('');
+  const rigaMiss=miss.map((a,i)=>'<tr style="background:'+(i%2===0?'#fff8f8':'#fff0f0')+'"><td style="padding:8px 10px;font-size:13px;font-weight:500;color:#c0392b">'+a.nome+'</td><td style="padding:8px 10px;font-size:12px;color:#888">'+(a.marca||'—')+'</td><td style="padding:8px 10px;font-size:12px;color:#888;font-family:monospace">'+(a.ser||'—')+'</td><td style="padding:8px 10px;text-align:center"><span style="background:#f8d7da;color:#721c24;padding:2px 10px;border-radius:20px;font-size:11px">⚠</span></td></tr>').join('');
+  const html=dichHTMLBase('Report rientro — '+nome,nome,allOk?'#27ae60':'#e74c3c')+
+    '<div style="background:'+(allOk?'#d4edda':'#f8d7da')+';border-radius:10px;padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;gap:12px;font-size:16px;font-weight:700;color:'+(allOk?'#155724':'#721c24')+'">'+(allOk?'✅ Rientro COMPLETO':'⚠️ Rientro INCOMPLETO — materiali mancanti')+'</div>'+
+    dichInfoGrid(nome,data,loc,tecnico,'')+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px">'+
+      '<div style="background:#e8eaf6;color:#3949ab;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:700">'+arts.length+'</div><div style="font-size:11px;margin-top:2px">Totali</div></div>'+
+      '<div style="background:#e8f5e9;color:#2e7d32;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:700">'+ok.length+'</div><div style="font-size:11px;margin-top:2px">Rientrati</div></div>'+
+      '<div style="background:#fce4ec;color:#c62828;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:700">'+miss.length+'</div><div style="font-size:11px;margin-top:2px">Mancanti</div></div>'+
+      '<div style="background:'+(allOk?'#e8f5e9':'#fff8e1')+';color:'+(allOk?'#2e7d32':'#e65100')+';border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:700">'+Math.round(ok.length/Math.max(arts.length,1)*100)+'%</div><div style="font-size:11px;margin-top:2px">Completamento</div></div>'+
+    '</div>'+
+    (ok.length?'<div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding-left:4px;border-left:4px solid #27ae60;color:#155724">✓ Rientrati ('+ok.length+')</div><table><thead><tr><th>Articolo</th><th>Marca</th><th>Seriale</th><th>Stato</th></tr></thead><tbody>'+rigaOk+'</tbody></table>':'')+
+    (miss.length?'<div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding-left:4px;border-left:4px solid #e74c3c;color:#721c24">⚠ Mancanti ('+miss.length+')</div><table><thead><tr><th>Articolo</th><th>Marca</th><th>Seriale</th><th>Stato</th></tr></thead><tbody>'+rigaMiss+'</tbody></table>':'')+
+    dichFirme(tecnico)+'</div></body></html>';
+  dichOpenPDF(html,'rientro_'+nome);
+}
+
+function dichHTMLBase(title,nome,color){
+  return '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>'+title+'</title>'+
+    '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Helvetica,Arial,sans-serif;color:#1a1a2e}'+
+    '.page{max-width:800px;margin:0 auto;padding:32px 40px}'+
+    '.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid '+color+'}'+
+    '.logo{font-size:22px;font-weight:700;color:'+color+'}.logo span{font-size:12px;font-weight:400;color:#888;display:block;margin-top:2px}'+
+    'table{width:100%;border-collapse:collapse;margin-bottom:20px;border-radius:8px;overflow:hidden;box-shadow:0 0 0 1px #e0e0e0}'+
+    'th{padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;text-align:left;background:#37474f;color:#fff}'+
+    '@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="page">'+
+    '<div class="header"><div><div class="logo">MMG<span>Multimedia Meeting Group</span></div></div>'+
+    '<div style="text-align:right;font-size:11px;color:#888">'+new Date().toLocaleString('it-IT')+'</div></div>';
+}
+function dichInfoGrid(nome,data,loc,tecnico,extra){
+  return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;background:#f8f8fc;border-radius:10px;padding:16px">'+
+    '<div><div style="font-size:10px;font-weight:600;text-transform:uppercase;color:#888;margin-bottom:3px">Evento / Lavoro</div><div style="font-size:14px;font-weight:500">'+nome+'</div></div>'+
+    '<div><div style="font-size:10px;font-weight:600;text-transform:uppercase;color:#888;margin-bottom:3px">Data</div><div style="font-size:14px;font-weight:500">'+data+'</div></div>'+
+    '<div><div style="font-size:10px;font-weight:600;text-transform:uppercase;color:#888;margin-bottom:3px">Location</div><div style="font-size:14px;font-weight:500">'+loc+'</div></div>'+
+    '<div><div style="font-size:10px;font-weight:600;text-transform:uppercase;color:#888;margin-bottom:3px">Tecnico</div><div style="font-size:14px;font-weight:500">'+tecnico+'</div></div>'+
+    (extra?'<div style="grid-column:1/-1"><div style="font-size:10px;font-weight:600;text-transform:uppercase;color:#888;margin-bottom:3px">Note</div><div style="font-size:14px;font-weight:500">'+extra+'</div></div>':'')+
+  '</div>';
+}
+function dichFirme(tecnico){
+  return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:32px;padding-top:20px;border-top:1px solid #eee">'+
+    '<div style="border-top:1px solid #ccc;padding-top:8px;font-size:11px;color:#888">Firma tecnico<br><br><br>'+tecnico+'</div>'+
+    '<div style="border-top:1px solid #ccc;padding-top:8px;font-size:11px;color:#888">Firma responsabile<br><br><br>___________________</div>'+
+  '</div>';
+}
+function dichOpenPDF(html,name){
+  const w=window.open('','_blank');
+  w.document.write(html);w.document.close();
+  setTimeout(()=>{w.focus();w.print();},400);
 }
 
 // ── CLOCK ──
