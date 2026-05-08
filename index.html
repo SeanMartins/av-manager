@@ -929,7 +929,7 @@ window.doReg = async () => {
     const member={id:uid,nome,cognome,email,tel:tel||'',ruolo:window._avState.selRole,createdAt:new Date().toISOString()};
     await db.collection('team').doc(uid).set(member);
     localStorage.setItem('av_user',JSON.stringify(member));
-    window.location.reload();
+    window._launchApp(member);
   } catch(e){ alert('Errore: '+e.message); console.error(e); }
   if(btn){ btn.textContent='Inizia →'; btn.disabled=false; }
 };
@@ -947,9 +947,22 @@ window.doQuickLogin = async () => {
     if(snap.empty){ window._toast('Email non trovata — registrati','r'); if(btn){btn.textContent='Accedi →';btn.disabled=false;} return; }
     const user={id:snap.docs[0].id,...snap.docs[0].data()};
     localStorage.setItem('av_user',JSON.stringify(user));
-    window.location.reload();
+    window._launchApp(user);
   } catch(e){ alert('Errore: '+e.message); console.error(e); }
   if(btn){ btn.textContent='Accedi →'; btn.disabled=false; }
+};
+
+// launchApp disponibile subito — usato da doReg/doQuickLogin
+// Verrà sovrascritto dalla versione completa nell'IIFE
+window._launchApp = (user) => {
+  document.getElementById('reg').style.display='none';
+  document.getElementById('app').style.display='flex';
+  const ini=(user.nome[0]+user.cognome[0]).toUpperCase();
+  ['avbtn','profAv'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=ini; });
+  const pn=document.getElementById('profName'); if(pn) pn.textContent=user.nome+' '+user.cognome;
+  const pr=document.getElementById('profRole'); if(pr) pr.textContent=user.ruolo;
+  const pe=document.getElementById('profEmail'); if(pe) pe.textContent=user.email;
+  const pt=document.getElementById('profTel'); if(pt) pt.textContent=user.tel||'—';
 };
 
 window._toast = (msg, t='g') => {
@@ -1225,9 +1238,14 @@ function launchApp() {
   document.getElementById('profEmail').textContent=user.email;
   document.getElementById('profTel').textContent=user.tel||'—';
   startListeners();
-  // Ripristina turno attivo dopo che i listener sono partiti
   setTimeout(restoreActivePunch, 800);
 }
+
+// Sovrascrivi _launchApp con versione completa (include startListeners)
+window._launchApp = (u) => {
+  user = u;
+  launchApp();
+};
 
 window.doLogout = () => {
   localStorage.removeItem('av_user');
