@@ -1157,57 +1157,60 @@ function restoreActivePunch() {
 // REALTIME LISTENERS — avviati dopo il login
 // ═══════════════════════════════════════════════════
 function startListeners() {
-  // Team — si aggiorna su tutti i dispositivi in tempo reale
-  onSnapshot(query(C.team(), orderBy('createdAt')), snap => {
+  const db = window._db;
+  if(!db){ console.error('DB non pronto'); return; }
+
+  // Team
+  db.collection('team').orderBy('createdAt').onSnapshot(snap => {
     cacheTeam = snap.docs.map(d => ({id: d.id, ...d.data()}));
     renderPresenze(); renderTeamPage();
-    document.getElementById('nTeam').textContent = cacheTeam.length;
-    document.getElementById('nRuoli').textContent = new Set(cacheTeam.map(m=>m.ruolo)).size;
-    // Notifica se nuovo collega si è registrato (non il primo caricamento)
-    if (snap.docChanges().some(c => c.type === 'added' && c.doc.data().id !== user?.id)) {
-      const added = snap.docChanges().filter(c=>c.type==='added');
-      if (added.length && !snap.metadata.hasPendingWrites) toast('👤 Nuovo collega registrato!','g');
+    const nt=document.getElementById('nTeam'); if(nt) nt.textContent=cacheTeam.length;
+    const nr=document.getElementById('nRuoli'); if(nr) nr.textContent=new Set(cacheTeam.map(m=>m.ruolo)).size;
+    if(snap.docChanges().some(c=>c.type==='added' && c.doc.data().id !== user?.id)){
+      if(!snap.metadata.hasPendingWrites) toast('👤 Nuovo collega registrato!');
     }
   });
 
   // Location
-  onSnapshot(query(C.locations(), orderBy('createdAt', 'desc')), snap => {
+  db.collection('locations').orderBy('createdAt','desc').onSnapshot(snap => {
     cacheLoc = snap.docs.map(d => ({id: d.id, ...d.data()}));
     renderLoc();
   });
 
   // Magazzino
-  onSnapshot(query(C.magazzino(), orderBy('nome')), snap => {
+  db.collection('magazzino').orderBy('nome').onSnapshot(snap => {
     cacheMag = snap.docs.map(d => ({id: d.id, ...d.data()}));
     renderMag();
   });
 
-  // Tickets (vecchio sistema — mantieni per compatibilità)
-  onSnapshot(query(C.tickets(), where('stato','==','aperto'), orderBy('createdAt','desc')), snap => {
+  // Tickets
+  db.collection('tickets').where('stato','==','aperto').orderBy('createdAt','desc').onSnapshot(snap => {
     cacheTickets = snap.docs.map(d => ({id: d.id, ...d.data()}));
     renderPresenze();
   });
 
-  // Forum posts — realtime
-  onSnapshot(query(C.forum(), orderBy('createdAt','desc')), snap => {
+  // Forum
+  db.collection('forum').orderBy('createdAt','desc').onSnapshot(snap => {
     cacheForum = snap.docs.map(d => ({id: d.id, ...d.data()}));
     renderForum();
-    document.getElementById('nTicket').textContent = cacheForum.length;
+    const nt=document.getElementById('nTicket'); if(nt) nt.textContent=cacheForum.length;
   });
 
   // Presenze oggi
   const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-  onSnapshot(query(C.presenze(), where('entrata','>',todayStart.toISOString())), snap => {
+  db.collection('presenze').where('entrata','>',todayStart.toISOString()).onSnapshot(snap => {
     cachePresenze = snap.docs.map(d => ({id: d.id, ...d.data()}));
     renderPresenze();
   });
 }
+window.startListeners = startListeners;
 
 // ═══════════════════════════════════════════════════
 // SEED magazzino demo (solo se collezione vuota)
 // ═══════════════════════════════════════════════════
 async function seedIfEmpty() {
-  const snap = await getDocs(C.magazzino());
+  const db = window._db; if(!db) return;
+  const snap = await db.collection('magazzino').limit(1).get();
   if (!snap.empty) return;
   const mag = [
     {cat:'traduzione',nome:'Bosch LBB 3422 ricevitore IR',marca:'Bosch',ser:'SN-TS001',qty:24,stato:'ok',createdAt:new Date().toISOString()},
@@ -1219,7 +1222,7 @@ async function seedIfEmpty() {
     {cat:'ledwall',nome:'Absen cabinet alluminio 500×500',marca:'Absen',ser:'SN-LW003',qty:12,stato:'ok',createdAt:new Date().toISOString()},
     {cat:'ledwall',nome:'Meanwell alimentatore 5V/60A',marca:'Meanwell',ser:'SN-LW004',qty:12,stato:'ok',createdAt:new Date().toISOString()},
   ];
-  for (const m of mag) await addDoc(C.magazzino(), m);
+  for (const m of mag) await db.collection('magazzino').add(m);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1314,42 +1317,44 @@ window.getGPS = () => {
 // PUNCH
 // ═══════════════════════════════════════════════════
 window.punch = async () => {
+  const db = window._db;
+  if(!db){ toast('Firebase non pronto','r'); return; }
+  const currentUser = user || JSON.parse(localStorage.getItem('av_user')||'null');
+  if(!currentUser){ toast('Utente non trovato','r'); return; }
   const btn=document.getElementById('pbtn'), stat=document.getElementById('pstat');
   const now=new Date(), p=x=>String(x).padStart(2,'0');
   const t=`${p(now.getHours())}:${p(now.getMinutes())}`;
   if(!punchedIn){
     punchedIn=true; punchStart=Date.now();
     btn.className='pbtn pout'; btn.textContent='⏹ Timbra uscita';
-    // Determina luogo finale
-    const customLuogo = v('luogoCustom');
-    const luogoFinale = customLuogo ? avState.selLuogo+' — '+customLuogo : avState.selLuogo;
+    const customLuogo = document.getElementById('luogoCustom')?.value.trim()||'';
+    const luogo = window._avState?.selLuogo||'🏢 In sede';
+    const luogoFinale = customLuogo ? luogo+' — '+customLuogo : luogo;
     stat.innerHTML=`Entrata timbrata alle ${t} <span class="luogo-badge">${luogoFinale}</span>`;
-    const ref = await addDoc(C.presenze(), {
-      uid:user.id, nome:user.nome+' '+user.cognome,
-      entrata:now.toISOString(), uscita:null,
-      luogo:luogoFinale,
-      gps: gpsCoords || null
-    });
-    punchDocId=ref.id;
-    // Salva turno attivo in localStorage — sopravvive alla chiusura app
-    localStorage.setItem('av_active_punch', JSON.stringify({
-      docId: ref.id, entrata: now.toISOString(), luogo: luogoFinale
-    }));
+    try {
+      const ref = await db.collection('presenze').add({
+        uid:currentUser.id, nome:currentUser.nome+' '+currentUser.cognome,
+        entrata:now.toISOString(), uscita:null,
+        luogo:luogoFinale, gps:gpsCoords||null
+      });
+      punchDocId=ref.id;
+      localStorage.setItem('av_active_punch',JSON.stringify({docId:ref.id,entrata:now.toISOString(),luogo:luogoFinale}));
+    } catch(e){ console.error('Punch in error:',e); }
     toast('✓ Entrata timbrata — '+luogoFinale);
-    // Blocca selezione luogo durante turno
-    document.getElementById('luogoWrap').style.opacity='0.4';
-    document.getElementById('luogoWrap').style.pointerEvents='none';
+    const lw=document.getElementById('luogoWrap');
+    if(lw){ lw.style.opacity='0.4'; lw.style.pointerEvents='none'; }
   } else {
     punchedIn=false;
     btn.className='pbtn pin'; btn.textContent='⏱ Timbra entrata';
     stat.textContent=`Uscita timbrata alle ${t}`;
     document.getElementById('oreOggi').textContent='0h';
-    if(punchDocId) await db.collection('presenze').doc(punchDocId).update({uscita:now.toISOString()});
+    try {
+      if(punchDocId) await db.collection('presenze').doc(punchDocId).update({uscita:now.toISOString()});
+    } catch(e){ console.error('Punch out error:',e); }
     punchStart=null; punchDocId=null; gpsCoords=null;
     localStorage.removeItem('av_active_punch');
-    // Riabilita selezione luogo
-    document.getElementById('luogoWrap').style.opacity='1';
-    document.getElementById('luogoWrap').style.pointerEvents='auto';
+    const lw=document.getElementById('luogoWrap');
+    if(lw){ lw.style.opacity='1'; lw.style.pointerEvents='auto'; }
     toast('✓ Uscita timbrata');
   }
 };
