@@ -1,5 +1,5 @@
 // ── Bump VERSION on every deploy → forces immediate update on all devices ──
-const VERSION = 'av-v20260507';
+const VERSION = 'av-v20260508-b';
 const CACHE   = VERSION;
 const ASSETS  = ['/', '/index.html', '/manifest.json'];
 
