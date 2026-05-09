@@ -318,21 +318,40 @@ textarea{resize:vertical;min-height:80px}
   <div class="msh">
     <div class="mhd"></div>
     <div id="plStep1">
-      <div class="stl" style="margin-bottom:4px">📋 Prepara un nuovo lavoro</div>
-      <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Inserisci i dettagli poi scannerizza i QR degli articoli</div>
-      <div class="ig"><label class="il">Nome evento / lavoro</label><input type="text" id="plNome" placeholder="Convegno Milano 15/06"></div>
-      <div class="ig"><label class="il">Location</label><select id="plLoc"><option value="">-- Seleziona --</option></select></div>
-      <div class="ig"><label class="il">Data</label><input type="date" id="plData"></div>
-      <div class="ig"><label class="il">Note</label><textarea id="plNote" placeholder="Note per il tecnico..." style="min-height:60px"></textarea></div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-f" onclick="stopCam();closeMod('mPreparaLavoro')">Annulla</button>
-        <button class="btn btn-p btn-f" onclick="plGoScan()">📷 Avvia scansione →</button>
+      <!-- Tab nuovo / modifica -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px;background:var(--bg2);border-radius:var(--rs);padding:4px">
+        <button id="plTabNuovo" onclick="plSwitchTab('nuovo')" style="padding:9px;border-radius:6px;border:none;background:var(--ac);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">📋 Nuovo</button>
+        <button id="plTabModifica" onclick="plSwitchTab('modifica')" style="padding:9px;border-radius:6px;border:none;background:transparent;color:var(--tx2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer">✏️ Modifica</button>
+      </div>
+
+      <!-- Form nuovo lavoro -->
+      <div id="plFormNuovo">
+        <div class="ig"><label class="il">Nome evento / lavoro</label><input type="text" id="plNome" placeholder="Convegno Milano 15/06"></div>
+        <div class="ig"><label class="il">Location</label><select id="plLoc"><option value="">-- Seleziona --</option></select></div>
+        <div class="ig"><label class="il">Data</label><input type="date" id="plData"></div>
+        <div class="ig"><label class="il">Note</label><textarea id="plNote" placeholder="Note per il tecnico..." style="min-height:60px"></textarea></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-f" onclick="stopCam();closeMod('mPreparaLavoro')">Annulla</button>
+          <button class="btn btn-p btn-f" onclick="plGoScan()">📷 Avvia scansione →</button>
+        </div>
+      </div>
+
+      <!-- Lista lavori esistenti da modificare -->
+      <div id="plFormModifica" style="display:none">
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:10px">Seleziona il lavoro da modificare</div>
+        <input type="text" id="plModSearch" placeholder="🔍 Cerca lavoro..." oninput="plFilterExisting()" style="margin-bottom:10px">
+        <div id="plExistingList" style="max-height:340px;overflow-y:auto"></div>
+        <button class="btn btn-f" style="margin-top:10px" onclick="stopCam();closeMod('mPreparaLavoro')">Annulla</button>
       </div>
     </div>
+
     <div id="plStep2" style="display:none">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
         <button class="btn" style="padding:6px 12px;font-size:12px" onclick="plBack()">← Torna</button>
-        <div class="stl" id="plNomeLbl">—</div>
+        <div style="flex:1;min-width:0">
+          <div class="stl" id="plNomeLbl" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
+          <div style="font-size:11px;color:var(--tx2)" id="plModLbl"></div>
+        </div>
       </div>
       <div style="position:relative;border-radius:var(--r);overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:1">
         <video id="plVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
@@ -351,7 +370,7 @@ textarea{resize:vertical;min-height:80px}
       <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">Digita nome o ID seriale per cercare nel magazzino</div>
       <div class="sec"><div class="stl">Lista preparata</div><span class="bdg bp" id="plCount">0 articoli</span></div>
       <div id="plItems" style="margin-bottom:14px"><div class="empty" style="padding:12px">Nessun articolo ancora</div></div>
-      <button class="btn btn-p btn-f" style="padding:14px;font-size:15px" onclick="plGeneraPDF()">📄 Genera PDF riepilogo</button>
+      <button class="btn btn-p btn-f" style="padding:14px;font-size:15px" onclick="plGeneraPDF()">📄 Genera PDF e salva</button>
     </div>
   </div>
 </div>
@@ -1373,19 +1392,82 @@ async function saveArt(){
 }
 
 // ── PREPARA LAVORO ──
-let plArticoli=[],plStream=null,plInterval=null;
+let plArticoli=[],plStream=null,plInterval=null,plEditingId=null;
+
+function plSwitchTab(tab){
+  const isNuovo=tab==='nuovo';
+  document.getElementById('plFormNuovo').style.display=isNuovo?'block':'none';
+  document.getElementById('plFormModifica').style.display=isNuovo?'none':'block';
+  document.getElementById('plTabNuovo').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:'+(isNuovo?'600':'500')+';background:'+(isNuovo?'var(--ac)':'transparent')+';color:'+(isNuovo?'#fff':'var(--tx2)');
+  document.getElementById('plTabModifica').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:'+(!isNuovo?'600':'500')+';background:'+(!isNuovo?'var(--ac)':'transparent')+';color:'+(!isNuovo?'#fff':'var(--tx2)');
+  if(!isNuovo) plRenderExisting(cacheDich);
+}
+
+function plFilterExisting(){
+  const q=(document.getElementById('plModSearch')?.value||'').toLowerCase();
+  plRenderExisting(q?cacheDich.filter(d=>(d.nome||'').toLowerCase().includes(q)||(d.location||'').toLowerCase().includes(q)):cacheDich);
+}
+
+function plRenderExisting(list){
+  const el=document.getElementById('plExistingList');if(!el)return;
+  // Solo preparazioni (non rientri completati)
+  const prep=list.filter(d=>!d.rientroData);
+  if(!prep.length){el.innerHTML='<div class="empty">Nessun lavoro preparato trovato</div>';return;}
+  let h='';
+  prep.forEach(d=>{
+    const data=d.data?new Date(d.data).toLocaleDateString('it-IT'):new Date(d.createdAt).toLocaleDateString('it-IT');
+    const nPezzi=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
+    h+='<div onclick="plCaricaEsistente(\''+d.id+'\')" style="padding:12px;border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor=\'var(--ac)\'" onmouseout="this.style.borderColor=\'var(--b)\'">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.nome+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2);margin-top:2px">📅 '+data+' · 📍 '+(d.location||'—')+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2)">👤 '+d.tecnico+' · 📦 '+nPezzi+' pezzi</div>'+
+        '</div>'+
+        '<span class="bdg bp">✏️ Modifica</span>'+
+      '</div></div>';
+  });
+  el.innerHTML=h;
+}
+
+function plCaricaEsistente(id){
+  const d=cacheDich.find(x=>x.id===id);if(!d)return;
+  plEditingId=id;
+  // Carica articoli esistenti nella lista
+  plArticoli=(d.articoli||[]).map(a=>({...a,qtyPrep:a.qty||1}));
+  // Precompila i campi info
+  document.getElementById('plNome').value=d.nome||'';
+  document.getElementById('plLoc').value=d.location||'';
+  document.getElementById('plData').value=d.data||'';
+  document.getElementById('plNote').value=d.note||'';
+  // Vai allo step 2
+  document.getElementById('plStep1').style.display='none';
+  document.getElementById('plStep2').style.display='block';
+  document.getElementById('plNomeLbl').textContent=d.nome||'—';
+  document.getElementById('plModLbl').textContent='✏️ Modifica lavoro esistente';
+  renderPlItems();
+  startCam('plVideo',processPlQR);
+  toast('✓ Lavoro caricato — '+plArticoli.length+' articoli');
+}
 
 function openMod(id){
   const el=document.getElementById(id);if(!el)return;
   el.classList.add('on');document.body.style.overflow='hidden';
   if(id==='mPreparaLavoro'){
-    plArticoli=[];
+    plArticoli=[];plEditingId=null;
     document.getElementById('plStep1').style.display='block';
     document.getElementById('plStep2').style.display='none';
+    // Reset tab to nuovo
+    document.getElementById('plFormNuovo').style.display='block';
+    document.getElementById('plFormModifica').style.display='none';
+    document.getElementById('plTabNuovo').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:600;background:var(--ac);color:#fff';
+    document.getElementById('plTabModifica').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:500;background:transparent;color:var(--tx2)';
     const sel=document.getElementById('plLoc');
     sel.innerHTML='<option value="">-- Seleziona --</option>';
     cacheLoc.forEach(l=>{const o=document.createElement('option');o.value=l.nome;o.textContent=l.nome;sel.appendChild(o);});
     document.getElementById('plData').value=new Date().toISOString().slice(0,10);
+    document.getElementById('plNome').value='';
+    document.getElementById('plNote').value='';
     renderPlItems();
   }
 }
@@ -1511,9 +1593,22 @@ async function plGeneraPDF(){
     '<div class="totale"><span>Totale articoli: <strong>'+plArticoli.length+'</strong></span><span>Totale pezzi: <strong>'+tot+'</strong></span></div>'+
     '<div class="firma"><div class="fbox">Firma tecnico<br><br><br>'+tecnico+'</div><div class="fbox">Firma responsabile<br><br><br>___________________</div></div>'+
     '<div class="footer"><span>MMG · Lista preparazione</span><span>'+nome+' · '+data+'</span></div></div></body></html>';
-  // Salva su Firebase
-  try{await DB.collection('lavori').add({nome,location:loc||'',data:dataRaw,tecnico,createdAt:new Date().toISOString(),articoli:plArticoli.map(a=>({id:a.id||'',nome:a.nome,cat:a.cat||'',marca:a.marca||'',ser:a.ser||'',qty:a.qtyPrep||1}))});}catch(e){console.warn(e);}
-  const w=window.open('','_blank');w.document.write(html);w.document.close();setTimeout(()=>{w.focus();w.print();},400);
+  // Salva su Firebase — aggiorna se modifica, crea se nuovo
+  try{
+    const lavoroData={nome,location:loc||'',data:dataRaw,tecnico,note:val('plNote'),
+      articoli:plArticoli.map(a=>({id:a.id||'',nome:a.nome,cat:a.cat||'',marca:a.marca||'',ser:a.ser||'',qty:a.qtyPrep||1})),
+      updatedAt:new Date().toISOString()
+    };
+    if(plEditingId){
+      await DB.collection('lavori').doc(plEditingId).update(lavoroData);
+      toast('✓ Lavoro aggiornato e PDF generato!');
+    } else {
+      lavoroData.createdAt=new Date().toISOString();
+      await DB.collection('lavori').add(lavoroData);
+      toast('✓ PDF generato!');
+    }
+  }catch(e){console.warn(e);}
+  plEditingId=null;  const w=window.open('','_blank');w.document.write(html);w.document.close();setTimeout(()=>{w.focus();w.print();},400);
   closeMod('mPreparaLavoro');toast('✓ PDF generato!');
 }
 
