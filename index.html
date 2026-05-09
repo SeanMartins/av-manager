@@ -2644,11 +2644,17 @@ function renderAgendaAdmin(){
   const fmt=d=>d.toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
   $('agWeekLabelAdmin').textContent='Settimana '+(agWeekOffset===0?'corrente':agWeekOffset>0?'+'+agWeekOffset:agWeekOffset);
   $('agWeekRangeAdmin').textContent=fmt(days[0])+' — '+fmt(days[6]);
-  // Popola filtro dipendenti
+  // Popola filtro dipendenti — sempre aggiornato
   const selF=$('agFilterDip');
-  if(selF&&selF.options.length===1){
+  if(selF){
+    const curVal=selF.value;
+    selF.innerHTML='<option value="all">👥 Tutti i dipendenti</option>';
     cacheTeam.filter(m=>m.ruolo!=='Responsabile').forEach(m=>{
-      const o=document.createElement('option');o.value=m.id;o.textContent=m.nome+' '+m.cognome;selF.appendChild(o);
+      const o=document.createElement('option');
+      o.value=m.id;
+      o.textContent=m.nome+' '+m.cognome+' ('+m.ruolo+')';
+      if(m.id===curVal)o.selected=true;
+      selF.appendChild(o);
     });
   }
   const filterUid=$('agFilterDip')?.value||'all';
@@ -2702,11 +2708,8 @@ function newTurnoForDay(ds){
   $('turTipo').value='lavoro';
   $('turLocation').value='';
   $('turNote').value='';
-  // Popola select dipendenti
-  const sel=$('turDip');sel.innerHTML='';
-  cacheTeam.filter(m=>m.ruolo!=='Responsabile').forEach(m=>{
-    const o=document.createElement('option');o.value=m.id;o.textContent=m.nome+' '+m.cognome;sel.appendChild(o);
-  });
+  // Popola sempre al momento dell'apertura
+  popolaTurDip(null);
   openMod('mNewTurno');
 }
 
@@ -2716,12 +2719,7 @@ function editTurno(id){
   $('mNewTurnoTitle').textContent='✏️ Modifica turno';
   $('turDeleteBtn').style.display='block';
   $('turSaveBtn').textContent='Aggiorna';
-  // Popola select dipendenti
-  const sel=$('turDip');sel.innerHTML='';
-  cacheTeam.filter(m=>m.ruolo!=='Responsabile').forEach(m=>{
-    const o=document.createElement('option');o.value=m.id;o.textContent=m.nome+' '+m.cognome;sel.appendChild(o);
-  });
-  sel.value=t.uid;
+  popolaTurDip(t.uid);
   $('turData').value=t.data;
   $('turOraIn').value=t.oraIn||'09:00';
   $('turOraFin').value=t.oraFin||'18:00';
@@ -2729,6 +2727,23 @@ function editTurno(id){
   $('turLocation').value=t.location||'';
   $('turNote').value=t.note||'';
   openMod('mNewTurno');
+}
+
+function popolaTurDip(selectedUid){
+  const sel=$('turDip');if(!sel)return;
+  sel.innerHTML='<option value="">-- Seleziona dipendente --</option>';
+  const lista=cacheTeam.filter(m=>m.ruolo!=='Responsabile');
+  if(!lista.length){
+    sel.innerHTML='<option value="">Nessun dipendente registrato</option>';
+    return;
+  }
+  lista.forEach(m=>{
+    const o=document.createElement('option');
+    o.value=m.id;
+    o.textContent=m.nome+' '+m.cognome+' ('+m.ruolo+')';
+    if(selectedUid&&m.id===selectedUid)o.selected=true;
+    sel.appendChild(o);
+  });
 }
 
 async function saveTurno(){
