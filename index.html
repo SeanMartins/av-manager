@@ -172,6 +172,8 @@ textarea{resize:vertical;min-height:80px}
           <span class="chip on" onclick="pickChip(this,'luogo')">🏢 In sede</span>
           <span class="chip" onclick="pickChip(this,'luogo')">🔧 Assistenza</span>
           <span class="chip" onclick="pickChip(this,'luogo')">✈️ Trasferta</span>
+          <span class="chip" onclick="pickChip(this,'luogo')">🃏 Jolly</span>
+          <span class="chip" onclick="pickChip(this,'luogo')">🤒 Malattia</span>
         </div>
         <div id="luogoExtra" style="display:none;margin-top:8px">
           <input type="text" id="luogoCustom" placeholder="Specifica il luogo...">
@@ -608,7 +610,11 @@ function pickChip(el,group){
   el.closest('.chips').querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
   if(group==='role')selRole=el.textContent.trim();
-  if(group==='luogo'){selLuogo=el.textContent.trim();const x=selLuogo.includes('Assistenza')||selLuogo.includes('Trasferta');$('luogoExtra').style.display=x?'block':'none';}
+  if(group==='luogo'){
+    selLuogo=el.textContent.trim();
+    const isExtra=selLuogo.includes('Assistenza')||selLuogo.includes('Trasferta');
+    $('luogoExtra').style.display=isExtra?'block':'none';
+  }
 }
 function togglePriv(){privOk=!privOk;$('privBox').classList.toggle('on',privOk);}
 function clearNotif(){$('notifDot').style.display='none';}
@@ -708,9 +714,10 @@ async function punch(){
     // ENTRATA
     punchedIn=true;punchStart=Date.now();inPausa=false;pause=[];
     btn.className='pbtn pout';btn.textContent='⏹ Timbra uscita';
-    pauseBtn.style.display='block';
     const extra=val('luogoCustom');
     const luogo=extra?selLuogo+' — '+extra:selLuogo;
+    const isSpeciale=luogo.includes('Malattia');
+    pauseBtn.style.display=isSpeciale?'none':'block';
     stat.innerHTML='Entrata timbrata alle '+t+' <span class="lbdg">'+luogo+'</span>';
     try{
       const ref=await DB.collection('presenze').add({uid:USER.id,nome:USER.nome+' '+USER.cognome,entrata:now.toISOString(),uscita:null,luogo,pause:[]});
@@ -835,7 +842,8 @@ function restorePunch(){
     const btn=$('pbtn');if(btn){btn.className='pbtn pout';btn.textContent='⏹ Timbra uscita';}
     const pauseBtn=$('pauseBtn');
     if(pauseBtn){
-      pauseBtn.style.display='block';
+      const isMalattia=(p.luogo||'').includes('Malattia');
+      pauseBtn.style.display=isMalattia?'none':'block';
       if(inPausa){
         pauseBtn.textContent='▶ Fine pausa';
         pauseBtn.style.background='var(--gnb)';pauseBtn.style.color='var(--gn)';
