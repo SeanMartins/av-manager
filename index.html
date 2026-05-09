@@ -711,7 +711,7 @@ async function punch(){
     try{
       const ref=await DB.collection('presenze').add({uid:USER.id,nome:USER.nome+' '+USER.cognome,entrata:now.toISOString(),uscita:null,luogo,pause:[]});
       punchDocId=ref.id;
-      localStorage.setItem('av_punch',JSON.stringify({docId:ref.id,entrata:now.toISOString(),luogo,pause:[]}));
+      localStorage.setItem('av_punch',JSON.stringify({docId:ref.id,entrata:now.toISOString(),luogo,pause:[],inPausa:false,pauseStart:null}));
     }catch(e){console.error(e);}
     $('luogoWrap').style.opacity='0.4';$('luogoWrap').style.pointerEvents='none';
     $('turnoTimeline').style.display='block';
@@ -749,6 +749,9 @@ async function togglePausa(){
     btn.textContent='▶ Fine pausa';
     btn.style.background='var(--gnb)';btn.style.color='var(--gn)';
     $('pstat').innerHTML='In pausa dalle '+t;
+    // Salva stato pausa in localStorage
+    const saved=localStorage.getItem('av_punch');
+    if(saved){try{const s=JSON.parse(saved);s.inPausa=true;s.pauseStart=pauseStart;s.pause=pause;localStorage.setItem('av_punch',JSON.stringify(s));}catch(e){}}
     toast('☕ Pausa iniziata');
   } else {
     // FINE PAUSA
@@ -764,7 +767,7 @@ async function togglePausa(){
     try{if(punchDocId)await DB.collection('presenze').doc(punchDocId).update({pause});}catch(e){console.error(e);}
     // Aggiorna localStorage
     const saved=localStorage.getItem('av_punch');
-    if(saved){try{const s=JSON.parse(saved);s.pause=pause;localStorage.setItem('av_punch',JSON.stringify(s));}catch(e){}}
+    if(saved){try{const s=JSON.parse(saved);s.pause=pause;s.inPausa=false;s.pauseStart=null;localStorage.setItem('av_punch',JSON.stringify(s));}catch(e){}}
     toast('▶ Fine pausa — '+durMin+' min');
   }
   updateTimeline();
@@ -819,16 +822,39 @@ function restorePunch(){
   try{
     const p=JSON.parse(a);
     if(new Date(p.entrata).toDateString()!==new Date().toDateString()){localStorage.removeItem('av_punch');return;}
+    // Ripristina stato base
     punchedIn=true;punchStart=new Date(p.entrata).getTime();punchDocId=p.docId;
     pause=p.pause||[];
+    // Ripristina pausa in corso se presente
+    inPausa=p.inPausa||false;
+    pauseStart=p.pauseStart||null;
     const btn=$('pbtn');if(btn){btn.className='pbtn pout';btn.textContent='⏹ Timbra uscita';}
-    const pauseBtn=$('pauseBtn');if(pauseBtn)pauseBtn.style.display='block';
+    const pauseBtn=$('pauseBtn');
+    if(pauseBtn){
+      pauseBtn.style.display='block';
+      if(inPausa){
+        pauseBtn.textContent='▶ Fine pausa';
+        pauseBtn.style.background='var(--gnb)';pauseBtn.style.color='var(--gn)';
+      } else {
+        pauseBtn.textContent='☕ Pausa';
+        pauseBtn.style.background='var(--amb)';pauseBtn.style.color='var(--am)';
+      }
+    }
     const e=new Date(p.entrata);
-    const stat=$('pstat');if(stat)stat.innerHTML='Entrata alle '+pad(e.getHours())+':'+pad(e.getMinutes())+' <span class="lbdg">'+(p.luogo||'')+'</span>';
+    const stat=$('pstat');
+    if(stat){
+      if(inPausa&&pauseStart){
+        const ps=new Date(pauseStart);
+        stat.innerHTML='In pausa dalle '+pad(ps.getHours())+':'+pad(ps.getMinutes());
+      } else {
+        stat.innerHTML='Entrata alle '+pad(e.getHours())+':'+pad(e.getMinutes())+' <span class="lbdg">'+(p.luogo||'')+'</span>';
+      }
+    }
     $('luogoWrap').style.opacity='0.4';$('luogoWrap').style.pointerEvents='none';
     $('turnoTimeline').style.display='block';
     updateTimeline();
-    toast('🔄 Turno ripristinato · '+pause.length+' pause salvate');
+    const msg=inPausa?'🔄 Turno ripristinato · in pausa':'🔄 Turno ripristinato · '+pause.length+' pause salvate';
+    toast(msg);
   }catch(e){localStorage.removeItem('av_punch');}
 }
 
