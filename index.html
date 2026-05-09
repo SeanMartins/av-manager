@@ -102,6 +102,7 @@ textarea{resize:vertical;min-height:80px}
 .mpin{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid rgba(255,255,255,.3);cursor:default;position:relative}
 .mpin-wrap:hover .pin-tooltip{display:block}
 .pin-tooltip{display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:10}
+.dtool.on{background:var(--acb)!important;border-color:var(--ac)!important;color:var(--ac2)!important}
 .upz{border:1px dashed var(--b2);border-radius:var(--rs);padding:16px;text-align:center;cursor:pointer;background:var(--bg2);margin-bottom:8px}
 </style>
 </head>
@@ -986,15 +987,49 @@ function openLocDet(lid){
         '</div>'+
       '</div>'+
       '<div class="pina" id="pina_'+lid+'" style="min-height:220px">'+
+        '<canvas id="canvas_'+lid+'" style="position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none"></canvas>'+
         renderPins(l.pins||[],lid,false)+
-        '<div class="pinh" id="pinh_'+lid+'">Premi Modifica per aggiungere pin</div>'+
+        '<div class="pinh" id="pinh_'+lid+'">Premi Modifica per aggiungere pin o disegnare</div>'+
       '</div>'+
       // Pannello modifica (nascosto)
       '<div id="editPanel_'+lid+'" style="display:none;margin-top:10px">'+
-        '<div style="font-size:12px;color:var(--tx2);margin-bottom:6px">Tocca la mappa per posizionare il pin</div>'+
-        buildPinSelect('pinT_'+lid)+
-        '<div class="ig" style="margin-top:8px"><label class="il">Nota pin (opzionale)</label>'+
-          '<input type="text" id="pinNote_'+lid+'" placeholder="Es: presa trifase lato sinistro">'+
+        '<div style="font-size:12px;color:var(--tx2);margin-bottom:8px;font-weight:500">Strumenti mappa</div>'+
+        // Tab strumenti
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">'+
+          '<button onclick="setMapTool(\'pin\',\''+lid+'\')" id="toolPin_'+lid+'" class="btn" style="font-size:12px;padding:7px;background:var(--acb);border-color:var(--ac);color:var(--ac2)">📍 Pin</button>'+
+          '<button onclick="setMapTool(\'draw\',\''+lid+'\')" id="toolDraw_'+lid+'" class="btn" style="font-size:12px;padding:7px">✏️ Disegna</button>'+
+        '</div>'+
+        // Pannello PIN
+        '<div id="panPin_'+lid+'">'+
+          '<div style="font-size:12px;color:var(--tx2);margin-bottom:6px">Tocca la mappa per posizionare il pin</div>'+
+          buildPinSelect('pinT_'+lid)+
+          '<div class="ig" style="margin-top:8px"><label class="il">Nota pin (opzionale)</label>'+
+            '<input type="text" id="pinNote_'+lid+'" placeholder="Es: presa trifase lato sinistro">'+
+          '</div>'+
+        '</div>'+
+        // Pannello DISEGNO
+        '<div id="panDraw_'+lid+'" style="display:none">'+
+          '<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Scegli elemento e disegna sulla mappa</div>'+
+          '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px" id="drawTools_'+lid+'">'+
+            '<button onclick="setDrawEl(\''+lid+'\',\'wall\')" class="btn dtool on" data-el="wall" style="font-size:11px;padding:6px">🧱 Muro</button>'+
+            '<button onclick="setDrawEl(\''+lid+'\',\'door\')" class="btn dtool" data-el="door" style="font-size:11px;padding:6px">🚪 Porta</button>'+
+            '<button onclick="setDrawEl(\''+lid+'\',\'window\')" class="btn dtool" data-el="window" style="font-size:11px;padding:6px">🪟 Finestra</button>'+
+            '<button onclick="setDrawEl(\''+lid+'\',\'table\')" class="btn dtool" data-el="table" style="font-size:11px;padding:6px">🪑 Tavolo</button>'+
+            '<button onclick="setDrawEl(\''+lid+'\',\'stage\')" class="btn dtool" data-el="stage" style="font-size:11px;padding:6px">🎭 Palco</button>'+
+            '<button onclick="setDrawEl(\''+lid+'\',\'pillar\')" class="btn dtool" data-el="pillar" style="font-size:11px;padding:6px">⬛ Pilastro</button>'+
+          '</div>'+
+          '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">'+
+            '<label class="il" style="margin:0;white-space:nowrap">Colore:</label>'+
+            '<input type="color" id="drawColor_'+lid+'" value="#6c63ff" style="width:36px;height:28px;padding:2px;border:1px solid var(--b2);border-radius:6px;background:var(--bg2);cursor:pointer">'+
+            '<label class="il" style="margin:0;white-space:nowrap">Spessore:</label>'+
+            '<select id="drawSize_'+lid+'" style="width:auto">'+
+              '<option value="2">Sottile</option><option value="4" selected>Normale</option><option value="8">Spesso</option>'+
+            '</select>'+
+          '</div>'+
+          '<div style="display:flex;gap:6px">'+
+            '<button onclick="undoDraw(\''+lid+'\')" class="btn btn-f" style="font-size:12px">↩ Annulla</button>'+
+            '<button onclick="clearDraw(\''+lid+'\')" class="btn btn-f" style="font-size:12px;color:var(--rd)">🗑 Cancella tutto</button>'+
+          '</div>'+
         '</div>'+
       '</div>'+
       // Lista pin
@@ -1035,29 +1070,197 @@ function buildPinList(pins, lid){
     '</div>').join('');
 }
 
+// ── DRAWING SYSTEM ──
+let mapTool = 'pin'; // 'pin' | 'draw'
+let drawEl = 'wall';
+let drawState = {}; // {lid: {drawing, startX, startY, history, ctx}}
+
+const DRAW_STYLES = {
+  wall:   {stroke:'#334155', fill:'rgba(51,65,85,0.15)',  dash:[]},
+  door:   {stroke:'#b45309', fill:'rgba(180,83,9,0.15)',  dash:[6,3]},
+  window: {stroke:'#0284c7', fill:'rgba(2,132,199,0.15)', dash:[4,4]},
+  table:  {stroke:'#6c63ff', fill:'rgba(108,99,255,0.1)', dash:[]},
+  stage:  {stroke:'#7c3aed', fill:'rgba(124,58,237,0.1)', dash:[8,2]},
+  pillar: {stroke:'#1e293b', fill:'rgba(30,41,59,0.5)',   dash:[]},
+};
+
+function setMapTool(tool, lid){
+  mapTool=tool;
+  if(!lid) return;
+  const pb=$('toolPin_'+lid),db=$('toolDraw_'+lid);
+  const pp=$('panPin_'+lid),pd=$('panDraw_'+lid);
+  const area=$('pina_'+lid);
+  const c=$('canvas_'+lid);
+  if(tool==='pin'){
+    if(pb){pb.style.background='var(--acb)';pb.style.borderColor='var(--ac)';pb.style.color='var(--ac2)';}
+    if(db){db.style.background='';db.style.borderColor='';db.style.color='';}
+    if(pp)pp.style.display='block';
+    if(pd)pd.style.display='none';
+    if(area){area.style.cursor='crosshair';area.onclick=e=>addPin(e,lid);}
+    if(c)c.style.pointerEvents='none';
+  } else {
+    if(db){db.style.background='var(--acb)';db.style.borderColor='var(--ac)';db.style.color='var(--ac2)';}
+    if(pb){pb.style.background='';pb.style.borderColor='';pb.style.color='';}
+    if(pp)pp.style.display='none';
+    if(pd)pd.style.display='block';
+    if(area){area.style.cursor='default';area.onclick=null;}
+    initCanvas(lid);
+  }
+}
+
+function setDrawEl(lid, el){
+  drawEl=el;
+  document.querySelectorAll('#drawTools_'+lid+' .dtool').forEach(b=>{
+    b.style.background=b.dataset.el===el?'var(--acb)':'';
+    b.style.borderColor=b.dataset.el===el?'var(--ac)':'';
+    b.style.color=b.dataset.el===el?'var(--ac2)':'';
+  });
+}
+
+function initCanvas(lid){
+  const area=$('pina_'+lid);const c=$('canvas_'+lid);if(!c||!area)return;
+  c.width=area.offsetWidth;c.height=area.offsetHeight;
+  c.style.pointerEvents='auto';
+  const ctx=c.getContext('2d');
+  if(!drawState[lid])drawState[lid]={history:[],drawing:false,startX:0,startY:0,ctx};
+  else drawState[lid].ctx=ctx;
+  // Ridisegna storia
+  redrawCanvas(lid);
+  // Touch / mouse events
+  c.onmousedown=e=>startDraw(e,lid,c);
+  c.onmousemove=e=>moveDraw(e,lid,c);
+  c.onmouseup=e=>endDraw(e,lid,c);
+  c.ontouchstart=e=>{e.preventDefault();startDraw(e.touches[0],lid,c);};
+  c.ontouchmove=e=>{e.preventDefault();moveDraw(e.touches[0],lid,c);};
+  c.ontouchend=e=>{e.preventDefault();endDraw(e.changedTouches[0],lid,c);};
+}
+
+function getPos(e,c){
+  const r=c.getBoundingClientRect();
+  return{x:e.clientX-r.left,y:e.clientY-r.top};
+}
+
+function startDraw(e,lid,c){
+  const p=getPos(e,c);
+  drawState[lid].drawing=true;
+  drawState[lid].startX=p.x;drawState[lid].startY=p.y;
+  // Snapshot before drawing
+  drawState[lid].snapshot=drawState[lid].ctx.getImageData(0,0,c.width,c.height);
+}
+
+function moveDraw(e,lid,c){
+  const ds=drawState[lid];if(!ds||!ds.drawing)return;
+  const p=getPos(e,c);
+  const ctx=ds.ctx;
+  ctx.putImageData(ds.snapshot,0,0);
+  drawShape(ctx,lid,ds.startX,ds.startY,p.x,p.y,false);
+}
+
+function endDraw(e,lid,c){
+  const ds=drawState[lid];if(!ds||!ds.drawing)return;
+  ds.drawing=false;
+  const p=getPos(e,c);
+  const color=$('drawColor_'+lid)?.value||'#6c63ff';
+  const size=parseInt($('drawSize_'+lid)?.value||4);
+  const shape={el:drawEl,x1:ds.startX,y1:ds.startY,x2:p.x,y2:p.y,color,size};
+  ds.history.push(shape);
+  redrawCanvas(lid);
+  // Salva su Firebase
+  const l=cacheLoc.find(x=>x.id===lid);
+  if(l){l.planimetria=ds.history;DB.collection('locations').doc(lid).update({planimetria:ds.history}).catch(()=>{});}
+}
+
+function drawShape(ctx,lid,x1,y1,x2,y2,fromHistory,shape){
+  const el=shape?shape.el:drawEl;
+  const color=shape?shape.color:($('drawColor_'+lid)?.value||'#6c63ff');
+  const size=shape?shape.size:parseInt($('drawSize_'+lid)?.value||4);
+  const style=DRAW_STYLES[el]||DRAW_STYLES.wall;
+  ctx.save();
+  ctx.strokeStyle=color||style.stroke;
+  ctx.fillStyle=shape?(color+'22'):style.fill;
+  ctx.lineWidth=size;
+  ctx.setLineDash(style.dash);
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+  const w=x2-x1,h=y2-y1;
+  if(el==='wall'||el==='door'||el==='window'){
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    // Porta: arco
+    if(el==='door'){
+      const len=Math.sqrt(w*w+h*h);
+      ctx.globalAlpha=0.3;ctx.beginPath();
+      ctx.arc(x1,y1,len,Math.atan2(h,w)-0.5,Math.atan2(h,w));ctx.stroke();
+    }
+  } else {
+    // Rettangolo per table, stage, pillar
+    ctx.beginPath();ctx.rect(Math.min(x1,x2),Math.min(y1,y2),Math.abs(w),Math.abs(h));
+    ctx.fill();ctx.stroke();
+    // Etichetta
+    ctx.globalAlpha=1;ctx.font='11px system-ui';ctx.fillStyle=color||style.stroke;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText({table:'Tavolo',stage:'Palco',pillar:'Pilastro'}[el]||el,(x1+x2)/2,(y1+y2)/2);
+  }
+  ctx.restore();
+}
+
+function redrawCanvas(lid){
+  const ds=drawState[lid];if(!ds)return;
+  const c=$('canvas_'+lid);if(!c)return;
+  const ctx=ds.ctx;ctx.clearRect(0,0,c.width,c.height);
+  (ds.history||[]).forEach(s=>drawShape(ctx,lid,s.x1,s.y1,s.x2,s.y2,true,s));
+}
+
+function undoDraw(lid){
+  const ds=drawState[lid];if(!ds||!ds.history.length)return;
+  ds.history.pop();redrawCanvas(lid);
+  const l=cacheLoc.find(x=>x.id===lid);
+  if(l){l.planimetria=ds.history;DB.collection('locations').doc(lid).update({planimetria:ds.history}).catch(()=>{});}
+  toast('↩ Annullato');
+}
+
+function clearDraw(lid){
+  const ds=drawState[lid];if(!ds)return;
+  ds.history=[];redrawCanvas(lid);
+  const l=cacheLoc.find(x=>x.id===lid);
+  if(l){l.planimetria=[];DB.collection('locations').doc(lid).update({planimetria:[]}).catch(()=>{});}
+  toast('🗑 Planimetria cancellata');
+}
+
 let editModes={};
 function toggleEditMode(lid){
   editModes[lid]=!editModes[lid];
   const panel=$('editPanel_'+lid);
-  const hint=$('pinh_'+lid);
   const btn=$('btnEdit_'+lid);
   const area=$('pina_'+lid);
+  const l=cacheLoc.find(x=>x.id===lid);
   if(editModes[lid]){
     panel.style.display='block';
-    if(hint)hint.textContent='Tocca la mappa per posizionare il pin';
-    if(btn){btn.textContent='✅ Fine modifica';btn.style.background='var(--gnb)';btn.style.borderColor='var(--gn)';btn.style.color='var(--gn)';}
-    area.style.cursor='crosshair';
-    area.onclick=e=>addPin(e,lid);
-    // Rirenderizza pin con bottoni rimozione
-    const l=cacheLoc.find(x=>x.id===lid);
-    if(l)area.innerHTML=renderPins(l.pins||[],lid,true)+'<div class="pinh" id="pinh_'+lid+'">Tocca per aggiungere pin</div>';
+    if(btn){btn.textContent='✅ Fine';btn.style.background='var(--gnb)';btn.style.borderColor='var(--gn)';btn.style.color='var(--gn)';}
+    // Init drawState con planimetria salvata
+    if(!drawState[lid]) drawState[lid]={history:[...(l?.planimetria||[])],drawing:false,startX:0,startY:0};
+    else drawState[lid].history=[...(l?.planimetria||[])];
+    // Rirenderizza con canvas e pin edit
+    area.innerHTML='<canvas id="canvas_'+lid+'" style="position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none"></canvas>'+renderPins(l?.pins||[],lid,true)+'<div class="pinh" id="pinh_'+lid+'">Tocca per aggiungere</div>';
+    // Default: tool pin
+    mapTool='pin'; area.style.cursor='crosshair'; area.onclick=e=>addPin(e,lid);
+    setTimeout(()=>{
+      const ds=drawState[lid]; if(!ds) return;
+      const c=$('canvas_'+lid); if(!c) return;
+      c.width=area.offsetWidth; c.height=area.offsetHeight;
+      ds.ctx=c.getContext('2d'); redrawCanvas(lid);
+      c.style.pointerEvents='none';
+    },80);
   } else {
     panel.style.display='none';
     if(btn){btn.textContent='✏️ Modifica';btn.style.background='';btn.style.borderColor='';btn.style.color='';}
-    area.style.cursor='default';
-    area.onclick=null;
-    const l=cacheLoc.find(x=>x.id===lid);
-    if(l)area.innerHTML=renderPins(l.pins||[],lid,false)+'<div class="pinh" id="pinh_'+lid+'">Premi Modifica per aggiungere pin</div>';
+    area.style.cursor='default'; area.onclick=null;
+    area.innerHTML='<canvas id="canvas_'+lid+'" style="position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none"></canvas>'+renderPins(l?.pins||[],lid,false)+'<div class="pinh" id="pinh_'+lid+'">Premi Modifica per aggiungere pin o disegnare</div>';
+    setTimeout(()=>{
+      const ds=drawState[lid]; if(!ds) return;
+      const c=$('canvas_'+lid); if(!c) return;
+      c.width=area.offsetWidth; c.height=area.offsetHeight;
+      ds.ctx=c.getContext('2d'); redrawCanvas(lid);
+    },80);
   }
 }
 
