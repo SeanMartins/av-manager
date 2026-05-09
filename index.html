@@ -1185,7 +1185,7 @@ function openLocDet(lid){
         '</div>'+
         // Pannello DISEGNO
         '<div id="panDraw_'+lid+'" style="display:none">'+
-          '<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Scegli elemento e disegna sulla mappa</div>'+
+          '<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Scegli elemento e disegna — <span style="color:var(--am)">tocca un oggetto esistente per spostarlo</span></div>'+
           '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px" id="drawTools_'+lid+'">'+
             '<button onclick="setDrawEl(\''+lid+'\',\'wall\')" class="btn dtool on" data-el="wall" style="font-size:11px;padding:6px">🧱 Muro</button>'+
             '<button onclick="setDrawEl(\''+lid+'\',\'door\')" class="btn dtool" data-el="door" style="font-size:11px;padding:6px">🚪 Porta</button>'+
@@ -1298,17 +1298,16 @@ function initCanvas(lid){
   c.width=area.offsetWidth;c.height=area.offsetHeight;
   c.style.pointerEvents='auto';
   const ctx=c.getContext('2d');
-  if(!drawState[lid])drawState[lid]={history:[],drawing:false,startX:0,startY:0,ctx};
+  if(!drawState[lid])drawState[lid]={history:[],drawing:false,dragging:false,dragIdx:-1,startX:0,startY:0,ctx};
   else drawState[lid].ctx=ctx;
-  // Ridisegna storia
   redrawCanvas(lid);
-  // Touch / mouse events
-  c.onmousedown=e=>startDraw(e,lid,c);
-  c.onmousemove=e=>moveDraw(e,lid,c);
-  c.onmouseup=e=>endDraw(e,lid,c);
-  c.ontouchstart=e=>{e.preventDefault();startDraw(e.touches[0],lid,c);};
-  c.ontouchmove=e=>{e.preventDefault();moveDraw(e.touches[0],lid,c);};
-  c.ontouchend=e=>{e.preventDefault();endDraw(e.changedTouches[0],lid,c);};
+  c.onmousedown=e=>canvasDown(e,lid,c);
+  c.onmousemove=e=>canvasMove(e,lid,c);
+  c.onmouseup=e=>canvasUp(e,lid,c);
+  c.onmouseleave=e=>canvasUp(e,lid,c);
+  c.ontouchstart=e=>{e.preventDefault();canvasDown(e.touches[0],lid,c);};
+  c.ontouchmove=e=>{e.preventDefault();canvasMove(e.touches[0],lid,c);};
+  c.ontouchend=e=>{e.preventDefault();canvasUp(e.changedTouches[0],lid,c);};
 }
 
 function getPos(e,c){
@@ -1316,34 +1315,99 @@ function getPos(e,c){
   return{x:e.clientX-r.left,y:e.clientY-r.top};
 }
 
-function startDraw(e,lid,c){
-  const p=getPos(e,c);
-  drawState[lid].drawing=true;
-  drawState[lid].startX=p.x;drawState[lid].startY=p.y;
-  // Snapshot before drawing
-  drawState[lid].snapshot=drawState[lid].ctx.getImageData(0,0,c.width,c.height);
+// Controlla se punto è dentro un rettangolo (con tolleranza)
+function hitRect(p,s,tol=8){
+  const x1=Math.min(s.x1,s.x2)-tol,x2=Math.max(s.x1,s.x2)+tol;
+  const y1=Math.min(s.y1,s.y2)-tol,y2=Math.max(s.y1,s.y2)+tol;
+  return p.x>=x1&&p.x<=x2&&p.y>=y1&&p.y<=y2;
+}
+// Controlla se punto è vicino a una linea
+function hitLine(p,s,tol=10){
+  const dx=s.x2-s.x1,dy=s.y2-s.y1;
+  const len=Math.sqrt(dx*dx+dy*dy);if(len<1)return false;
+  const t=Math.max(0,Math.min(1,((p.x-s.x1)*dx+(p.y-s.y1)*dy)/(len*len)));
+  const cx=s.x1+t*dx,cy=s.y1+t*dy;
+  return Math.sqrt((p.x-cx)**2+(p.y-cy)**2)<tol;
+}
+function isMovable(el){return['table','stage','pillar'].includes(el);}
+
+function findHit(p,history){
+  // Cerca dall'ultimo (in cima) al primo
+  for(let i=history.length-1;i>=0;i--){
+    const s=history[i];
+    if(isMovable(s.el)&&hitRect(p,s)) return i;
+    if(!isMovable(s.el)&&hitLine(p,s)) return i;
+  }
+  return -1;
 }
 
-function moveDraw(e,lid,c){
-  const ds=drawState[lid];if(!ds||!ds.drawing)return;
+function canvasDown(e,lid,c){
+  const ds=drawState[lid];if(!ds)return;
   const p=getPos(e,c);
-  const ctx=ds.ctx;
-  ctx.putImageData(ds.snapshot,0,0);
-  drawShape(ctx,lid,ds.startX,ds.startY,p.x,p.y,false);
+  // Controlla se stiamo cliccando su un elemento esistente → drag
+  const idx=findHit(p,ds.history);
+  if(idx>=0){
+    ds.dragging=true;ds.dragIdx=idx;
+    ds.dragOffX=p.x-(ds.history[idx].x1+ds.history[idx].x2)/2;
+    ds.dragOffY=p.y-(ds.history[idx].y1+ds.history[idx].y2)/2;
+    ds.dragStartX=ds.history[idx].x1;
+    ds.dragStartY=ds.history[idx].y1;
+    c.style.cursor='grabbing';
+  } else {
+    // Nuovo disegno
+    ds.drawing=true;ds.startX=p.x;ds.startY=p.y;
+    ds.snapshot=ds.ctx.getImageData(0,0,c.width,c.height);
+  }
 }
 
-function endDraw(e,lid,c){
-  const ds=drawState[lid];if(!ds||!ds.drawing)return;
-  ds.drawing=false;
+function canvasMove(e,lid,c){
+  const ds=drawState[lid];if(!ds)return;
   const p=getPos(e,c);
-  const color=$('drawColor_'+lid)?.value||'#6c63ff';
-  const size=parseInt($('drawSize_'+lid)?.value||4);
-  const shape={el:drawEl,x1:ds.startX,y1:ds.startY,x2:p.x,y2:p.y,color,size};
-  ds.history.push(shape);
-  redrawCanvas(lid);
-  // Salva su Firebase
+  if(ds.dragging&&ds.dragIdx>=0){
+    const s=ds.history[ds.dragIdx];
+    const w=s.x2-s.x1,h=s.y2-s.y1;
+    const cx=p.x-ds.dragOffX,cy=p.y-ds.dragOffY;
+    s.x1=cx-w/2;s.y1=cy-h/2;s.x2=cx+w/2;s.y2=cy+h/2;
+    redrawCanvas(lid);
+    // Evidenzia elemento selezionato
+    const ctx=ds.ctx;
+    ctx.save();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+    ctx.strokeRect(Math.min(s.x1,s.x2)-3,Math.min(s.y1,s.y2)-3,Math.abs(w)+6,Math.abs(h)+6);
+    ctx.restore();
+  } else if(ds.drawing){
+    const ctx=ds.ctx;
+    ctx.putImageData(ds.snapshot,0,0);
+    drawShape(ctx,lid,ds.startX,ds.startY,p.x,p.y,false);
+  } else {
+    // Cambia cursore se hovera su oggetto
+    const idx=findHit(p,ds.history);
+    c.style.cursor=idx>=0?'grab':'crosshair';
+  }
+}
+
+function canvasUp(e,lid,c){
+  const ds=drawState[lid];if(!ds)return;
+  const p=getPos(e,c);
+  c.style.cursor='crosshair';
+  if(ds.dragging){
+    ds.dragging=false;ds.dragIdx=-1;
+    redrawCanvas(lid);
+    savePlanimetria(lid);
+  } else if(ds.drawing){
+    ds.drawing=false;
+    // Ignora click senza movimento
+    if(Math.abs(p.x-ds.startX)<3&&Math.abs(p.y-ds.startY)<3){return;}
+    const color=$('drawColor_'+lid)?.value||'#6c63ff';
+    const size=parseInt($('drawSize_'+lid)?.value||4);
+    ds.history.push({el:drawEl,x1:ds.startX,y1:ds.startY,x2:p.x,y2:p.y,color,size});
+    redrawCanvas(lid);
+    savePlanimetria(lid);
+  }
+}
+
+function savePlanimetria(lid){
   const l=cacheLoc.find(x=>x.id===lid);
-  if(l){l.planimetria=ds.history;DB.collection('locations').doc(lid).update({planimetria:ds.history}).catch(()=>{});}
+  if(l){l.planimetria=drawState[lid].history;DB.collection('locations').doc(lid).update({planimetria:drawState[lid].history}).catch(()=>{});}
 }
 
 function drawShape(ctx,lid,x1,y1,x2,y2,fromHistory,shape){
@@ -1353,28 +1417,29 @@ function drawShape(ctx,lid,x1,y1,x2,y2,fromHistory,shape){
   const style=DRAW_STYLES[el]||DRAW_STYLES.wall;
   ctx.save();
   ctx.strokeStyle=color||style.stroke;
-  ctx.fillStyle=shape?(color+'22'):style.fill;
+  ctx.fillStyle=color+'22';
   ctx.lineWidth=size;
   ctx.setLineDash(style.dash);
-  ctx.lineCap='round';
-  ctx.lineJoin='round';
+  ctx.lineCap='round';ctx.lineJoin='round';
   const w=x2-x1,h=y2-y1;
   if(el==='wall'||el==='door'||el==='window'){
     ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-    // Porta: arco
     if(el==='door'){
       const len=Math.sqrt(w*w+h*h);
-      ctx.globalAlpha=0.3;ctx.beginPath();
+      ctx.globalAlpha=0.25;ctx.beginPath();
       ctx.arc(x1,y1,len,Math.atan2(h,w)-0.5,Math.atan2(h,w));ctx.stroke();
     }
   } else {
-    // Rettangolo per table, stage, pillar
     ctx.beginPath();ctx.rect(Math.min(x1,x2),Math.min(y1,y2),Math.abs(w),Math.abs(h));
     ctx.fill();ctx.stroke();
-    // Etichetta
-    ctx.globalAlpha=1;ctx.font='11px system-ui';ctx.fillStyle=color||style.stroke;
+    ctx.globalAlpha=1;ctx.font='bold 11px system-ui';ctx.fillStyle=color||style.stroke;
     ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText({table:'Tavolo',stage:'Palco',pillar:'Pilastro'}[el]||el,(x1+x2)/2,(y1+y2)/2);
+    const label={table:'🪑 Tavolo',stage:'🎭 Palco',pillar:'⬛ Pilastro'}[el]||el;
+    ctx.fillText(label,(x1+x2)/2,(y1+y2)/2);
+    // Handle di spostamento — pallino in alto a sinistra
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.beginPath();ctx.arc(Math.min(x1,x2)+8,Math.min(y1,y2)+8,5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1;ctx.setLineDash([]);ctx.stroke();
   }
   ctx.restore();
 }
@@ -1389,8 +1454,7 @@ function redrawCanvas(lid){
 function undoDraw(lid){
   const ds=drawState[lid];if(!ds||!ds.history.length)return;
   ds.history.pop();redrawCanvas(lid);
-  const l=cacheLoc.find(x=>x.id===lid);
-  if(l){l.planimetria=ds.history;DB.collection('locations').doc(lid).update({planimetria:ds.history}).catch(()=>{});}
+  savePlanimetria(lid);
   toast('↩ Annullato');
 }
 
