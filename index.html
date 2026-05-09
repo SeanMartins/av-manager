@@ -376,6 +376,7 @@ textarea{resize:vertical;min-height:80px}
   <div class="msh">
     <div class="mhd"></div>
     <div class="stl" style="margin-bottom:14px" id="mNewTurnoTitle">📅 Assegna turno</div>
+    <button onclick="debugTeam()" style="width:100%;padding:8px;margin-bottom:10px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tx2);font-family:var(--font);font-size:12px;cursor:pointer">🔧 Debug: carica dipendenti</button>
     <div class="ig"><label class="il">Dipendente</label>
       <select id="turDip"></select>
     </div>
@@ -2729,6 +2730,25 @@ function editTurno(id){
   $('turLocation').value=t.location||'';
   $('turNote').value=t.note||'';
   openMod('mNewTurno');
+}
+
+async function debugTeam(){
+  try{
+    const snap=await DB.collection('team').get();
+    const tutti=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const msg='Trovati '+tutti.length+' utenti in Firebase:\n\n'+
+      tutti.map(u=>u.nome+' '+u.cognome+' — '+u.ruolo).join('\n')+
+      '\n\ncacheTeam: '+cacheTeam.length+' utenti';
+    alert(msg);
+    // Forza ricarica select
+    const sel=$('turDip');if(!sel)return;
+    sel.innerHTML='<option value="">-- Seleziona --</option>';
+    tutti.filter(m=>m.ruolo!=='Responsabile').forEach(m=>{
+      const o=document.createElement('option');
+      o.value=m.id;o.textContent=m.nome+' '+m.cognome+' — '+m.ruolo;
+      sel.appendChild(o);
+    });
+  }catch(e){alert('Errore Firebase: '+e.message);}
 }
 
 async function popolaTurDip(selectedUid){
