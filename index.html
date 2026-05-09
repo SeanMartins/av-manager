@@ -2644,15 +2644,17 @@ function renderAgendaAdmin(){
   const fmt=d=>d.toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
   $('agWeekLabelAdmin').textContent='Settimana '+(agWeekOffset===0?'corrente':agWeekOffset>0?'+'+agWeekOffset:agWeekOffset);
   $('agWeekRangeAdmin').textContent=fmt(days[0])+' — '+fmt(days[6]);
-  // Popola filtro dipendenti — sempre aggiornato
+  // Popola filtro dipendenti
   const selF=$('agFilterDip');
   if(selF){
     const curVal=selF.value;
+    let lista=cacheTeam.filter(m=>m.ruolo!=='Responsabile');
     selF.innerHTML='<option value="all">👥 Tutti i dipendenti</option>';
-    cacheTeam.filter(m=>m.ruolo!=='Responsabile').forEach(m=>{
+    lista.sort((a,b)=>(a.nome+a.cognome).localeCompare(b.nome+b.cognome));
+    lista.forEach(m=>{
       const o=document.createElement('option');
       o.value=m.id;
-      o.textContent=m.nome+' '+m.cognome+' ('+m.ruolo+')';
+      o.textContent=m.nome+' '+m.cognome+' — '+m.ruolo;
       if(m.id===curVal)o.selected=true;
       selF.appendChild(o);
     });
@@ -2729,18 +2731,27 @@ function editTurno(id){
   openMod('mNewTurno');
 }
 
-function popolaTurDip(selectedUid){
+async function popolaTurDip(selectedUid){
   const sel=$('turDip');if(!sel)return;
+  sel.innerHTML='<option value="">⏳ Caricamento...</option>';
+  // Se cache vuoto carica direttamente da Firebase
+  let lista=cacheTeam.filter(m=>m.ruolo!=='Responsabile');
+  if(!lista.length){
+    try{
+      const snap=await DB.collection('team').get();
+      lista=snap.docs.map(d=>({id:d.id,...d.data()})).filter(m=>m.ruolo!=='Responsabile');
+    }catch(e){console.error(e);}
+  }
   sel.innerHTML='<option value="">-- Seleziona dipendente --</option>';
-  const lista=cacheTeam.filter(m=>m.ruolo!=='Responsabile');
   if(!lista.length){
     sel.innerHTML='<option value="">Nessun dipendente registrato</option>';
     return;
   }
+  lista.sort((a,b)=>(a.nome+a.cognome).localeCompare(b.nome+b.cognome));
   lista.forEach(m=>{
     const o=document.createElement('option');
     o.value=m.id;
-    o.textContent=m.nome+' '+m.cognome+' ('+m.ruolo+')';
+    o.textContent=m.nome+' '+m.cognome+' — '+m.ruolo;
     if(selectedUid&&m.id===selectedUid)o.selected=true;
     sel.appendChild(o);
   });
