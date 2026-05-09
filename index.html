@@ -2586,16 +2586,28 @@ function getWeekDates(offset){
 function agendaWeek(dir){agWeekOffset+=dir;renderAgenda();}
 
 function startAgendaListener(){
+  let firstLoad=true;
   DB.collection('agenda').onSnapshot(snap=>{
-    const prev=cacheAgenda.length;
+    const prev=cacheAgenda.map(x=>x.id);
     cacheAgenda=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderAgenda();
-    // Notifica nuovi turni per il dipendente corrente
-    if(prev>0&&snap.docChanges().some(c=>c.type==='added'&&c.doc.data().uid===USER?.id)){
+    // Notifica solo dopo il primo caricamento
+    if(firstLoad){firstLoad=false;return;}
+    // Controlla se ci sono turni nuovi o modificati per questo utente
+    const nuovi=snap.docChanges().filter(c=>
+      (c.type==='added'||c.type==='modified') &&
+      c.doc.data().uid===USER?.id
+    );
+    if(nuovi.length>0){
       const pg=$('p-agenda');
-      if(!pg||!pg.classList.contains('on')){
+      const isAgendaAperta=pg&&pg.classList.contains('on');
+      if(!isAgendaAperta){
         $('agendaDot').style.display='block';
-        toast('📅 Nuovo turno assegnato!');
+        const t=nuovi[0].doc.data();
+        const tipo=t.tipo||'lavoro';
+        const icona={lavoro:'💼',assistenza:'🔧',trasferta:'✈️',jolly:'🃏',riposo:'😴',ferie:'🏖',formazione:'📚'}[tipo]||'📅';
+        const data=t.data?new Date(t.data).toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short'}):'';
+        toast(icona+' Nuovo turno: '+data+(t.location?' — '+t.location:''));
       }
     }
   });
