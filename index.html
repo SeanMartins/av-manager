@@ -60,6 +60,7 @@ textarea{resize:vertical;min-height:80px}
 .clk{font-size:50px;font-weight:300;letter-spacing:-2px;text-align:center;margin-bottom:3px;font-variant-numeric:tabular-nums}
 .clks{font-size:13px;color:var(--tx2);text-align:center;margin-bottom:18px}
 .pbtn{width:100%;padding:16px;border-radius:var(--r);font-family:var(--font);font-size:16px;font-weight:600;cursor:pointer;border:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .pin{background:var(--gnb);color:var(--gn);border:1px solid rgba(34,197,94,.3)}
 .pout{background:var(--rdb);color:var(--rd);border:1px solid rgba(239,68,68,.3)}
 .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px}
@@ -174,8 +175,19 @@ textarea{resize:vertical;min-height:80px}
           <input type="text" id="luogoCustom" placeholder="Specifica il luogo...">
         </div>
       </div>
+      <!-- Bottoni timbratura -->
       <button class="pbtn pin" id="pbtn" onclick="punch()">⏱ Timbra entrata</button>
-      <div class="sg3" style="margin-top:16px">
+      <button class="pbtn" id="pauseBtn" onclick="togglePausa()" style="display:none;margin-top:8px;background:var(--amb);color:var(--am);border:1px solid rgba(245,158,11,.3)">☕ Pausa</button>
+      <!-- Timeline turno -->
+      <div id="turnoTimeline" style="display:none;margin-top:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);padding:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Turno di oggi</div>
+        <div id="timelineItems"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--b)">
+          <span style="font-size:12px;color:var(--tx2)">Ore lavorate nette</span>
+          <span style="font-size:15px;font-weight:700;color:var(--gn)" id="oreNette">0h 0m</span>
+        </div>
+      </div>
+      <div class="sg3" style="margin-top:12px">
         <div class="sc"><div class="sn" id="nOre">0h</div><div class="sl">Ore oggi</div></div>
         <div class="sc"><div class="sn" id="nPresenti">0</div><div class="sl">Presenti</div></div>
         <div class="sc"><div class="sn" id="nTeam">0</div><div class="sl">Team</div></div>
@@ -557,6 +569,7 @@ const DB = firebase.firestore();
 
 // ── STATE ──
 let USER=null,punchedIn=false,punchStart=null,punchDocId=null;
+let inPausa=false,pauseStart=null,pause=[];  // pause: [{inizio, fine}]
 let privOk=false,selRole='Tecnico AV',selLuogo='🏢 In sede';
 let cacheTeam=[],cachePresenze=[],cacheForum=[];
 let fotoBase64=[],lastForumCount=0,appStarted=false;
@@ -683,31 +696,121 @@ function startListeners(){
 
 // ── PUNCH ──
 async function punch(){
-  const btn=$('pbtn'),stat=$('pstat');
+  const btn=$('pbtn'),stat=$('pstat'),pauseBtn=$('pauseBtn');
   const now=new Date(),t=pad(now.getHours())+':'+pad(now.getMinutes());
   if(!punchedIn){
-    punchedIn=true;punchStart=Date.now();
+    // ENTRATA
+    punchedIn=true;punchStart=Date.now();inPausa=false;pause=[];
     btn.className='pbtn pout';btn.textContent='⏹ Timbra uscita';
+    pauseBtn.style.display='block';
     const extra=val('luogoCustom');
     const luogo=extra?selLuogo+' — '+extra:selLuogo;
     stat.innerHTML='Entrata timbrata alle '+t+' <span class="lbdg">'+luogo+'</span>';
     try{
-      const ref=await DB.collection('presenze').add({uid:USER.id,nome:USER.nome+' '+USER.cognome,entrata:now.toISOString(),uscita:null,luogo});
+      const ref=await DB.collection('presenze').add({uid:USER.id,nome:USER.nome+' '+USER.cognome,entrata:now.toISOString(),uscita:null,luogo,pause:[]});
       punchDocId=ref.id;
-      localStorage.setItem('av_punch',JSON.stringify({docId:ref.id,entrata:now.toISOString(),luogo}));
+      localStorage.setItem('av_punch',JSON.stringify({docId:ref.id,entrata:now.toISOString(),luogo,pause:[]}));
     }catch(e){console.error(e);}
     $('luogoWrap').style.opacity='0.4';$('luogoWrap').style.pointerEvents='none';
+    $('turnoTimeline').style.display='block';
+    updateTimeline();
     toast('✓ Entrata — '+luogo);
-  }else{
+  } else {
+    // USCITA — chiudi pausa aperta se presente
+    if(inPausa){
+      pause.push({inizio:pauseStart,fine:now.toISOString()});
+      inPausa=false;pauseStart=null;
+    }
     punchedIn=false;
     btn.className='pbtn pin';btn.textContent='⏱ Timbra entrata';
+    pauseBtn.style.display='none';pauseBtn.textContent='☕ Pausa';
+    pauseBtn.style.background='var(--amb)';pauseBtn.style.color='var(--am)';
     stat.textContent='Uscita timbrata alle '+t;
-    $('nOre').textContent='0h';punchStart=null;
-    try{if(punchDocId)await DB.collection('presenze').doc(punchDocId).update({uscita:now.toISOString()});}catch(e){console.error(e);}
-    punchDocId=null;localStorage.removeItem('av_punch');
+    updateTimeline();
+    try{if(punchDocId)await DB.collection('presenze').doc(punchDocId).update({uscita:now.toISOString(),pause});}
+    catch(e){console.error(e);}
+    punchDocId=null;punchStart=null;
+    localStorage.removeItem('av_punch');
     $('luogoWrap').style.opacity='1';$('luogoWrap').style.pointerEvents='auto';
+    $('nOre').textContent='0h';
     toast('✓ Uscita timbrata');
   }
+}
+
+async function togglePausa(){
+  if(!punchedIn)return;
+  const btn=$('pauseBtn');
+  const now=new Date(),t=pad(now.getHours())+':'+pad(now.getMinutes());
+  if(!inPausa){
+    // INIZIO PAUSA
+    inPausa=true;pauseStart=now.toISOString();
+    btn.textContent='▶ Fine pausa';
+    btn.style.background='var(--gnb)';btn.style.color='var(--gn)';
+    $('pstat').innerHTML='In pausa dalle '+t;
+    toast('☕ Pausa iniziata');
+  } else {
+    // FINE PAUSA
+    inPausa=false;
+    const p={inizio:pauseStart,fine:now.toISOString()};
+    pause.push(p);pauseStart=null;
+    btn.textContent='☕ Pausa';
+    btn.style.background='var(--amb)';btn.style.color='var(--am)';
+    const durMs=new Date(p.fine)-new Date(p.inizio);
+    const durMin=Math.round(durMs/60000);
+    $('pstat').innerHTML='Fine pausa alle '+t+' · pausa '+durMin+' min';
+    // Salva pause su Firebase
+    try{if(punchDocId)await DB.collection('presenze').doc(punchDocId).update({pause});}catch(e){console.error(e);}
+    // Aggiorna localStorage
+    const saved=localStorage.getItem('av_punch');
+    if(saved){try{const s=JSON.parse(saved);s.pause=pause;localStorage.setItem('av_punch',JSON.stringify(s));}catch(e){}}
+    toast('▶ Fine pausa — '+durMin+' min');
+  }
+  updateTimeline();
+}
+
+function calcOreNette(){
+  if(!punchStart) return 0;
+  const now=punchedIn?Date.now():Date.now();
+  let totMs=punchedIn?Date.now()-punchStart:0;
+  // Sottrai pause completate
+  (pause||[]).forEach(p=>{if(p.fine)totMs-=(new Date(p.fine)-new Date(p.inizio));});
+  // Sottrai pausa in corso
+  if(inPausa&&pauseStart) totMs-=(Date.now()-new Date(pauseStart));
+  return Math.max(0,totMs);
+}
+
+function updateTimeline(){
+  const tl=$('timelineItems');if(!tl)return;
+  if(!punchStart){$('turnoTimeline').style.display='none';return;}
+  const fmt=iso=>{ const d=new Date(iso);return pad(d.getHours())+':'+pad(d.getMinutes());};
+  let h='';
+  // Entrata
+  const ent=new Date(punchStart);
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+    '<div style="width:10px;height:10px;border-radius:50%;background:var(--gn);flex-shrink:0"></div>'+
+    '<span style="font-size:13px;color:var(--tx)">🟢 Entrata <strong>'+pad(ent.getHours())+':'+pad(ent.getMinutes())+'</strong></span>'+
+  '</div>';
+  // Pause
+  (pause||[]).forEach((p,i)=>{
+    const durMin=Math.round((new Date(p.fine)-new Date(p.inizio))/60000);
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+      '<div style="width:10px;height:10px;border-radius:50%;background:var(--am);flex-shrink:0"></div>'+
+      '<span style="font-size:13px;color:var(--tx)">☕ Pausa '+(i+1)+': <strong>'+fmt(p.inizio)+'</strong> → <strong>'+fmt(p.fine)+'</strong> <span style="color:var(--tx2)">('+durMin+' min)</span></span>'+
+    '</div>';
+  });
+  // Pausa in corso
+  if(inPausa&&pauseStart){
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+      '<div style="width:10px;height:10px;border-radius:50%;background:var(--am);flex-shrink:0;animation:pulse 1s infinite"></div>'+
+      '<span style="font-size:13px;color:var(--am)">☕ Pausa in corso dalle <strong>'+fmt(pauseStart)+'</strong>...</span>'+
+    '</div>';
+  }
+  tl.innerHTML=h;
+  // Ore nette
+  const ms=calcOreNette();
+  const hh=Math.floor(ms/3600000);
+  const mm=Math.floor((ms%3600000)/60000);
+  const ne=$('oreNette');if(ne)ne.textContent=hh+'h '+mm+'m';
 }
 function restorePunch(){
   const a=localStorage.getItem('av_punch');if(!a)return;
@@ -715,11 +818,15 @@ function restorePunch(){
     const p=JSON.parse(a);
     if(new Date(p.entrata).toDateString()!==new Date().toDateString()){localStorage.removeItem('av_punch');return;}
     punchedIn=true;punchStart=new Date(p.entrata).getTime();punchDocId=p.docId;
+    pause=p.pause||[];
     const btn=$('pbtn');if(btn){btn.className='pbtn pout';btn.textContent='⏹ Timbra uscita';}
+    const pauseBtn=$('pauseBtn');if(pauseBtn)pauseBtn.style.display='block';
     const e=new Date(p.entrata);
     const stat=$('pstat');if(stat)stat.innerHTML='Entrata alle '+pad(e.getHours())+':'+pad(e.getMinutes())+' <span class="lbdg">'+(p.luogo||'')+'</span>';
     $('luogoWrap').style.opacity='0.4';$('luogoWrap').style.pointerEvents='none';
-    toast('🔄 Turno ripristinato');
+    $('turnoTimeline').style.display='block';
+    updateTimeline();
+    toast('🔄 Turno ripristinato · '+pause.length+' pause salvate');
   }catch(e){localStorage.removeItem('av_punch');}
 }
 
@@ -1765,22 +1872,66 @@ async function doExport(){
   if(!rows.length){toast('Nessuna timbratura trovata','a');return;}
   const pad2=n=>String(n).padStart(2,'0');
   const dd=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const fmtTime=iso=>{if(!iso)return'—';const d=new Date(iso);return pad2(d.getHours())+':'+pad2(d.getMinutes());};
+
   const data=rows.map(r=>{
     const ent=new Date(r.entrata),usc=r.uscita?new Date(r.uscita):null;
-    const ore=usc?((usc-ent)/3600000).toFixed(2):'—';
-    return{nome:r.nome||'—',data:pad2(ent.getDate())+'/'+pad2(ent.getMonth()+1)+'/'+ent.getFullYear(),giorno:dd[ent.getDay()],luogo:r.luogo||'In sede',entrata:pad2(ent.getHours())+':'+pad2(ent.getMinutes()),uscita:usc?pad2(usc.getHours())+':'+pad2(usc.getMinutes()):'—',ore_lav:ore};
+    const durTotMs=usc?(usc-ent):0;
+    // Calcola durata pause
+    const pauses=r.pause||[];
+    const pauseMs=pauses.reduce((s,p)=>{if(p.inizio&&p.fine)s+=new Date(p.fine)-new Date(p.inizio);return s;},0);
+    const oreNetteMs=Math.max(0,durTotMs-pauseMs);
+    const oreNette=usc?(oreNetteMs/3600000).toFixed(2):'—';
+    const oreLorde=usc?(durTotMs/3600000).toFixed(2):'—';
+    const durPauseMin=Math.round(pauseMs/60000);
+    // Formatta dettaglio pause
+    const pauseStr=pauses.map((p,i)=>'P'+(i+1)+':'+fmtTime(p.inizio)+'→'+fmtTime(p.fine)).join(' / ')||'—';
+    return{
+      nome:r.nome||'—',
+      data:pad2(ent.getDate())+'/'+pad2(ent.getMonth()+1)+'/'+ent.getFullYear(),
+      giorno:dd[ent.getDay()],
+      luogo:r.luogo||'In sede',
+      entrata:fmtTime(r.entrata),
+      uscita:fmtTime(r.uscita),
+      ore_lorde:oreLorde,
+      n_pause:pauses.length,
+      dur_pause:durPauseMin>0?durPauseMin+' min':'0',
+      pause_dettaglio:pauseStr,
+      ore_nette:oreNette,
+    };
   });
-  // Calcola totali
-  const totali={};data.forEach(r=>{if(!totali[r.nome])totali[r.nome]=0;const h=parseFloat(r.ore_lav);if(!isNaN(h))totali[r.nome]+=h;});
+
+  // Totali per dipendente
+  const totali={};
+  data.forEach(r=>{
+    if(!totali[r.nome])totali[r.nome]={lorde:0,nette:0,pause:0,giorni:0};
+    const l=parseFloat(r.ore_lorde),n=parseFloat(r.ore_nette),p=parseInt(r.dur_pause);
+    if(!isNaN(l))totali[r.nome].lorde+=l;
+    if(!isNaN(n))totali[r.nome].nette+=n;
+    if(!isNaN(p))totali[r.nome].pause+=p;
+    totali[r.nome].giorni++;
+  });
+
+  // Genera CSV
   let csv='\uFEFF';
-  csv+=['Nome','Data','Giorno','Luogo','Entrata','Uscita','Ore lavorate'].join(';')+'\n';
-  data.forEach(r=>{csv+=[r.nome,r.data,r.giorno,r.luogo,r.entrata,r.uscita,r.ore_lav].map(c=>'"'+c+'"').join(';')+'\n';});
-  csv+='\n"TOTALE ORE PER DIPENDENTE"\n';
-  Object.entries(totali).forEach(([n,o])=>{csv+='"'+n+'";"'+o.toFixed(2)+' ore"\n';});
+  const headers=['Nome','Data','Giorno','Luogo','Entrata','Uscita','Ore lorde','N° pause','Durata pause','Dettaglio pause','Ore nette lavorate'];
+  csv+=headers.join(';')+'\n';
+  data.forEach(r=>{
+    csv+=[r.nome,r.data,r.giorno,r.luogo,r.entrata,r.uscita,r.ore_lorde,r.n_pause,r.dur_pause,r.pause_dettaglio,r.ore_nette]
+      .map(c=>'"'+c+'"').join(';')+'\n';
+  });
+  // Totali mensili
+  csv+='\n"═══ TOTALE MENSILE — '+mesiN[mese]+' '+anno+' ═══"\n';
+  csv+='"Dipendente";"Giorni lavorati";"Ore lorde";"Totale pause";"Ore nette"\n';
+  Object.entries(totali).forEach(([nome,t])=>{
+    csv+='"'+nome+'";"'+t.giorni+' giorni";"'+t.lorde.toFixed(2)+' h";"'+t.pause+' min";"'+t.nette.toFixed(2)+' h"\n';
+  });
+  csv+='\n"Generato il: '+new Date().toLocaleString('it-IT')+'"\n';
+
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='presenze_'+mesiN[mese]+'_'+anno+'.csv';a.click();
-  toast('✓ '+data.length+' righe esportate!');closeMod('mExport');
+  a.download='MMG_Presenze_'+mesiN[mese]+'_'+anno+'.csv';a.click();
+  toast('✓ '+data.length+' righe esportate');closeMod('mExport');
 }
 
 // Override closeMod to stop cameras
@@ -2149,7 +2300,12 @@ function buildHTMLRientro(d){
 function tick(){
   const n=new Date();
   const cl=$('clock');if(cl)cl.textContent=pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());
-  if(punchedIn&&punchStart){const d=Math.floor((Date.now()-punchStart)/1000);const oe=$('nOre');if(oe)oe.textContent=Math.floor(d/3600)+'h'+pad(Math.floor(d%3600/60))+'m';}
+  if(punchedIn&&punchStart){
+    const ms=calcOreNette();
+    const hh=Math.floor(ms/3600000),mm=Math.floor((ms%3600000)/60000);
+    const oe=$('nOre');if(oe)oe.textContent=hh+'h'+pad(mm)+'m';
+    const ne=$('oreNette');if(ne)ne.textContent=hh+'h '+mm+'m';
+  }
 }
 function setDate(){
   const n=new Date();
