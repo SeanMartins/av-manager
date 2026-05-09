@@ -95,9 +95,13 @@ textarea{resize:vertical;min-height:80px}
 .rhead{display:flex;align-items:center;gap:8px;margin-bottom:5px}
 .rav{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0;background:var(--acb);color:var(--ac2)}
 /* NOTIFICA */
-.pina{background:var(--bg2);border-radius:var(--r);min-height:160px;position:relative;cursor:crosshair;border:1px dashed var(--b2);overflow:hidden;margin-bottom:8px}
+.pina{background:var(--bg2);border-radius:var(--r);min-height:220px;position:relative;border:1px dashed var(--b2);overflow:hidden;margin-bottom:8px}
+.pina.edit{cursor:crosshair}
 .pinh{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--tx3);white-space:nowrap;pointer-events:none}
-.mpin{position:absolute;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;transform:translate(-50%,-50%);border:2px solid rgba(255,255,255,.25)}
+.mpin-wrap{position:absolute;transform:translate(-50%,-50%);z-index:2}
+.mpin{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid rgba(255,255,255,.3);cursor:default;position:relative}
+.mpin-wrap:hover .pin-tooltip{display:block}
+.pin-tooltip{display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:10}
 .upz{border:1px dashed var(--b2);border-radius:var(--rs);padding:16px;text-align:center;cursor:pointer;background:var(--bg2);margin-bottom:8px}
 </style>
 </head>
@@ -906,29 +910,105 @@ async function saveLoc(){
   document.querySelectorAll('#locTags .chip').forEach(c=>c.classList.remove('on'));
 }
 
+// ── VOCABOLARIO PIN ──
+const PIN_TYPES = {
+  // Audio / Video
+  'casse':     {emoji:'🔊', label:'Casse',          bg:'#6c63ff', fg:'#fff'},
+  'proiettore':{emoji:'📽', label:'Proiettore',     bg:'#3b82f6', fg:'#fff'},
+  'ledwall':   {emoji:'🖥', label:'LED wall',       bg:'#0ea5e9', fg:'#fff'},
+  'monitor_st':{emoji:'🖥', label:'Monitor+stativo',bg:'#0284c7', fg:'#fff'},
+  'schermo_ap':{emoji:'🎞', label:'Schermo appeso', bg:'#0369a1', fg:'#fff'},
+  'schermo_au':{emoji:'🎞', label:'Schermo autoport.',bg:'#075985',fg:'#fff'},
+  'schermo_ga':{emoji:'🎞', label:'Schermo su gambe',bg:'#0c4a6e',fg:'#fff'},
+  'ptz':       {emoji:'🎥', label:'PTZ',            bg:'#7c3aed', fg:'#fff'},
+  'telecamera':{emoji:'📹', label:'Telecamera',     bg:'#6d28d9', fg:'#fff'},
+  'gobbo':     {emoji:'📺', label:'Monitor gobbo',  bg:'#5b21b6', fg:'#fff'},
+  // Regia / Controllo
+  'regia':     {emoji:'🎛', label:'Tavolo regia',   bg:'#0f766e', fg:'#fff'},
+  'copri_regia':{emoji:'🪞',label:'Copri regia',    bg:'#115e59', fg:'#fff'},
+  // Palco / Sala
+  'podio':     {emoji:'🎤', label:'Podio',          bg:'#b45309', fg:'#fff'},
+  'presidenza':{emoji:'🪑', label:'Presidenza',     bg:'#92400e', fg:'#fff'},
+  // Infrastruttura
+  'presa':     {emoji:'🔌', label:'Prese',          bg:'#f59e0b', fg:'#000'},
+  'rete':      {emoji:'🌐', label:'Rete internet',  bg:'#16a34a', fg:'#fff'},
+  'wifi':      {emoji:'📶', label:'WiFi',           bg:'#22c55e', fg:'#fff'},
+  // Problemi
+  'problema':  {emoji:'⚠️', label:'Problema',       bg:'#ef4444', fg:'#fff'},
+};
+
+function pinStyle(t){ const p=PIN_TYPES[t]||PIN_TYPES['problema']; return 'background:'+p.bg+';color:'+p.fg; }
+function pinEmoji(t){ return (PIN_TYPES[t]||PIN_TYPES['problema']).emoji; }
+function pinLabel(t){ return (PIN_TYPES[t]||PIN_TYPES['problema']).label; }
+
+function buildPinSelect(id){
+  // Raggruppa per categoria
+  const groups = [
+    {label:'🔊 Audio / Video', keys:['casse','proiettore','ledwall','monitor_st','schermo_ap','schermo_au','schermo_ga','ptz','telecamera','gobbo']},
+    {label:'🎛 Regia / Controllo', keys:['regia','copri_regia']},
+    {label:'🎤 Palco / Sala', keys:['podio','presidenza']},
+    {label:'🔌 Infrastruttura', keys:['presa','rete','wifi']},
+    {label:'⚠️ Altro', keys:['problema']},
+  ];
+  let html='<select id="'+id+'" style="width:100%;margin-top:8px">';
+  groups.forEach(g=>{
+    html+='<optgroup label="'+g.label+'">';
+    g.keys.forEach(k=>{html+='<option value="'+k+'">'+PIN_TYPES[k].emoji+' '+PIN_TYPES[k].label+'</option>';});
+    html+='</optgroup>';
+  });
+  return html+'</select>';
+}
+
+function renderPins(pins, lid, editMode){
+  return (pins||[]).map((p,i)=>{
+    const s=pinStyle(p.t), em=pinEmoji(p.t);
+    const note=p.note?'<div class="pin-tooltip">'+p.note+'</div>':'';
+    const del=editMode?'<div onclick="removePin(\''+lid+'\','+i+')" style="position:absolute;top:-6px;right:-6px;width:16px;height:16px;border-radius:50%;background:#ef4444;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2">✕</div>':'';
+    return '<div class="mpin-wrap" style="left:'+p.x+'%;top:'+p.y+'%">'+del+
+      '<div class="mpin" style="'+s+'" title="'+(p.note||pinLabel(p.t))+'">'+em+'</div>'+note+'</div>';
+  }).join('');
+}
+
 function openLocDet(lid){
   const l=cacheLoc.find(x=>x.id===lid);if(!l)return;
   const tagC={WiFi:'bb',Trifase:'bp',Generatore:'ba','Buio totale':'bp','Accesso camion':'bg','Interferenze RF':'br'};
-  const pinS={av:'background:#6c63ff;color:#fff',el:'background:#f59e0b;color:#000',pr:'background:#ef4444;color:#fff',wi:'background:#3b82f6;color:#fff'};
-  const pinL={av:'AV',el:'EL',pr:'!!',wi:'WF'};
-  const pins=(l.pins||[]).map(p=>'<div class="mpin" style="left:'+p.x+'%;top:'+p.y+'%;'+pinS[p.t]+'">'+pinL[p.t]+'</div>').join('');
   const tags=(l.tags||[]).map(t=>'<span class="bdg '+(tagC[t]||'bp')+'">'+t+'</span>').join('');
   $('mLocDetBody').innerHTML=
     '<div style="font-size:17px;font-weight:600;margin-bottom:2px">'+l.nome+'</div>'+
     '<div style="font-size:13px;color:var(--tx2);margin-bottom:14px">📍 '+(l.indirizzo||'—')+'</div>'+
+
+    // MAPPA
     '<div class="card" style="margin-bottom:12px">'+
-      '<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Mappa interattiva</div>'+
-      '<div class="pina" id="pina_'+lid+'" style="height:160px">'+pins+'<div class="pinh">Tocca per aggiungere pin</div></div>'+
-      '<select id="pinT_'+lid+'" style="width:auto;margin-top:6px">'+
-        '<option value="av">🔊 AV</option><option value="el">⚡ Elettrico</option>'+
-        '<option value="pr">⚠️ Problema</option><option value="wi">📶 WiFi</option>'+
-      '</select>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px">Mappa interattiva</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<button id="btnEdit_'+lid+'" onclick="toggleEditMode(\''+lid+'\')" class="btn" style="padding:5px 10px;font-size:12px">✏️ Modifica</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="pina" id="pina_'+lid+'" style="min-height:220px">'+
+        renderPins(l.pins||[],lid,false)+
+        '<div class="pinh" id="pinh_'+lid+'">Premi Modifica per aggiungere pin</div>'+
+      '</div>'+
+      // Pannello modifica (nascosto)
+      '<div id="editPanel_'+lid+'" style="display:none;margin-top:10px">'+
+        '<div style="font-size:12px;color:var(--tx2);margin-bottom:6px">Tocca la mappa per posizionare il pin</div>'+
+        buildPinSelect('pinT_'+lid)+
+        '<div class="ig" style="margin-top:8px"><label class="il">Nota pin (opzionale)</label>'+
+          '<input type="text" id="pinNote_'+lid+'" placeholder="Es: presa trifase lato sinistro">'+
+        '</div>'+
+      '</div>'+
+      // Lista pin
+      '<div id="pinList_'+lid+'" style="margin-top:10px">'+buildPinList(l.pins||[],lid)+'</div>'+
     '</div>'+
+
+    // NOTE
     '<div class="card" style="margin-bottom:12px">'+
       '<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Note tecniche</div>'+
       '<div style="font-size:14px;line-height:1.6">'+(l.note||'Nessuna nota.')+'</div>'+
       '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:9px">'+tags+'</div>'+
     '</div>'+
+
+    // FOTO
     '<div class="card" style="margin-bottom:12px">'+
       '<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Foto / Planimetrie</div>'+
       '<div class="upz" onclick="document.getElementById(\'fu_'+lid+'\').click()">'+
@@ -939,21 +1019,83 @@ function openLocDet(lid){
       '<div class="pgrid" id="pg_'+lid+'">'+Array(l.foto||0).fill('<div class="pth">📷</div>').join('')+'</div>'+
     '</div>'+
     '<button class="btn btn-f" onclick="closeMod(\'mLocDet\')">Chiudi</button>';
-  setTimeout(()=>{const a=$('pina_'+lid);if(a)a.onclick=e=>addPin(e,lid);},50);
+
   openMod('mLocDet');
 }
 
+function buildPinList(pins, lid){
+  if(!pins||!pins.length) return '<div style="font-size:12px;color:var(--tx3);padding:4px 0">Nessun pin ancora</div>';
+  return '<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">Pin sulla mappa ('+pins.length+')</div>'+
+    pins.map((p,i)=>'<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--b)">'+
+      '<div class="mpin" style="'+pinStyle(p.t)+';position:static;transform:none;width:24px;height:24px;flex-shrink:0">'+pinEmoji(p.t)+'</div>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500">'+pinLabel(p.t)+'</div>'+
+      (p.note?'<div style="font-size:11px;color:var(--tx2)">'+p.note+'</div>':'')+
+      '</div>'+
+      '<button onclick="removePin(\''+lid+'\','+i+')" style="width:24px;height:24px;border-radius:6px;border:1px solid var(--rdb);background:var(--rdb);color:var(--rd);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center">✕</button>'+
+    '</div>').join('');
+}
+
+let editModes={};
+function toggleEditMode(lid){
+  editModes[lid]=!editModes[lid];
+  const panel=$('editPanel_'+lid);
+  const hint=$('pinh_'+lid);
+  const btn=$('btnEdit_'+lid);
+  const area=$('pina_'+lid);
+  if(editModes[lid]){
+    panel.style.display='block';
+    if(hint)hint.textContent='Tocca la mappa per posizionare il pin';
+    if(btn){btn.textContent='✅ Fine modifica';btn.style.background='var(--gnb)';btn.style.borderColor='var(--gn)';btn.style.color='var(--gn)';}
+    area.style.cursor='crosshair';
+    area.onclick=e=>addPin(e,lid);
+    // Rirenderizza pin con bottoni rimozione
+    const l=cacheLoc.find(x=>x.id===lid);
+    if(l)area.innerHTML=renderPins(l.pins||[],lid,true)+'<div class="pinh" id="pinh_'+lid+'">Tocca per aggiungere pin</div>';
+  } else {
+    panel.style.display='none';
+    if(btn){btn.textContent='✏️ Modifica';btn.style.background='';btn.style.borderColor='';btn.style.color='';}
+    area.style.cursor='default';
+    area.onclick=null;
+    const l=cacheLoc.find(x=>x.id===lid);
+    if(l)area.innerHTML=renderPins(l.pins||[],lid,false)+'<div class="pinh" id="pinh_'+lid+'">Premi Modifica per aggiungere pin</div>';
+  }
+}
+
 async function addPin(e,lid){
+  if(!editModes[lid])return;
   const area=$('pina_'+lid);if(!area)return;
   const r=area.getBoundingClientRect();
-  const x=Math.round((e.clientX-r.left)/r.width*100),y=Math.round((e.clientY-r.top)/r.height*100);
-  const t=$('pinT_'+lid)?.value||'av';
-  const pinS={av:'background:#6c63ff;color:#fff',el:'background:#f59e0b;color:#000',pr:'background:#ef4444;color:#fff',wi:'background:#3b82f6;color:#fff'};
-  const pinL={av:'AV',el:'EL',pr:'!!',wi:'WF'};
-  const pin=document.createElement('div');pin.className='mpin';
-  pin.style.cssText='left:'+x+'%;top:'+y+'%;'+pinS[t];pin.textContent=pinL[t];area.appendChild(pin);
-  const l=cacheLoc.find(x=>x.id===lid);
-  if(l)await DB.collection('locations').doc(lid).update({pins:[...(l.pins||[]),{x,y,t}]});
+  const x=Math.round((e.clientX-r.left)/r.width*100);
+  const y=Math.round((e.clientY-r.top)/r.height*100);
+  const t=$('pinT_'+lid)?.value||'casse';
+  const note=($('pinNote_'+lid)?.value||'').trim();
+  const l=cacheLoc.find(x=>x.id===lid);if(!l)return;
+  const newPin={x,y,t,note};
+  const newPins=[...(l.pins||[]),newPin];
+  await DB.collection('locations').doc(lid).update({pins:newPins});
+  // Aggiorna cache locale
+  l.pins=newPins;
+  // Aggiorna visuale mappa
+  area.innerHTML=renderPins(newPins,lid,true)+'<div class="pinh" id="pinh_'+lid+'">Tocca per aggiungere pin</div>';
+  area.onclick=e2=>addPin(e2,lid);
+  // Aggiorna lista
+  const pl=$('pinList_'+lid);if(pl)pl.innerHTML=buildPinList(newPins,lid);
+  $('pinNote_'+lid).value='';
+  toast('✓ Pin aggiunto: '+pinLabel(t));
+}
+
+async function removePin(lid,idx){
+  const l=cacheLoc.find(x=>x.id===lid);if(!l)return;
+  const newPins=(l.pins||[]).filter((_,i)=>i!==idx);
+  await DB.collection('locations').doc(lid).update({pins:newPins});
+  l.pins=newPins;
+  const area=$('pina_'+lid);
+  if(area){
+    area.innerHTML=renderPins(newPins,lid,editModes[lid]||false)+'<div class="pinh" id="pinh_'+lid+'">'+(editModes[lid]?'Tocca per aggiungere pin':'Premi Modifica per aggiungere pin')+'</div>';
+    if(editModes[lid])area.onclick=e=>addPin(e,lid);
+  }
+  const pl=$('pinList_'+lid);if(pl)pl.innerHTML=buildPinList(newPins,lid);
+  toast('✓ Pin rimosso');
 }
 
 async function handleLocPhotos(e,lid){
