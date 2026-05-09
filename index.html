@@ -106,6 +106,20 @@ textarea{resize:vertical;min-height:80px}
 .mpin-wrap:hover .pin-tooltip{display:block}
 .pin-tooltip{display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:10}
 .dtool.on{background:var(--acb)!important;border-color:var(--ac)!important;color:var(--ac2)!important}
+/* AGENDA */
+.ag-day{background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px;overflow:hidden}
+.ag-day-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--b)}
+.ag-day-name{font-size:13px;font-weight:600}
+.ag-day-date{font-size:11px;color:var(--tx2)}
+.ag-day.today .ag-day-header{background:var(--acb)}
+.ag-day.today .ag-day-name{color:var(--ac2)}
+.ag-turno{margin:8px;border-radius:var(--rs);padding:10px 12px;cursor:pointer;transition:opacity .15s}
+.ag-turno:hover{opacity:.85}
+.ag-turno-title{font-size:13px;font-weight:600;margin-bottom:2px}
+.ag-turno-sub{font-size:11px;opacity:.85;margin-bottom:2px}
+.ag-empty{padding:10px 12px;font-size:12px;color:var(--tx3);font-style:italic}
+.ag-add{display:flex;align-items:center;justify-content:center;margin:8px;padding:8px;border:1px dashed var(--b2);border-radius:var(--rs);cursor:pointer;font-size:12px;color:var(--tx3);gap:6px}
+.ag-add:hover{border-color:var(--ac);color:var(--ac2)}
 .upz{border:1px dashed var(--b2);border-radius:var(--rs);padding:16px;text-align:center;cursor:pointer;background:var(--bg2);margin-bottom:8px}
 </style>
 </head>
@@ -135,7 +149,14 @@ textarea{resize:vertical;min-height:80px}
           <span class="chip on" onclick="pickChip(this,'role')">Tecnico AV</span>
           <span class="chip" onclick="pickChip(this,'role')">Project Manager</span>
           <span class="chip" onclick="pickChip(this,'role')">Magazziniere</span>
+          <span class="chip" onclick="pickChip(this,'role')">Responsabile</span>
         </div>
+      </div>
+      <!-- Password solo per Responsabile -->
+      <div class="ig" id="pwdWrap" style="display:none">
+        <label class="il">Password Responsabile</label>
+        <input type="password" id="rPwd" placeholder="Scegli una password sicura">
+        <div style="font-size:11px;color:var(--tx3);margin-top:4px">Richiesta ad ogni accesso come Responsabile</div>
       </div>
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
         <div id="privBox" class="cbox" onclick="togglePriv()"></div>
@@ -144,7 +165,11 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-p btn-f" id="regBtn" onclick="doReg()" style="padding:13px;font-size:15px;font-weight:600">Inizia →</button>
     </div>
     <div id="formLogin" style="display:none">
-      <div class="ig"><label class="il">La tua email</label><input type="email" id="loginEmail" placeholder="mario@azienda.it"></div>
+      <div class="ig"><label class="il">La tua email</label><input type="email" id="loginEmail" placeholder="mario@azienda.it" oninput="checkLoginPwd()"></div>
+      <div class="ig" id="loginPwdWrap" style="display:none">
+        <label class="il">Password Responsabile</label>
+        <input type="password" id="loginPwd" placeholder="Inserisci la tua password">
+      </div>
       <button class="btn btn-p btn-f" id="loginBtn" onclick="doLogin()" style="padding:13px;font-size:15px;font-weight:600">Accedi →</button>
       <div style="font-size:12px;color:var(--tx2);text-align:center;margin-top:10px">Inserisci l'email con cui ti sei registrato</div>
     </div>
@@ -296,20 +321,95 @@ textarea{resize:vertical;min-height:80px}
       <div id="dichList"><div class="empty">Caricamento...</div></div>
     </div>
 
+    <!-- AGENDA -->
+    <div class="page" id="p-agenda">
+      <!-- Vista dipendente -->
+      <div id="agendaDip">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <button onclick="agendaWeek(-1)" class="btn" style="padding:8px 14px;font-size:18px;line-height:1">‹</button>
+          <div style="text-align:center">
+            <div style="font-size:14px;font-weight:600" id="agWeekLabel">—</div>
+            <div style="font-size:11px;color:var(--tx2)" id="agWeekRange">—</div>
+          </div>
+          <button onclick="agendaWeek(1)" class="btn" style="padding:8px 14px;font-size:18px;line-height:1">›</button>
+        </div>
+        <div id="agCalendar"></div>
+      </div>
+      <!-- Vista responsabile -->
+      <div id="agendaAdmin" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <button onclick="agendaWeek(-1)" class="btn" style="padding:8px 14px;font-size:18px;line-height:1">‹</button>
+          <div style="text-align:center">
+            <div style="font-size:14px;font-weight:600" id="agWeekLabelAdmin">—</div>
+            <div style="font-size:11px;color:var(--tx2)" id="agWeekRangeAdmin">—</div>
+          </div>
+          <button onclick="agendaWeek(1)" class="btn" style="padding:8px 14px;font-size:18px;line-height:1">›</button>
+        </div>
+        <select id="agFilterDip" onchange="renderAgenda()" style="width:100%;margin-bottom:12px">
+          <option value="all">👥 Tutti i dipendenti</option>
+        </select>
+        <button class="btn btn-p btn-f" style="margin-bottom:14px" onclick="openMod('mNewTurno')">+ Assegna turno</button>
+        <div id="agCalendarAdmin"></div>
+      </div>
+    </div>
+
   </div>
   <div id="nav">
     <div class="ni on" id="n-presenze" onclick="goPage('presenze')"><div class="ic">⏱</div><div class="lb">Presenze</div></div>
     <div class="ni" id="n-location" onclick="goPage('location')"><div class="ic">📍</div><div class="lb">Location</div></div>
     <div class="ni" id="n-magazzino" onclick="goPage('magazzino')"><div class="ic">📦</div><div class="lb">Magazzino</div></div>
+    <div class="ni" id="n-agenda" onclick="goPage('agenda')" style="position:relative">
+      <div class="ic">📅</div><div class="lb">Agenda</div>
+      <div class="notif-dot" id="agendaDot" style="display:none"></div>
+    </div>
     <div class="ni" id="n-forum" onclick="goPage('forum');clearNotif()" style="position:relative">
       <div class="ic">💬</div><div class="lb">Forum</div>
       <div class="notif-dot" id="notifDot" style="display:none"></div>
     </div>
-    <div class="ni" id="n-dichiarazione" onclick="goPage('dichiarazione')"><div class="ic">📁</div><div class="lb">Archivio</div></div>
   </div>
 </div>
 
 <div id="toast"></div>
+
+<!-- NUOVO TURNO -->
+<div class="mol" id="mNewTurno" onclick="if(event.target===this)closeMod('mNewTurno')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px" id="mNewTurnoTitle">📅 Assegna turno</div>
+    <div class="ig"><label class="il">Dipendente</label>
+      <select id="turDip"></select>
+    </div>
+    <div class="ig"><label class="il">Data</label>
+      <input type="date" id="turData">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Orario inizio</label><input type="time" id="turOraIn" value="09:00"></div>
+      <div class="ig"><label class="il">Orario fine</label><input type="time" id="turOraFin" value="18:00"></div>
+    </div>
+    <div class="ig"><label class="il">Tipo turno</label>
+      <select id="turTipo">
+        <option value="lavoro">💼 Lavoro</option>
+        <option value="assistenza">🔧 Assistenza</option>
+        <option value="trasferta">✈️ Trasferta</option>
+        <option value="jolly">🃏 Jolly</option>
+        <option value="riposo">😴 Riposo</option>
+        <option value="ferie">🏖 Ferie</option>
+        <option value="formazione">📚 Formazione</option>
+      </select>
+    </div>
+    <div class="ig"><label class="il">Location / Evento (opzionale)</label>
+      <input type="text" id="turLocation" placeholder="Es: Convegno Milano — Villa Borromeo">
+    </div>
+    <div class="ig"><label class="il">Note per il dipendente</label>
+      <textarea id="turNote" placeholder="Es: Portare ledwall, contattare Mario per l'accesso..." style="min-height:70px"></textarea>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" id="turDeleteBtn" style="display:none;color:var(--rd)" onclick="deleteTurno()">🗑 Elimina</button>
+      <button class="btn btn-f" onclick="closeMod('mNewTurno')">Annulla</button>
+      <button class="btn btn-p btn-f" id="turSaveBtn" onclick="saveTurno()">Salva</button>
+    </div>
+  </div>
+</div>
 
 <!-- PROFILO -->
 <div class="mol" id="mProfile" onclick="if(event.target===this)closeMod('mProfile')">
@@ -594,8 +694,9 @@ function goPage(n){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(b=>b.classList.remove('on'));
   $('p-'+n)&&$('p-'+n).classList.add('on');$('n-'+n)&&$('n-'+n).classList.add('on');
-  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti'};
+  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda'};
   $('ptitle').textContent=t[n]||n;
+  if(n==='agenda'){$('agendaDot').style.display='none';renderAgenda();}
 }
 
 // ── UI ──
@@ -609,7 +710,11 @@ function showTab(t){
 function pickChip(el,group){
   el.closest('.chips').querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
-  if(group==='role')selRole=el.textContent.trim();
+  if(group==='role'){
+    selRole=el.textContent.trim();
+    const pwdWrap=$('pwdWrap');
+    if(pwdWrap) pwdWrap.style.display=selRole==='Responsabile'?'block':'none';
+  }
   if(group==='luogo'){
     selLuogo=el.textContent.trim();
     const isExtra=selLuogo.includes('Assistenza')||selLuogo.includes('Trasferta');
@@ -624,18 +729,40 @@ async function doReg(){
   const nome=val('rNome'),cognome=val('rCognome'),email=val('rEmail'),tel=val('rTel');
   if(!nome||!cognome||!email){toast('Compila nome, cognome ed email','r');return;}
   if(!privOk){toast('Accetta la privacy policy','r');return;}
+  if(selRole==='Responsabile'){
+    const pwd=val('rPwd');
+    if(!pwd||pwd.length<6){toast('Inserisci una password di almeno 6 caratteri','r');return;}
+  }
   const btn=$('regBtn');btn.textContent='Salvataggio...';btn.disabled=true;
   try{
     const snap=await DB.collection('team').where('email','==',email).get();
     if(!snap.empty){toast('Email già registrata — usa Accedi','a');btn.textContent='Inizia →';btn.disabled=false;return;}
     const uid='u'+Date.now();
-    const m={id:uid,nome,cognome,email,tel:tel||'',ruolo:selRole,createdAt:new Date().toISOString()};
+    // Hash semplice password (non crittografica, ma oscura il valore in chiaro)
+    let pwdHash='';
+    if(selRole==='Responsabile'){
+      const pwd=val('rPwd');
+      // SHA-256 via Web Crypto
+      const msgBuf=new TextEncoder().encode(pwd+'mmg_salt_'+uid);
+      const hashBuf=await crypto.subtle.digest('SHA-256',msgBuf);
+      pwdHash=Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+    const m={id:uid,nome,cognome,email,tel:tel||'',ruolo:selRole,pwdHash,createdAt:new Date().toISOString()};
     await DB.collection('team').doc(uid).set(m);
     localStorage.setItem('av_user',JSON.stringify(m));
     USER=m;startApp();
   }catch(e){alert('Errore: '+e.message);}
   btn.textContent='Inizia →';btn.disabled=false;
 }
+// Mostra campo password se l'email corrisponde a un Responsabile
+async function checkLoginPwd(){
+  const email=val('loginEmail');
+  if(!email||email.length<5){$('loginPwdWrap').style.display='none';return;}
+  // Cerca in cache prima
+  const m=cacheTeam.find(x=>x.email===email.toLowerCase());
+  if(m){$('loginPwdWrap').style.display=m.ruolo==='Responsabile'?'block':'none';}
+}
+
 async function doLogin(){
   const email=val('loginEmail');
   if(!email){toast('Inserisci la tua email','r');return;}
@@ -643,7 +770,17 @@ async function doLogin(){
   try{
     const snap=await DB.collection('team').where('email','==',email.toLowerCase()).get();
     if(snap.empty){toast('Email non trovata','r');btn.textContent='Accedi →';btn.disabled=false;return;}
-    USER={id:snap.docs[0].id,...snap.docs[0].data()};
+    const userData={id:snap.docs[0].id,...snap.docs[0].data()};
+    // Verifica password se Responsabile
+    if(userData.ruolo==='Responsabile'){
+      const pwd=val('loginPwd');
+      if(!pwd){toast('Inserisci la password','r');btn.textContent='Accedi →';btn.disabled=false;return;}
+      const msgBuf=new TextEncoder().encode(pwd+'mmg_salt_'+userData.id);
+      const hashBuf=await crypto.subtle.digest('SHA-256',msgBuf);
+      const hash=Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      if(hash!==userData.pwdHash){toast('Password errata','r');btn.textContent='Accedi →';btn.disabled=false;return;}
+    }
+    USER=userData;
     localStorage.setItem('av_user',JSON.stringify(USER));startApp();
   }catch(e){alert('Errore: '+e.message);}
   btn.textContent='Accedi →';btn.disabled=false;
@@ -660,7 +797,7 @@ function startApp(){
   $('profEmail').textContent=USER.email;
   $('profTel').textContent=USER.tel||'—';
   appStarted=true;
-  startListeners();startLocListener();startMagListener();startDichListener();restorePunch();
+  startListeners();startLocListener();startMagListener();startDichListener();startAgendaListener();restorePunch();
   seedMagazzino();
   // Popola anni ZIP
   const nowY=new Date().getFullYear();
@@ -2416,6 +2553,218 @@ function buildHTMLRientro(d){
     (ok.length?'<div style="font-size:14px;font-weight:700;margin:12px 0 8px;padding-left:4px;border-left:4px solid #27ae60;color:#155724">✓ Rientrati</div><table><thead><tr><th>Articolo</th><th>Marca</th><th>Seriale</th><th>Stato</th></tr></thead><tbody>'+rigaOk+'</tbody></table>':'')+
     (miss.length?'<div style="font-size:14px;font-weight:700;margin:12px 0 8px;padding-left:4px;border-left:4px solid #e74c3c;color:#721c24">⚠ Mancanti</div><table><thead><tr><th>Articolo</th><th>Marca</th><th>Seriale</th><th>Stato</th></tr></thead><tbody>'+rigaMiss+'</tbody></table>':'')+
     dichFirme(tecnico)+'</div></body></html>';
+}
+
+// ── AGENDA ──
+let cacheAgenda=[], agWeekOffset=0, turnoEditId=null;
+
+const TURNO_COLORS={
+  lavoro:    {bg:'rgba(108,99,255,.25)',border:'#6c63ff',text:'#a5a0ff'},
+  assistenza:{bg:'rgba(245,158,11,.2)', border:'#f59e0b',text:'#fbbf24'},
+  trasferta: {bg:'rgba(59,130,246,.2)', border:'#3b82f6',text:'#60a5fa'},
+  jolly:     {bg:'rgba(168,85,247,.2)', border:'#a855f7',text:'#c084fc'},
+  riposo:    {bg:'rgba(100,116,139,.2)',border:'#64748b',text:'#94a3b8'},
+  ferie:     {bg:'rgba(34,197,94,.2)',  border:'#22c55e',text:'#4ade80'},
+  formazione:{bg:'rgba(239,68,68,.2)',  border:'#ef4444',text:'#f87171'},
+};
+const TURNO_ICONS={lavoro:'💼',assistenza:'🔧',trasferta:'✈️',jolly:'🃏',riposo:'😴',ferie:'🏖',formazione:'📚'};
+
+function isResponsabile(){return USER&&USER.ruolo==='Responsabile';}
+
+function getWeekDates(offset){
+  const now=new Date();
+  const day=now.getDay();
+  const monday=new Date(now);
+  monday.setDate(now.getDate()-((day===0?7:day)-1)+offset*7);
+  monday.setHours(0,0,0,0);
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(monday);d.setDate(monday.getDate()+i);days.push(d);}
+  return days;
+}
+
+function agendaWeek(dir){agWeekOffset+=dir;renderAgenda();}
+
+function startAgendaListener(){
+  DB.collection('agenda').onSnapshot(snap=>{
+    const prev=cacheAgenda.length;
+    cacheAgenda=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderAgenda();
+    // Notifica nuovi turni per il dipendente corrente
+    if(prev>0&&snap.docChanges().some(c=>c.type==='added'&&c.doc.data().uid===USER?.id)){
+      const pg=$('p-agenda');
+      if(!pg||!pg.classList.contains('on')){
+        $('agendaDot').style.display='block';
+        toast('📅 Nuovo turno assegnato!');
+      }
+    }
+  });
+}
+
+function renderAgenda(){
+  const isAdmin=isResponsabile();
+  $('agendaDip').style.display=isAdmin?'none':'block';
+  $('agendaAdmin').style.display=isAdmin?'block':'none';
+  if(isAdmin) renderAgendaAdmin();
+  else renderAgendaDip();
+}
+
+function renderAgendaDip(){
+  const days=getWeekDates(agWeekOffset);
+  const fmt=d=>d.toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
+  $('agWeekLabel').textContent='Settimana '+(agWeekOffset===0?'corrente':agWeekOffset>0?'+'+agWeekOffset:agWeekOffset);
+  $('agWeekRange').textContent=fmt(days[0])+' — '+fmt(days[6]);
+  const today=new Date().toDateString();
+  let h='';
+  const GG=['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+  days.forEach((d,i)=>{
+    const ds=d.toISOString().slice(0,10);
+    const isToday=d.toDateString()===today;
+    const turni=cacheAgenda.filter(t=>t.uid===USER.id&&t.data===ds);
+    h+='<div class="ag-day'+(isToday?' today':'')+'">'+
+      '<div class="ag-day-header">'+
+        '<span class="ag-day-name">'+GG[i]+'</span>'+
+        '<span class="ag-day-date">'+d.toLocaleDateString('it-IT',{day:'2-digit',month:'short'})+'</span>'+
+      '</div>';
+    if(!turni.length){h+='<div class="ag-empty">Nessun turno assegnato</div>';}
+    else turni.forEach(t=>{
+      const c=TURNO_COLORS[t.tipo]||TURNO_COLORS.lavoro;
+      h+='<div class="ag-turno" style="background:'+c.bg+';border-left:3px solid '+c.border+'">'+
+        '<div class="ag-turno-title" style="color:'+c.text+'">'+TURNO_ICONS[t.tipo]+' '+(t.location||t.tipo)+'</div>'+
+        (t.oraIn?'<div class="ag-turno-sub" style="color:'+c.text+'">⏰ '+t.oraIn+(t.oraFin?' → '+t.oraFin:'')+'</div>':'')+
+        (t.note?'<div class="ag-turno-sub" style="color:'+c.text+';opacity:.7">📝 '+t.note+'</div>':'')+
+      '</div>';
+    });
+    h+='</div>';
+  });
+  $('agCalendar').innerHTML=h;
+}
+
+function renderAgendaAdmin(){
+  const days=getWeekDates(agWeekOffset);
+  const fmt=d=>d.toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
+  $('agWeekLabelAdmin').textContent='Settimana '+(agWeekOffset===0?'corrente':agWeekOffset>0?'+'+agWeekOffset:agWeekOffset);
+  $('agWeekRangeAdmin').textContent=fmt(days[0])+' — '+fmt(days[6]);
+  // Popola filtro dipendenti
+  const selF=$('agFilterDip');
+  if(selF&&selF.options.length===1){
+    cacheTeam.filter(m=>m.ruolo!=='Responsabile').forEach(m=>{
+      const o=document.createElement('option');o.value=m.id;o.textContent=m.nome+' '+m.cognome;selF.appendChild(o);
+    });
+  }
+  const filterUid=$('agFilterDip')?.value||'all';
+  const today=new Date().toDateString();
+  const GG=['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+  let h='';
+  days.forEach((d,i)=>{
+    const ds=d.toISOString().slice(0,10);
+    const isToday=d.toDateString()===today;
+    let turni=cacheAgenda.filter(t=>t.data===ds);
+    if(filterUid!=='all')turni=turni.filter(t=>t.uid===filterUid);
+    h+='<div class="ag-day'+(isToday?' today':'')+'">'+
+      '<div class="ag-day-header">'+
+        '<span class="ag-day-name">'+GG[i]+'</span>'+
+        '<span class="ag-day-date">'+d.toLocaleDateString('it-IT',{day:'2-digit',month:'short'})+'</span>'+
+        '<span class="bdg ba" style="font-size:10px">'+turni.length+' turni</span>'+
+      '</div>';
+    if(!turni.length){h+='<div class="ag-empty">Nessun turno</div>';}
+    else {
+      // Raggruppa per dipendente se "tutti"
+      turni.forEach(t=>{
+        const m=cacheTeam.find(x=>x.id===t.uid);
+        const c=TURNO_COLORS[t.tipo]||TURNO_COLORS.lavoro;
+        h+='<div class="ag-turno" style="background:'+c.bg+';border-left:3px solid '+c.border+'" onclick="editTurno(\''+t.id+'\')">'+
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">'+
+            '<div>'+
+              (filterUid==='all'?'<div style="font-size:11px;color:'+c.text+';opacity:.8;margin-bottom:2px">👤 '+(m?m.nome+' '+m.cognome:'?')+'</div>':'')+
+              '<div class="ag-turno-title" style="color:'+c.text+'">'+TURNO_ICONS[t.tipo]+' '+(t.location||t.tipo)+'</div>'+
+              (t.oraIn?'<div class="ag-turno-sub" style="color:'+c.text+'">⏰ '+t.oraIn+(t.oraFin?' → '+t.oraFin:'')+'</div>':'')+
+              (t.note?'<div class="ag-turno-sub" style="color:'+c.text+';opacity:.7">📝 '+t.note+'</div>':'')+
+            '</div>'+
+            '<span style="font-size:16px;opacity:.6;flex-shrink:0">✏️</span>'+
+          '</div></div>';
+      });
+    }
+    // Bottone aggiungi
+    h+='<div class="ag-add" onclick="newTurnoForDay(\''+ds+'\')">+ Aggiungi turno</div>';
+    h+='</div>';
+  });
+  $('agCalendarAdmin').innerHTML=h;
+}
+
+function newTurnoForDay(ds){
+  turnoEditId=null;
+  $('mNewTurnoTitle').textContent='📅 Assegna turno';
+  $('turDeleteBtn').style.display='none';
+  $('turSaveBtn').textContent='Salva';
+  $('turData').value=ds;
+  $('turOraIn').value='09:00';
+  $('turOraFin').value='18:00';
+  $('turTipo').value='lavoro';
+  $('turLocation').value='';
+  $('turNote').value='';
+  // Popola select dipendenti
+  const sel=$('turDip');sel.innerHTML='';
+  cacheTeam.filter(m=>m.ruolo!=='Responsabile').forEach(m=>{
+    const o=document.createElement('option');o.value=m.id;o.textContent=m.nome+' '+m.cognome;sel.appendChild(o);
+  });
+  openMod('mNewTurno');
+}
+
+function editTurno(id){
+  const t=cacheAgenda.find(x=>x.id===id);if(!t)return;
+  turnoEditId=id;
+  $('mNewTurnoTitle').textContent='✏️ Modifica turno';
+  $('turDeleteBtn').style.display='block';
+  $('turSaveBtn').textContent='Aggiorna';
+  // Popola select dipendenti
+  const sel=$('turDip');sel.innerHTML='';
+  cacheTeam.filter(m=>m.ruolo!=='Responsabile').forEach(m=>{
+    const o=document.createElement('option');o.value=m.id;o.textContent=m.nome+' '+m.cognome;sel.appendChild(o);
+  });
+  sel.value=t.uid;
+  $('turData').value=t.data;
+  $('turOraIn').value=t.oraIn||'09:00';
+  $('turOraFin').value=t.oraFin||'18:00';
+  $('turTipo').value=t.tipo||'lavoro';
+  $('turLocation').value=t.location||'';
+  $('turNote').value=t.note||'';
+  openMod('mNewTurno');
+}
+
+async function saveTurno(){
+  const uid=$('turDip').value;
+  const data=$('turData').value;
+  if(!uid||!data){toast('Seleziona dipendente e data','r');return;}
+  const btn=$('turSaveBtn');btn.textContent='Salvataggio...';btn.disabled=true;
+  const turno={
+    uid,data,
+    oraIn:$('turOraIn').value,
+    oraFin:$('turOraFin').value,
+    tipo:$('turTipo').value,
+    location:$('turLocation').value,
+    note:$('turNote').value,
+    assegnatoDa:USER.id,
+    assegnatoIl:new Date().toISOString()
+  };
+  try{
+    if(turnoEditId){
+      await DB.collection('agenda').doc(turnoEditId).update(turno);
+      toast('✓ Turno aggiornato');
+    } else {
+      await DB.collection('agenda').add(turno);
+      const m=cacheTeam.find(x=>x.id===uid);
+      toast('✓ Turno assegnato a '+(m?m.nome:'dipendente'));
+    }
+    closeMod('mNewTurno');
+  }catch(e){alert('Errore: '+e.message);}
+  btn.textContent='Salva';btn.disabled=false;
+}
+
+async function deleteTurno(){
+  if(!turnoEditId)return;
+  if(!confirm('Eliminare questo turno?'))return;
+  await DB.collection('agenda').doc(turnoEditId).delete();
+  closeMod('mNewTurno');toast('✓ Turno eliminato');
 }
 
 // ── CLOCK ──
