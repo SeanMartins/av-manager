@@ -671,12 +671,16 @@ function startListeners(){
     $('nTeam').textContent=cacheTeam.length;
     renderPresenze();renderTeam();
   });
-  // Presenze oggi
-  const today=new Date();today.setHours(0,0,0,0);
-  DB.collection('presenze').where('entrata','>',today.toISOString()).onSnapshot(snap=>{
-    cachePresenze=snap.docs.map(d=>({id:d.id,...d.data()}));
-    renderPresenze();
-  });
+  // Presenze oggi — usa range esplicito per evitare problemi timezone
+  const todayStart=new Date();todayStart.setHours(0,0,0,0);
+  const todayEnd=new Date();todayEnd.setHours(23,59,59,999);
+  DB.collection('presenze')
+    .where('entrata','>=',todayStart.toISOString())
+    .where('entrata','<=',todayEnd.toISOString())
+    .onSnapshot(snap=>{
+      cachePresenze=snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderPresenze();
+    });
   // Forum — realtime con notifiche
   DB.collection('forum').orderBy('createdAt','desc').onSnapshot(snap=>{
     const prev=cacheForum.length;
@@ -873,7 +877,25 @@ function renderPresenze(){
     const bc=tp?(tp.uscita?'ba':'bg'):'bp';
     const bl=tp?(tp.uscita?'Uscito':'Presente'):'Assente';
     let orario='';
-    if(tp){const ent=new Date(tp.entrata);const eS=pad(ent.getHours())+':'+pad(ent.getMinutes());if(tp.uscita){const u=new Date(tp.uscita);const uS=pad(u.getHours())+':'+pad(u.getMinutes());const ore=((u-ent)/3600000).toFixed(1);orario='🟢 '+eS+' → 🔴 '+uS+' · '+ore+'h';}else orario='🟢 Entrata '+eS;}
+    if(tp){
+      const ent=new Date(tp.entrata);
+      const eS=pad(ent.getHours())+':'+pad(ent.getMinutes());
+      const pauses=tp.pause||[];
+      const pauseMs=pauses.reduce((s,p)=>{if(p.inizio&&p.fine)s+=new Date(p.fine)-new Date(p.inizio);return s;},0);
+      const pauseMin=Math.round(pauseMs/60000);
+      if(tp.uscita){
+        const u=new Date(tp.uscita);
+        const uS=pad(u.getHours())+':'+pad(u.getMinutes());
+        const lordeH=((u-ent)/3600000);
+        const netteH=Math.max(0,lordeH-pauseMs/3600000);
+        orario='🟢 '+eS+' → 🔴 '+uS+' · '+netteH.toFixed(1)+'h nette';
+        if(pauses.length>0) orario+=' <span style="font-size:10px;color:var(--am)">☕'+pauses.length+'</span>';
+      } else {
+        orario='🟢 Entrata '+eS;
+        if(pauses.length>0) orario+=' <span style="font-size:10px;color:var(--am)">☕'+pauses.length+' pause</span>';
+        if(pauseMin>0) orario+=' <span style="font-size:10px;color:var(--tx3)">('+pauseMin+'min)</span>';
+      }
+    }
     h+='<div class="row"><div class="av '+avC[i%4]+'">'+ini+'</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">'+m.nome+' '+m.cognome+'</div><div class="pres-luogo">'+(orario||m.ruolo)+'</div>'+(luogo?'<div style="font-size:11px;color:var(--ac2);margin-top:1px">'+luogo+'</div>':'')+'</div><span class="bdg '+bc+'">'+bl+'</span></div>';
   });
   const tt=$('teamToday');if(tt)tt.innerHTML=h;
