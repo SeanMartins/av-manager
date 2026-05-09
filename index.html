@@ -10,6 +10,7 @@
 <title>MMG — Multimedia Meeting Group</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -236,7 +237,36 @@ textarea{resize:vertical;min-height:80px}
         <div class="sc"><div class="sn" id="nDichPrep">0</div><div class="sl">Preparazioni</div></div>
         <div class="sc"><div class="sn" id="nDichRient">0</div><div class="sl">Rientri</div></div>
       </div>
-      <!-- Filtro -->
+      <!-- Download ZIP -->
+      <div class="card" style="margin-bottom:14px;padding:14px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px">⬇️ Scarica archivio ZIP</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div><label class="il">Mese</label>
+            <select id="zipMese">
+              <option value="all">Tutto l'anno</option>
+              <option value="0">Gennaio</option><option value="1">Febbraio</option>
+              <option value="2">Marzo</option><option value="3">Aprile</option>
+              <option value="4">Maggio</option><option value="5">Giugno</option>
+              <option value="6">Luglio</option><option value="7">Agosto</option>
+              <option value="8">Settembre</option><option value="9">Ottobre</option>
+              <option value="10">Novembre</option><option value="11">Dicembre</option>
+            </select>
+          </div>
+          <div><label class="il">Anno</label><select id="zipAnno"></select></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border-radius:var(--rs);padding:10px">
+            <input type="checkbox" id="zipPrep" checked style="width:18px;height:18px;cursor:pointer">
+            <label for="zipPrep" style="font-size:13px;cursor:pointer">📋 Preparazioni</label>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border-radius:var(--rs);padding:10px">
+            <input type="checkbox" id="zipRient" checked style="width:18px;height:18px;cursor:pointer">
+            <label for="zipRient" style="font-size:13px;cursor:pointer">✅ Rientri</label>
+          </div>
+        </div>
+        <button class="btn btn-p btn-f" id="zipBtn" onclick="downloadZip()">📦 Genera e scarica ZIP</button>
+      </div>
+      <!-- Filtro lista -->
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <button class="btn" id="dfAll" onclick="dichFilter('all')" style="flex:1;font-size:13px;background:var(--acb);border-color:var(--ac);color:var(--ac2)">Tutti</button>
         <button class="btn" id="dfPrep" onclick="dichFilter('prep')" style="flex:1;font-size:13px">📋 Preparazioni</button>
@@ -587,6 +617,11 @@ function startApp(){
   appStarted=true;
   startListeners();startLocListener();startMagListener();startDichListener();restorePunch();
   seedMagazzino();
+  // Popola anni ZIP
+  const nowY=new Date().getFullYear();
+  const sa=$('zipAnno');if(sa){sa.innerHTML='';for(let y=nowY;y>=nowY-3;y--){const o=document.createElement('option');o.value=y;o.textContent=y;sa.appendChild(o);}}
+  // Imposta mese corrente nel ZIP
+  const sm=$('zipMese');if(sm)sm.value=new Date().getMonth();
 }
 
 // ── LISTENERS ──
@@ -1532,6 +1567,142 @@ function dichOpenPDF(html,name){
   const w=window.open('','_blank');
   w.document.write(html);w.document.close();
   setTimeout(()=>{w.focus();w.print();},400);
+}
+
+async function downloadZip(){
+  const meseVal=$('zipMese')?.value;
+  const anno=parseInt($('zipAnno')?.value||new Date().getFullYear());
+  const inclPrep=$('zipPrep')?.checked;
+  const inclRient=$('zipRient')?.checked;
+  if(!inclPrep&&!inclRient){toast('Seleziona almeno un tipo di documento','r');return;}
+
+  const mesiN=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const btn=$('zipBtn');btn.textContent='⏳ Generazione...';btn.disabled=true;
+
+  // Filtra i documenti per periodo
+  let docs=[...cacheDich];
+  docs=docs.filter(d=>{
+    const date=new Date(d.rientroData||d.createdAt);
+    if(date.getFullYear()!==anno)return false;
+    if(meseVal!=='all'&&date.getMonth()!==parseInt(meseVal))return false;
+    return true;
+  });
+  if(!inclPrep)docs=docs.filter(d=>!!d.rientroData);
+  if(!inclRient)docs=docs.filter(d=>!d.rientroData);
+
+  if(!docs.length){
+    toast('Nessun documento trovato per il periodo selezionato','a');
+    btn.textContent='📦 Genera e scarica ZIP';btn.disabled=false;return;
+  }
+
+  toast('⏳ Creo '+docs.length+' PDF...','a');
+
+  const zip=new JSZip();
+  const periodoLabel=meseVal==='all'?anno:mesiN[parseInt(meseVal)]+'_'+anno;
+
+  // Crea cartelle separate
+  const folderPrep=zip.folder('Preparazioni');
+  const folderRient=zip.folder('Rientri');
+
+  docs.forEach(d=>{
+    const isRient=!!d.rientroData;
+    const nomeFile=(d.nome||'documento').replace(/[^a-zA-Z0-9_\-àèéìòù ]/g,'_').replace(/ /g,'_');
+    const dataStr=new Date(d.rientroData||d.createdAt).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'-');
+
+    let html='';
+    if(isRient&&inclRient){
+      html=buildHTMLRientro(d);
+      folderRient.file(dataStr+'_'+nomeFile+'.html',html);
+    } else if(!isRient&&inclPrep){
+      html=buildHTMLPrep(d);
+      folderPrep.file(dataStr+'_'+nomeFile+'.html',html);
+    }
+  });
+
+  // Aggiungi indice riepilogativo
+  let indice='<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Indice archivio</title>'+
+    '<style>body{font-family:Helvetica,Arial,sans-serif;padding:32px;color:#1a1a2e}.header{border-bottom:2px solid #6c63ff;padding-bottom:16px;margin-bottom:24px}.logo{font-size:20px;font-weight:700;color:#6c63ff}h2{font-size:16px;margin:20px 0 10px;color:#555}table{width:100%;border-collapse:collapse}th{background:#37474f;color:#fff;padding:8px 10px;text-align:left;font-size:12px}td{padding:8px 10px;border-bottom:1px solid #eee;font-size:13px}.ok{color:#27ae60;font-weight:600}.warn{color:#e74c3c;font-weight:600}.prep{color:#6c63ff;font-weight:600}</style></head><body>'+
+    '<div class="header"><div class="logo">MMG — Multimedia Meeting Group</div>'+
+    '<div style="font-size:13px;color:#888;margin-top:4px">Archivio documenti · '+periodoLabel+'</div></div>'+
+    '<p style="font-size:13px;color:#555;margin-bottom:20px">Totale documenti: <strong>'+docs.length+'</strong></p>';
+
+  const prep=docs.filter(d=>!d.rientroData);
+  const rient=docs.filter(d=>!!d.rientroData);
+
+  if(prep.length){
+    indice+='<h2>📋 Preparazioni ('+prep.length+')</h2><table><thead><tr><th>Data</th><th>Evento</th><th>Location</th><th>Tecnico</th><th>Pezzi</th></tr></thead><tbody>';
+    prep.forEach(d=>{
+      const data=new Date(d.createdAt).toLocaleDateString('it-IT');
+      const pezzi=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
+      indice+='<tr><td>'+data+'</td><td><strong>'+d.nome+'</strong></td><td>'+(d.location||'—')+'</td><td>'+d.tecnico+'</td><td>'+pezzi+'</td></tr>';
+    });
+    indice+='</tbody></table>';
+  }
+  if(rient.length){
+    indice+='<h2>✅ Rientri ('+rient.length+')</h2><table><thead><tr><th>Data</th><th>Evento</th><th>Location</th><th>Tecnico</th><th>Stato</th></tr></thead><tbody>';
+    rient.forEach(d=>{
+      const data=new Date(d.rientroData).toLocaleDateString('it-IT');
+      const stato=d.rientrato?'<span class="ok">✓ Completo</span>':'<span class="warn">⚠ Incompleto</span>';
+      indice+='<tr><td>'+data+'</td><td><strong>'+d.nome+'</strong></td><td>'+(d.location||'—')+'</td><td>'+d.rientroTecnico||d.tecnico+'</td><td>'+stato+'</td></tr>';
+    });
+    indice+='</tbody></table>';
+  }
+  indice+='<p style="font-size:11px;color:#aaa;margin-top:32px;padding-top:12px;border-top:1px solid #eee">Generato il '+new Date().toLocaleString('it-IT')+'</p></body></html>';
+  zip.file('_INDICE_'+periodoLabel+'.html',indice);
+
+  // Genera e scarica ZIP
+  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='MMG_Archivio_'+periodoLabel+'.zip';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('✓ ZIP scaricato — '+docs.length+' documenti');
+  btn.textContent='📦 Genera e scarica ZIP';btn.disabled=false;
+}
+
+// Helper per buildHTML — riutilizzano le funzioni esistenti ma restituiscono stringa
+function buildHTMLPrep(d){
+  const nome=d.nome||'—',loc=d.location||'—';
+  const data=d.data?new Date(d.data).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
+  const tecnico=d.tecnico||'—';
+  const tot=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
+  const bycat={};(d.articoli||[]).forEach(a=>{const k=a.cat||'Altro';if(!bycat[k])bycat[k]=[];bycat[k].push(a);});
+  let righe='';
+  Object.entries(bycat).forEach(([cat,items])=>{
+    righe+='<tr><td colspan="4" style="background:#f0f0f8;font-weight:600;font-size:11px;text-transform:uppercase;color:#555;padding:8px 10px">'+cat+'</td></tr>';
+    items.forEach((a,i)=>{righe+='<tr style="background:'+(i%2===0?'#fff':'#fafafa')+'"><td style="padding:8px 10px;font-size:13px;font-weight:500">'+a.nome+'</td><td style="padding:8px 10px;font-size:12px;color:#666">'+(a.marca||'—')+'</td><td style="padding:8px 10px;font-size:12px;color:#666;font-family:monospace">'+(a.ser||'—')+'</td><td style="padding:8px 10px;font-size:14px;font-weight:700;text-align:center">'+(a.qty||1)+'</td></tr>';});
+  });
+  return dichHTMLBase('Lista preparazione — '+nome,nome,'#6c63ff')+
+    '<div style="font-size:26px;font-weight:700;margin-bottom:18px">Lista preparazione materiali</div>'+
+    dichInfoGrid(nome,data,loc,tecnico,'')+
+    '<table><thead><tr><th>Articolo</th><th>Marca</th><th>N° Seriale</th><th>Qtà</th></tr></thead><tbody>'+righe+'</tbody></table>'+
+    '<div style="display:flex;justify-content:flex-end;gap:20px;font-size:13px;color:#666;margin-bottom:24px"><span>Totale: <strong>'+tot+' pezzi</strong></span></div>'+
+    dichFirme(tecnico)+'</div></body></html>';
+}
+
+function buildHTMLRientro(d){
+  const allOk=d.rientrato;
+  const nome=d.nome||'—',loc=d.location||'—';
+  const data=d.data?new Date(d.data).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
+  const tecnico=d.rientroTecnico||d.tecnico||'—';
+  const arts=d.articoliRientro||d.articoli||[];
+  const ok=arts.filter(a=>a.rientrato!==false);
+  const miss=arts.filter(a=>a.rientrato===false);
+  const rigaOk=ok.map((a,i)=>'<tr style="background:'+(i%2===0?'#fff':'#f9fff9')+'"><td style="padding:8px 10px;font-size:13px">'+a.nome+'</td><td style="padding:8px 10px;font-size:12px;color:#666">'+(a.marca||'—')+'</td><td style="padding:8px 10px;font-size:12px;font-family:monospace">'+(a.ser||'—')+'</td><td style="padding:8px 10px;text-align:center"><span style="background:#d4edda;color:#155724;padding:2px 8px;border-radius:20px;font-size:11px">✓</span></td></tr>').join('');
+  const rigaMiss=miss.map((a,i)=>'<tr style="background:'+(i%2===0?'#fff8f8':'#fff0f0')+'"><td style="padding:8px 10px;font-size:13px;color:#c0392b">'+a.nome+'</td><td style="padding:8px 10px;font-size:12px;color:#888">'+(a.marca||'—')+'</td><td style="padding:8px 10px;font-size:12px;font-family:monospace">'+(a.ser||'—')+'</td><td style="padding:8px 10px;text-align:center"><span style="background:#f8d7da;color:#721c24;padding:2px 8px;border-radius:20px;font-size:11px">⚠</span></td></tr>').join('');
+  return dichHTMLBase('Report rientro — '+nome,nome,allOk?'#27ae60':'#e74c3c')+
+    '<div style="background:'+(allOk?'#d4edda':'#f8d7da')+';border-radius:10px;padding:14px 20px;margin-bottom:24px;font-size:16px;font-weight:700;color:'+(allOk?'#155724':'#721c24')+'">'+(allOk?'✅ Rientro COMPLETO':'⚠️ Rientro INCOMPLETO')+'</div>'+
+    dichInfoGrid(nome,data,loc,tecnico,'')+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px">'+
+      '<div style="background:#e8eaf6;color:#3949ab;border-radius:10px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700">'+arts.length+'</div><div style="font-size:11px">Totali</div></div>'+
+      '<div style="background:#e8f5e9;color:#2e7d32;border-radius:10px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700">'+ok.length+'</div><div style="font-size:11px">Rientrati</div></div>'+
+      '<div style="background:#fce4ec;color:#c62828;border-radius:10px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700">'+miss.length+'</div><div style="font-size:11px">Mancanti</div></div>'+
+      '<div style="background:'+(allOk?'#e8f5e9':'#fff8e1')+';color:'+(allOk?'#2e7d32':'#e65100')+';border-radius:10px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700">'+Math.round(ok.length/Math.max(arts.length,1)*100)+'%</div><div style="font-size:11px">Completamento</div></div>'+
+    '</div>'+
+    (ok.length?'<div style="font-size:14px;font-weight:700;margin:12px 0 8px;padding-left:4px;border-left:4px solid #27ae60;color:#155724">✓ Rientrati</div><table><thead><tr><th>Articolo</th><th>Marca</th><th>Seriale</th><th>Stato</th></tr></thead><tbody>'+rigaOk+'</tbody></table>':'')+
+    (miss.length?'<div style="font-size:14px;font-weight:700;margin:12px 0 8px;padding-left:4px;border-left:4px solid #e74c3c;color:#721c24">⚠ Mancanti</div><table><thead><tr><th>Articolo</th><th>Marca</th><th>Seriale</th><th>Stato</th></tr></thead><tbody>'+rigaMiss+'</tbody></table>':'')+
+    dichFirme(tecnico)+'</div></body></html>';
 }
 
 // ── CLOCK ──
