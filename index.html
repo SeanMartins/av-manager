@@ -589,6 +589,14 @@ textarea{resize:vertical;min-height:80px}
   <div class="msh"><div class="mhd"></div><div id="mLocDetBody"></div></div>
 </div>
 
+<!-- DOVE È USATO -->
+<div class="mol" id="mDoveUsato" onclick="if(event.target===this)closeMod('mDoveUsato')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div id="mDoveUsatoBody"></div>
+  </div>
+</div>
+
 <!-- NUOVO ARTICOLO -->
 <div class="mol" id="mNewArt" onclick="if(event.target===this)closeMod('mNewArt')">
   <div class="msh">
@@ -1724,26 +1732,81 @@ function renderMag(){
   $('nArt').textContent=cacheMag.length;
   $('nDisp').textContent=cacheMag.filter(m=>m.stato==='ok').length;
   $('nInUso').textContent=cacheMag.filter(m=>m.stato!=='ok').length;
-  const sc={ok:['bg','Disponibile'],out:['ba','In uso'],maint:['br','Manutenzione']};
   let h='';
   ['audio','luci','ledwall','traduzione','video','strutture'].forEach(cat=>{
     const items=fil.filter(m=>m.cat===cat);if(!items.length)return;
     const label={audio:'🎙 Audio',luci:'💡 Luci',ledwall:'🖥 LED wall',traduzione:'🎧 Traduzione simultanea',video:'📽 Video / Proiezione',strutture:'🏗 Strutture'}[cat]||cat;
     h+='<div style="font-size:11px;font-weight:600;color:var(--tx2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:7px">'+label+'</div><div class="card" style="margin-bottom:13px">';
     items.forEach(m=>{
-      const [bc,bl]=sc[m.stato]||sc.ok;
+      let badgeHtml='';
+      if(m.stato==='ok'){
+        badgeHtml='<span class="bdg bg">Disponibile</span>';
+      } else if(m.stato==='maint'){
+        badgeHtml='<span class="bdg br">Manutenzione</span>';
+      } else {
+        // "In uso" — cerca in quale lavoro è presente
+        const lavoro=trovaDovEUsato(m.id,m.ser);
+        if(lavoro){
+          badgeHtml='<span class="bdg ba" style="cursor:pointer;text-decoration:underline" onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')">📋 In uso</span>';
+        } else {
+          badgeHtml='<span class="bdg ba">In uso</span>';
+        }
+      }
       h+='<div class="row">'+
         '<div style="width:36px;height:36px;border-radius:var(--rs);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">📦</div>'+
         '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.nome+'</div>'+
         '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'—')+' · '+(m.ser||'—')+'</div></div>'+
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'+
         '<span style="font-size:12px;color:var(--tx2)">×'+(m.qty||1)+'</span>'+
-        '<span class="bdg '+bc+'">'+bl+'</span></div></div>';
+        badgeHtml+'</div></div>';
     });
     h+='</div>';
   });
   if(!fil.length)h='<div class="empty">Nessun articolo trovato</div>';
   const ml=$('magList');if(ml)ml.innerHTML=h;
+}
+
+// Cerca se un articolo è presente in un lavoro non ancora rientrato
+function trovaDovEUsato(id,ser){
+  return cacheDich.find(d=>
+    !d.rientroData && // non ancora smarcato
+    (d.articoli||[]).some(a=>
+      a.id===id || (ser&&a.ser===ser) ||
+      (a.id||'').toLowerCase()===(id||'').toLowerCase()
+    )
+  );
+}
+
+function mostraDovetUsato(artId, artNomeEnc){
+  const artNome=decodeURIComponent(artNomeEnc);
+  // Trova tutti i lavori attivi che contengono questo articolo
+  const lavori=cacheDich.filter(d=>
+    !d.rientroData &&
+    (d.articoli||[]).some(a=>a.id===artId||(a.id||'').toLowerCase()===artId.toLowerCase())
+  );
+  if(!lavori.length){toast('Nessun lavoro attivo trovato','a');return;}
+
+  let body='<div style="font-size:16px;font-weight:600;margin-bottom:4px">📋 '+artNome+'</div>'+
+    '<div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Presente nei seguenti lavori in corso:</div>';
+
+  lavori.forEach(d=>{
+    const data=d.data?new Date(d.data).toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
+    const art=(d.articoli||[]).find(a=>a.id===artId||(a.id||'').toLowerCase()===artId.toLowerCase());
+    const qty=art?.qty||1;
+    body+='<div class="card" style="margin-bottom:10px;padding:12px">'+
+      '<div style="font-size:15px;font-weight:600;margin-bottom:6px">'+d.nome+'</div>'+
+      '<div style="display:flex;flex-direction:column;gap:4px">'+
+        '<div style="font-size:12px;color:var(--tx2)">📅 '+data+'</div>'+
+        '<div style="font-size:12px;color:var(--tx2)">📍 '+(d.location||'—')+'</div>'+
+        '<div style="font-size:12px;color:var(--tx2)">👤 '+d.tecnico+'</div>'+
+        '<div style="font-size:12px;color:var(--am);font-weight:500;margin-top:4px">📦 Quantità in uso: '+qty+'</div>'+
+      '</div>'+
+    '</div>';
+  });
+
+  body+='<button class="btn btn-f" onclick="closeMod(\'mDoveUsato\')" style="margin-top:4px">Chiudi</button>';
+  $('mDoveUsatoBody').innerHTML=body;
+  openMod('mDoveUsato');
 }
 
 async function saveArt(){
