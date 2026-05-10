@@ -1747,7 +1747,7 @@ function renderMag(){
         // "In uso" — cerca in quale lavoro è presente
         const lavoro=trovaDovEUsato(m.id,m.ser);
         if(lavoro){
-          badgeHtml='<span class="bdg ba" style="cursor:pointer;text-decoration:underline" onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')">📋 In uso</span>';
+          badgeHtml='<span class="bdg ba" style="cursor:pointer;border-bottom:1.5px solid var(--am);gap:4px" onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')">📋 In uso ›</span>';
         } else {
           badgeHtml='<span class="bdg ba">In uso</span>';
         }
