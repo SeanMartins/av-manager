@@ -1774,19 +1774,47 @@ function trovaDovEUsato(id,ser){
 
 function mostraDovetUsato(artId, artNomeEnc){
   const artNome=decodeURIComponent(artNomeEnc);
-  // Trova tutti i lavori attivi che contengono questo articolo
+  // Trova il materiale in cache per avere anche ser e nome
+  const mat=cacheMag.find(m=>m.id===artId);
+  const artSer=mat?.ser||'';
+  const artNomeClean=artNome.toLowerCase();
+
+  // Cerca in tutti i lavori non ancora rientrati
   const lavori=cacheDich.filter(d=>
     !d.rientroData &&
-    (d.articoli||[]).some(a=>a.id===artId||(a.id||'').toLowerCase()===artId.toLowerCase())
+    (d.articoli||[]).some(a=>
+      a.id===artId ||
+      (artSer && a.ser===artSer) ||
+      (a.id||'').toLowerCase()===artId.toLowerCase() ||
+      (artSer && (a.ser||'').toLowerCase()===artSer.toLowerCase()) ||
+      (a.nome||'').toLowerCase()===artNomeClean
+    )
   );
-  if(!lavori.length){toast('Nessun lavoro attivo trovato','a');return;}
+
+  if(!lavori.length){
+    // Mostra comunque il modal con info utile
+    let body='<div style="font-size:16px;font-weight:600;margin-bottom:4px">📋 '+artNome+'</div>'+
+      '<div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Seriale: '+(artSer||'—')+'</div>'+
+      '<div class="card" style="padding:14px;text-align:center">'+
+        '<div style="font-size:24px;margin-bottom:8px">🔍</div>'+
+        '<div style="font-size:14px;font-weight:500;margin-bottom:6px">Nessun lavoro attivo trovato</div>'+
+        '<div style="font-size:12px;color:var(--tx2)">L\'articolo risulta "In uso" ma non è presente in nessun lavoro preparato dall\'app.<br><br>Potrebbe essere stato segnato manualmente oppure il lavoro è già stato smarcato.</div>'+
+      '</div>'+
+      '<button class="btn btn-f" onclick="closeMod(\'mDoveUsato\')" style="margin-top:10px">Chiudi</button>';
+    $('mDoveUsatoBody').innerHTML=body;
+    openMod('mDoveUsato');
+    return;
+  }
 
   let body='<div style="font-size:16px;font-weight:600;margin-bottom:4px">📋 '+artNome+'</div>'+
     '<div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Presente nei seguenti lavori in corso:</div>';
 
   lavori.forEach(d=>{
     const data=d.data?new Date(d.data).toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
-    const art=(d.articoli||[]).find(a=>a.id===artId||(a.id||'').toLowerCase()===artId.toLowerCase());
+    const art=(d.articoli||[]).find(a=>
+      a.id===artId||(artSer&&a.ser===artSer)||
+      (a.nome||'').toLowerCase()===artNomeClean
+    );
     const qty=art?.qty||1;
     body+='<div class="card" style="margin-bottom:10px;padding:12px">'+
       '<div style="font-size:15px;font-weight:600;margin-bottom:6px">'+d.nome+'</div>'+
@@ -1798,7 +1826,6 @@ function mostraDovetUsato(artId, artNomeEnc){
       '</div>'+
     '</div>';
   });
-
   body+='<button class="btn btn-f" onclick="closeMod(\'mDoveUsato\')" style="margin-top:4px">Chiudi</button>';
   $('mDoveUsatoBody').innerHTML=body;
   openMod('mDoveUsato');
