@@ -1,5 +1,5 @@
 // ── Cambia questo numero ad ogni deploy per forzare aggiornamento immediato ──
-const VERSION = 'mmg-v' + Date.now();
+const VERSION = 'mmg-v' + Date.now() + '-r2';
 const CACHE = VERSION;
  
 self.addEventListener('install', e => {
