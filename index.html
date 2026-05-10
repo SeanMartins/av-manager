@@ -426,6 +426,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.10.16</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1744,13 +1745,7 @@ function renderMag(){
       } else if(m.stato==='maint'){
         badgeHtml='<span class="bdg br">Manutenzione</span>';
       } else {
-        // "In uso" — cerca in quale lavoro è presente
-        const lavoro=trovaDovEUsato(m.id,m.ser);
-        if(lavoro){
-          badgeHtml='<button onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')" style="background:var(--amb);color:var(--am);border:1px solid var(--am);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:4px">📋 In uso <span style="font-size:14px;line-height:1">›</span></button>';
-        } else {
-          badgeHtml='<span class="bdg ba">In uso</span>';
-        }
+        badgeHtml='<button onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')" style="background:var(--amb);color:var(--am);border:1px solid var(--am);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📋 In uso ›</button>';
       }
       h+='<div class="row">'+
         '<div style="width:36px;height:36px;border-radius:var(--rs);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">📦</div>'+
