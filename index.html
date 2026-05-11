@@ -256,6 +256,21 @@ textarea{resize:vertical;min-height:80px}
           <span style="font-size:22px">✅</span><span style="font-size:13px">Smarca rientro</span>
         </button>
       </div>
+      <!-- Sezione Responsabile -->
+      <div id="magRespSection" style="display:none;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🔐 Gestione Responsabile</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--gn);color:var(--gn)" onclick="openMod('mMatNuovi')">
+            <span style="font-size:18px">🆕</span>Nuovi
+          </button>
+          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--rd);color:var(--rd)" onclick="openMod('mMatVenduti')">
+            <span style="font-size:18px">💰</span>Venduti
+          </button>
+          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--am);color:var(--am)" onclick="openMod('mMatInstall')">
+            <span style="font-size:18px">🔧</span>Installati
+          </button>
+        </div>
+      </div>
       <div class="sec">
         <div class="stl">Inventario</div>
         <button class="btn btn-p" style="padding:7px 14px;font-size:13px" onclick="openMod('mNewArt')">+ Articolo</button>
@@ -453,7 +468,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.02</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.03</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -617,7 +632,110 @@ textarea{resize:vertical;min-height:80px}
   <div class="msh"><div class="mhd"></div><div id="mLocDetBody"></div></div>
 </div>
 
-<!-- DOVE È USATO -->
+<!-- MATERIALI NUOVI -->
+<div class="mol" id="mMatNuovi" onclick="if(event.target===this)closeMod('mMatNuovi')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="stl">🆕 Materiali nuovi</div>
+      <button class="btn btn-p" style="padding:6px 12px;font-size:12px" onclick="openMod('mAddNuovo')">+ Aggiungi</button>
+    </div>
+    <div id="listaNuovi"><div class="empty">Nessun materiale nuovo registrato</div></div>
+    <button class="btn btn-f" style="margin-top:10px" onclick="closeMod('mMatNuovi')">Chiudi</button>
+  </div>
+</div>
+
+<!-- ADD MATERIALE NUOVO -->
+<div class="mol" id="mAddNuovo" onclick="if(event.target===this)closeMod('mAddNuovo')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px">🆕 Registra materiale nuovo</div>
+    <div class="ig"><label class="il">Articolo magazzino</label>
+      <select id="nuovoArtSel"></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Anno acquisto</label><input type="number" id="nuovoAnno" placeholder="2026" min="2000" max="2100"></div>
+      <div class="ig"><label class="il">Quantità acquistata</label><input type="number" id="nuovoQty" value="1" min="1"></div>
+    </div>
+    <div class="ig"><label class="il">Fornitore</label><input type="text" id="nuovoFornitore" placeholder="Es: Proel, Thomann..."></div>
+    <div class="ig"><label class="il">Prezzo totale (€)</label><input type="number" id="nuovoPrezzo" placeholder="0.00" step="0.01"></div>
+    <div class="ig"><label class="il">Note</label><textarea id="nuovoNote" placeholder="Fattura n°, condizioni..." style="min-height:60px"></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mAddNuovo')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="saveMatNuovo()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MATERIALI VENDUTI -->
+<div class="mol" id="mMatVenduti" onclick="if(event.target===this)closeMod('mMatVenduti')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="stl">💰 Materiali venduti</div>
+      <button class="btn btn-p" style="padding:6px 12px;font-size:12px" onclick="openMod('mAddVenduto')">+ Aggiungi</button>
+    </div>
+    <div id="listaVenduti"><div class="empty">Nessun materiale venduto registrato</div></div>
+    <button class="btn btn-f" style="margin-top:10px" onclick="closeMod('mMatVenduti')">Chiudi</button>
+  </div>
+</div>
+
+<!-- ADD MATERIALE VENDUTO -->
+<div class="mol" id="mAddVenduto" onclick="if(event.target===this)closeMod('mAddVenduto')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px">💰 Registra vendita</div>
+    <div class="ig"><label class="il">Articolo magazzino</label>
+      <select id="vendutoArtSel"></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Anno vendita</label><input type="number" id="vendutoAnno" placeholder="2026" min="2000" max="2100"></div>
+      <div class="ig"><label class="il">Quantità venduta</label><input type="number" id="vendutoQty" value="1" min="1"></div>
+    </div>
+    <div class="ig"><label class="il">Acquirente</label><input type="text" id="vendutoAcquirente" placeholder="Nome cliente o azienda"></div>
+    <div class="ig"><label class="il">Prezzo vendita (€)</label><input type="number" id="vendutoPrezzo" placeholder="0.00" step="0.01"></div>
+    <div class="ig"><label class="il">Note</label><textarea id="vendutoNote" placeholder="Fattura n°, condizioni..." style="min-height:60px"></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mAddVenduto')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="saveMatVenduto()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MATERIALI INSTALLATI -->
+<div class="mol" id="mMatInstall" onclick="if(event.target===this)closeMod('mMatInstall')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="stl">🔧 Materiali installati</div>
+      <button class="btn btn-p" style="padding:6px 12px;font-size:12px" onclick="openMod('mAddInstall')">+ Aggiungi</button>
+    </div>
+    <div id="listaInstall"><div class="empty">Nessun materiale installato registrato</div></div>
+    <button class="btn btn-f" style="margin-top:10px" onclick="closeMod('mMatInstall')">Chiudi</button>
+  </div>
+</div>
+
+<!-- ADD MATERIALE INSTALLATO -->
+<div class="mol" id="mAddInstall" onclick="if(event.target===this)closeMod('mAddInstall')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px">🔧 Registra installazione</div>
+    <div class="ig"><label class="il">Articolo magazzino</label>
+      <select id="installArtSel"></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Anno installazione</label><input type="number" id="installAnno" placeholder="2026" min="2000" max="2100"></div>
+      <div class="ig"><label class="il">Quantità installata</label><input type="number" id="installQty" value="1" min="1"></div>
+    </div>
+    <div class="ig"><label class="il">Riferimento lavoro / cliente</label><input type="text" id="installLavoro" placeholder="Es: Villa Borromeo — Convegno 2026"></div>
+    <div class="ig"><label class="il">Ubicazione installazione</label><input type="text" id="installLuogo" placeholder="Es: Sala conferenze piano 2"></div>
+    <div class="ig"><label class="il">Note</label><textarea id="installNote" placeholder="Dettagli tecnici, garanzia..." style="min-height:60px"></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mAddInstall')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="saveMatInstall()">Salva</button>
+    </div>
+  </div>
+</div>
 <div class="mol" id="mDoveUsato" onclick="if(event.target===this)closeMod('mDoveUsato')">
   <div class="msh">
     <div class="mhd"></div>
@@ -836,6 +954,11 @@ function startApp(){
   appStarted=true;
   startListeners();startLocListener();startMagListener();startDichListener();startAgendaListener();restorePunch();
   seedMagazzino();
+  // Mostra sezione Responsabile se applicabile
+  if(isResponsabile()){
+    const rs=$('magRespSection');if(rs)rs.style.display='block';
+    startMatRespListeners();
+  }
   // Popola anni ZIP
   const nowY=new Date().getFullYear();
   const sa=$('zipAnno');if(sa){sa.innerHTML='';for(let y=nowY;y>=nowY-3;y--){const o=document.createElement('option');o.value=y;o.textContent=y;sa.appendChild(o);}}
@@ -2306,7 +2429,169 @@ async function doExport(){
   toast('✓ '+data.length+' righe esportate');closeMod('mExport');
 }
 
-// Override closeMod to stop cameras
+// ── MATERIALI RESPONSABILE ──
+let cacheMatNuovi=[], cacheMatVenduti=[], cacheMatInstall=[];
+
+function startMatRespListeners(){
+  DB.collection('mat_nuovi').orderBy('createdAt','desc').onSnapshot(s=>{
+    cacheMatNuovi=s.docs.map(d=>({id:d.id,...d.data()}));
+    renderMatNuovi();
+  });
+  DB.collection('mat_venduti').orderBy('createdAt','desc').onSnapshot(s=>{
+    cacheMatVenduti=s.docs.map(d=>({id:d.id,...d.data()}));
+    renderMatVenduti();
+  });
+  DB.collection('mat_install').orderBy('createdAt','desc').onSnapshot(s=>{
+    cacheMatInstall=s.docs.map(d=>({id:d.id,...d.data()}));
+    renderMatInstall();
+  });
+}
+
+function popolaArtSel(selId){
+  const sel=$(selId);if(!sel)return;
+  sel.innerHTML='<option value="">-- Seleziona articolo --</option>';
+  [...cacheMag].sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(m=>{
+    const o=document.createElement('option');
+    o.value=m.id;
+    o.textContent=m.nome+' · '+(m.marca||'')+(m.ser?' ['+m.ser+']':'');
+    sel.appendChild(o);
+  });
+}
+
+function renderMatNuovi(){
+  const el=$('listaNuovi');if(!el)return;
+  if(!cacheMatNuovi.length){el.innerHTML='<div class="empty">Nessun materiale nuovo registrato</div>';return;}
+  el.innerHTML=cacheMatNuovi.map(m=>{
+    const art=cacheMag.find(x=>x.id===m.artId);
+    return '<div class="card" style="padding:12px;margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:600">'+(art?art.nome:m.artNome||'—')+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2);margin-top:2px">'+
+            '📅 Anno: <strong>'+m.anno+'</strong> · 📦 Qtà: <strong>'+m.qty+'</strong>'+
+            (m.fornitore?' · 🏪 '+m.fornitore:'')+
+            (m.prezzo?' · 💶 €'+parseFloat(m.prezzo).toFixed(2):'')+
+          '</div>'+
+          (m.note?'<div style="font-size:11px;color:var(--tx3);margin-top:3px">📝 '+m.note+'</div>':'')+
+        '</div>'+
+        '<button onclick="deleteMatResp(\'mat_nuovi\',\''+m.id+'\')" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--rdb);background:var(--rdb);color:var(--rd);cursor:pointer;font-size:12px;flex-shrink:0">✕</button>'+
+      '</div></div>';
+  }).join('');
+}
+
+function renderMatVenduti(){
+  const el=$('listaVenduti');if(!el)return;
+  if(!cacheMatVenduti.length){el.innerHTML='<div class="empty">Nessun materiale venduto registrato</div>';return;}
+  el.innerHTML=cacheMatVenduti.map(m=>{
+    const art=cacheMag.find(x=>x.id===m.artId);
+    return '<div class="card" style="padding:12px;margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:600">'+(art?art.nome:m.artNome||'—')+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2);margin-top:2px">'+
+            '📅 Anno: <strong>'+m.anno+'</strong> · 📦 Qtà: <strong>'+m.qty+'</strong>'+
+            (m.acquirente?' · 👤 '+m.acquirente:'')+
+            (m.prezzo?' · 💶 €'+parseFloat(m.prezzo).toFixed(2):'')+
+          '</div>'+
+          (m.note?'<div style="font-size:11px;color:var(--tx3);margin-top:3px">📝 '+m.note+'</div>':'')+
+        '</div>'+
+        '<button onclick="deleteMatResp(\'mat_venduti\',\''+m.id+'\')" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--rdb);background:var(--rdb);color:var(--rd);cursor:pointer;font-size:12px;flex-shrink:0">✕</button>'+
+      '</div></div>';
+  }).join('');
+}
+
+function renderMatInstall(){
+  const el=$('listaInstall');if(!el)return;
+  if(!cacheMatInstall.length){el.innerHTML='<div class="empty">Nessun materiale installato registrato</div>';return;}
+  el.innerHTML=cacheMatInstall.map(m=>{
+    const art=cacheMag.find(x=>x.id===m.artId);
+    return '<div class="card" style="padding:12px;margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:600">'+(art?art.nome:m.artNome||'—')+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2);margin-top:2px">'+
+            '📅 Anno: <strong>'+m.anno+'</strong> · 📦 Qtà: <strong>'+m.qty+'</strong>'+
+          '</div>'+
+          (m.lavoro?'<div style="font-size:11px;color:var(--am);margin-top:2px">🔧 '+m.lavoro+'</div>':'')+
+          (m.luogo?'<div style="font-size:11px;color:var(--tx2);margin-top:2px">📍 '+m.luogo+'</div>':'')+
+          (m.note?'<div style="font-size:11px;color:var(--tx3);margin-top:3px">📝 '+m.note+'</div>':'')+
+        '</div>'+
+        '<button onclick="deleteMatResp(\'mat_install\',\''+m.id+'\')" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--rdb);background:var(--rdb);color:var(--rd);cursor:pointer;font-size:12px;flex-shrink:0">✕</button>'+
+      '</div></div>';
+  }).join('');
+}
+
+async function saveMatNuovo(){
+  const artId=val('nuovoArtSel'),anno=val('nuovoAnno');
+  if(!artId||!anno){toast('Seleziona articolo e anno','r');return;}
+  const art=cacheMag.find(x=>x.id===artId);
+  await DB.collection('mat_nuovi').add({
+    artId,artNome:art?.nome||'',anno:parseInt(anno),
+    qty:parseInt(val('nuovoQty'))||1,
+    fornitore:val('nuovoFornitore'),prezzo:val('nuovoPrezzo'),
+    note:val('nuovoNote'),createdAt:new Date().toISOString()
+  });
+  closeMod('mAddNuovo');toast('✓ Materiale nuovo registrato');
+}
+
+async function saveMatVenduto(){
+  const artId=val('vendutoArtSel'),anno=val('vendutoAnno');
+  if(!artId||!anno){toast('Seleziona articolo e anno','r');return;}
+  const art=cacheMag.find(x=>x.id===artId);
+  await DB.collection('mat_venduti').add({
+    artId,artNome:art?.nome||'',anno:parseInt(anno),
+    qty:parseInt(val('vendutoQty'))||1,
+    acquirente:val('vendutoAcquirente'),prezzo:val('vendutoPrezzo'),
+    note:val('vendutoNote'),createdAt:new Date().toISOString()
+  });
+  closeMod('mAddVenduto');toast('✓ Vendita registrata');
+}
+
+async function saveMatInstall(){
+  const artId=val('installArtSel'),anno=val('installAnno');
+  if(!artId||!anno){toast('Seleziona articolo e anno','r');return;}
+  const art=cacheMag.find(x=>x.id===artId);
+  await DB.collection('mat_install').add({
+    artId,artNome:art?.nome||'',anno:parseInt(anno),
+    qty:parseInt(val('installQty'))||1,
+    lavoro:val('installLavoro'),luogo:val('installLuogo'),
+    note:val('installNote'),createdAt:new Date().toISOString()
+  });
+  closeMod('mAddInstall');toast('✓ Installazione registrata');
+}
+
+async function deleteMatResp(col,id){
+  if(!confirm('Eliminare questo record?'))return;
+  await DB.collection(col).doc(id).delete();
+  toast('✓ Eliminato');
+}
+
+// Popola select articoli quando si aprono i modal
+function openMod(id){
+  const el=document.getElementById(id);if(!el)return;
+  el.classList.add('on');document.body.style.overflow='hidden';
+  if(id==='mAddNuovo')setTimeout(()=>popolaArtSel('nuovoArtSel'),50);
+  if(id==='mAddVenduto')setTimeout(()=>popolaArtSel('vendutoArtSel'),50);
+  if(id==='mAddInstall')setTimeout(()=>popolaArtSel('installArtSel'),50);
+  if(id==='mMatNuovi')renderMatNuovi();
+  if(id==='mMatVenduti')renderMatVenduti();
+  if(id==='mMatInstall')renderMatInstall();
+  if(id==='mPreparaLavoro'){
+    plArticoli=[];plEditingId=null;
+    document.getElementById('plStep1').style.display='block';
+    document.getElementById('plStep2').style.display='none';
+    document.getElementById('plFormNuovo').style.display='block';
+    document.getElementById('plFormModifica').style.display='none';
+    document.getElementById('plTabNuovo').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:600;background:var(--ac);color:#fff';
+    document.getElementById('plTabModifica').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:500;background:transparent;color:var(--tx2)';
+    const sel=document.getElementById('plLoc');
+    if(sel){sel.innerHTML='<option value="">-- Seleziona --</option>';cacheLoc.forEach(l=>{const o=document.createElement('option');o.value=l.nome;o.textContent=l.nome;sel.appendChild(o);});}
+    const pd=document.getElementById('plData');if(pd)pd.value=new Date().toISOString().slice(0,10);
+    const pn=document.getElementById('plNome');if(pn)pn.value='';
+    const pno=document.getElementById('plNote');if(pno)pno.value='';
+    renderPlItems();
+  }
+}
 const _closeMod=window.closeMod;
 function closeMod(id){
   if(id==='mPreparaLavoro'){stopCam();}
