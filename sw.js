@@ -1,4 +1,4 @@
-const VERSION = 'mmg-20260510-1523';
+const VERSION = 'mmg-20260512-0900';
 const CACHE = VERSION;
  
 self.addEventListener('install', e => {
@@ -55,3 +55,4 @@ self.addEventListener('fetch', e => {
 self.addEventListener('message', e => {
   if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
+ 
