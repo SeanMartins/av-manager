@@ -391,6 +391,7 @@ textarea{resize:vertical;min-height:80px}
       <div class="ic">💬</div><div class="lb">Forum</div>
       <div class="notif-dot" id="notifDot" style="display:none"></div>
     </div>
+    <div class="ni" id="n-dichiarazione" onclick="goPage('dichiarazione')"><div class="ic">📁</div><div class="lb">Archivio</div></div>
   </div>
 </div>
 
@@ -449,9 +450,10 @@ textarea{resize:vertical;min-height:80px}
       <div class="row" style="padding:7px 0"><span style="font-size:13px;color:var(--tx2);width:76px">Email</span><span style="font-size:13px" id="profEmail">—</span></div>
       <div class="row" style="padding:7px 0"><span style="font-size:13px;color:var(--tx2);width:76px">Telefono</span><span style="font-size:13px" id="profTel">—</span></div>
     </div>
+    <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.01</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.02</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
