@@ -3014,29 +3014,11 @@ try{
   }
 }catch(e){localStorage.removeItem('av_user');}
 
-// ── SERVICE WORKER — aggiornamento immediato ──
+// ── NO SERVICE WORKER — disabilitato per aggiornamenti immediati ──
 if('serviceWorker' in navigator){
-  let refreshing=false;
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{
-    if(!refreshing){refreshing=true;window.location.reload();}
-  });
-  // Prima disregistra tutti i SW vecchi, poi registra il nuovo
   navigator.serviceWorker.getRegistrations().then(regs=>{
-    const unregAll=regs.map(r=>r.unregister());
-    return Promise.all(unregAll);
-  }).then(()=>{
-    return navigator.serviceWorker.register('/sw.js?v=20260512');
-  }).then(reg=>{
-    reg.update();
-    setInterval(()=>reg.update(),30000);
-    reg.addEventListener('updatefound',()=>{
-      const n=reg.installing;if(!n)return;
-      n.addEventListener('statechange',()=>{
-        if(n.state==='installed')n.postMessage('SKIP_WAITING');
-      });
-    });
-    if(reg.waiting)reg.waiting.postMessage('SKIP_WAITING');
-  }).catch(e=>console.warn('SW:',e));
+    regs.forEach(r=>r.unregister());
+  });
 }
 </script>
 </body>
