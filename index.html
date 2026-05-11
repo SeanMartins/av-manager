@@ -152,6 +152,7 @@ textarea{resize:vertical;min-height:80px}
           <span class="chip" onclick="pickChip(this,'role')">Project Manager</span>
           <span class="chip" onclick="pickChip(this,'role')">Magazziniere</span>
           <span class="chip" onclick="pickChip(this,'role')">Responsabile</span>
+          <span class="chip" onclick="pickChip(this,'role')">Collaboratore esterno</span>
         </div>
       </div>
       <!-- Password solo per Responsabile -->
@@ -468,7 +469,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.03</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.04</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -954,10 +955,19 @@ function startApp(){
   appStarted=true;
   startListeners();startLocListener();startMagListener();startDichListener();startAgendaListener();restorePunch();
   seedMagazzino();
-  // Mostra sezione Responsabile se applicabile
+  // Configura UI in base al ruolo
   if(isResponsabile()){
     const rs=$('magRespSection');if(rs)rs.style.display='block';
     startMatRespListeners();
+  }
+  if(isEsterno()){
+    // Nascondi voci non accessibili agli esterni
+    ['n-location','n-magazzino','n-dichiarazione'].forEach(id=>{
+      const el=$(id);if(el)el.style.display='none';
+    });
+    // Nascondi bottone archivio nel profilo
+    const archBtn=document.querySelector('[onclick*="dichiarazione"]');
+    if(archBtn)archBtn.style.display='none';
   }
   // Popola anni ZIP
   const nowY=new Date().getFullYear();
@@ -1174,8 +1184,10 @@ function renderPresenze(){
   $('nPresenti').textContent=todayP.filter(p=>!p.uscita).length;
   const avC=['a1','a2','a3','a4'];
   let h='';
-  if(!cacheTeam.length)h='<div class="empty">Nessun dipendente registrato</div>';
-  else cacheTeam.forEach((m,i)=>{
+  // Esterni non vedono altri esterni
+  const teamVis=isEsterno()?cacheTeam.filter(m=>m.id===USER.id||m.ruolo!=='Collaboratore esterno'):cacheTeam;
+  if(!teamVis.length)h='<div class="empty">Nessun dipendente registrato</div>';
+  else teamVis.forEach((m,i)=>{
     const ini=(m.nome[0]+m.cognome[0]).toUpperCase();
     const tp=todayP.find(p=>p.uid===m.id);
     const luogo=tp&&tp.luogo?tp.luogo:'';
@@ -1201,7 +1213,16 @@ function renderPresenze(){
         if(pauseMin>0) orario+=' <span style="font-size:10px;color:var(--tx3)">('+pauseMin+'min)</span>';
       }
     }
-    h+='<div class="row"><div class="av '+avC[i%4]+'">'+ini+'</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">'+m.nome+' '+m.cognome+'</div><div class="pres-luogo">'+(orario||m.ruolo)+'</div>'+(luogo?'<div style="font-size:11px;color:var(--ac2);margin-top:1px">'+luogo+'</div>':'')+'</div><span class="bdg '+bc+'">'+bl+'</span></div>';
+    h+='<div class="row"><div class="av '+avC[i%4]+'">'+ini+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:14px;font-weight:500;display:flex;align-items:center;gap:5px">'+
+          m.nome+' '+m.cognome+
+          (m.ruolo==='Collaboratore esterno'?'<span style="font-size:10px;background:rgba(168,85,247,.15);color:#c084fc;padding:1px 7px;border-radius:10px">ext</span>':'')+
+        '</div>'+
+        '<div class="pres-luogo">'+(orario||m.ruolo)+'</div>'+
+        (luogo?'<div style="font-size:11px;color:var(--ac2);margin-top:1px">'+luogo+'</div>':'')+
+      '</div>'+
+      '<span class="bdg '+bc+'">'+bl+'</span></div>';
   });
   const tt=$('teamToday');if(tt)tt.innerHTML=h;
 }
@@ -3001,6 +3022,7 @@ const TURNO_COLORS={
 const TURNO_ICONS={lavoro:'💼',assistenza:'🔧',trasferta:'✈️',jolly:'🃏',riposo:'😴',ferie:'🏖',formazione:'📚'};
 
 function isResponsabile(){return USER&&USER.ruolo==='Responsabile';}
+function isEsterno(){return USER&&USER.ruolo==='Collaboratore esterno';}
 
 function getWeekDates(offset){
   const now=new Date();
@@ -3062,8 +3084,7 @@ function renderAgendaDip(){
   days.forEach((d,i)=>{
     const ds=d.toISOString().slice(0,10);
     const isToday=d.toDateString()===today;
-    const turni=cacheAgenda.filter(t=>t.uid===USER.id&&t.data===ds);
-    h+='<div class="ag-day'+(isToday?' today':'')+'">'+
+    const turni=cacheAgenda.filter(t=>t.uid===USER.id&&t.data===ds);    h+='<div class="ag-day'+(isToday?' today':'')+'">'+
       '<div class="ag-day-header">'+
         '<span class="ag-day-name">'+GG[i]+'</span>'+
         '<span class="ag-day-date">'+d.toLocaleDateString('it-IT',{day:'2-digit',month:'short'})+'</span>'+
