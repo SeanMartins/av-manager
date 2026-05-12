@@ -445,6 +445,17 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- STORICO MODIFICHE ARTICOLO -->
+<div class="mol" id="mStorico" onclick="if(event.target===this)closeMod('mStorico')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:2px" id="storicoNome">—</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:14px" id="storicoSer">—</div>
+    <div id="storicoList"><div class="empty">Nessuna modifica registrata</div></div>
+    <button class="btn btn-f" style="margin-top:12px" onclick="closeMod('mStorico')">Chiudi</button>
+  </div>
+</div>
+
 <!-- FIRMA DIGITALE -->
 <div class="mol" id="mFirma" onclick="if(event.target===this)closeMod('mFirma')">
   <div class="msh">
@@ -541,7 +552,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.19</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.20</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2015,13 +2026,20 @@ function renderMag(){
       } else {
         badgeHtml='<button onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')" style="background:var(--amb);color:var(--am);border:1px solid var(--am);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📋 In uso ›</button>';
       }
-      h+='<div class="row" onclick="mostraQR(\''+m.id+'\')" style="cursor:pointer">'+
-        '<div style="width:36px;height:36px;border-radius:var(--rs);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">📦</div>'+
-        '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.nome+'</div>'+
-        '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'—')+' · '+(m.ser||'—')+'</div></div>'+
+      h+='<div class="row">'+
+        '<div onclick="mostraQR(\''+m.id+'\')" style="width:36px;height:36px;border-radius:var(--rs);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;cursor:pointer">📦</div>'+
+        '<div style="flex:1;min-width:0;cursor:pointer" onclick="mostraQR(\''+m.id+'\')">'+
+          '<div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.nome+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'—')+' · '+(m.ser||'—')+'</div>'+
+          (m.ultimaMod?'<div style="font-size:10px;color:var(--tx3);margin-top:1px">✏️ '+m.ultimaMod+'</div>':'')+
+        '</div>'+
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'+
-        '<span style="font-size:12px;color:var(--tx2)">×'+(m.qty||1)+'</span>'+
-        badgeHtml+'</div></div>';
+          '<div style="display:flex;align-items:center;gap:5px">'+
+            '<span style="font-size:12px;color:var(--tx2)">×'+(m.qty||1)+'</span>'+
+            '<button onclick="event.stopPropagation();mostraStorico(\''+m.id+'\')" style="width:20px;height:20px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center">📋</button>'+
+          '</div>'+
+          badgeHtml+
+        '</div></div>';
     });
     h+='</div>';
   });
@@ -2101,14 +2119,82 @@ function mostraDovetUsato(artId, artNomeEnc){
 
 async function saveArt(){
   const nome=val('aNome');if(!nome){toast('Inserisci il nome','r');return;}
+  const stato=val('aStato');
+  const now=new Date().toISOString();
+  const chi=USER?USER.nome+' '+USER.cognome:'—';
+  const statoLabel={ok:'Disponibile',out:'In uso',maint:'Manutenzione'}[stato]||stato;
+  const logEntry={stato,statoLabel,chi,at:now};
+  const ultimaMod=chi+' → '+statoLabel+' · '+new Date(now).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
   await DB.collection('magazzino').add({
     cat:val('aCat'),nome,marca:val('aMarca'),ser:val('aSer'),
-    qty:parseInt(val('aQty'))||1,stato:val('aStato'),
-    createdAt:new Date().toISOString()
+    qty:parseInt(val('aQty'))||1,stato,
+    ultimaMod,
+    storico:[logEntry],
+    createdAt:now
   });
   closeMod('mNewArt');toast('✓ Articolo salvato');
   ['aNome','aMarca','aSer'].forEach(id=>{const el=$(id);if(el)el.value='';});
   $('aQty').value='1';
+}
+
+async function aggiornaStatoArt(artId, nuovoStato){
+  const m=cacheMag.find(x=>x.id===artId);if(!m)return;
+  const now=new Date().toISOString();
+  const chi=USER?USER.nome+' '+USER.cognome:'—';
+  const statoLabel={ok:'Disponibile',out:'In uso',maint:'Manutenzione'}[nuovoStato]||nuovoStato;
+  const logEntry={stato:nuovoStato,statoLabel,chi,at:now};
+  const ultimaMod=chi+' → '+statoLabel+' · '+new Date(now).toLocaleDateString('it-IT',{day:'2-digit',month:'short'});
+  const storico=[...(m.storico||[]),logEntry];
+  await DB.collection('magazzino').doc(artId).update({stato:nuovoStato,ultimaMod,storico});
+  toast('✓ Stato aggiornato: '+statoLabel);
+}
+
+async function mostraStorico(artId){
+  const m=cacheMag.find(x=>x.id===artId);if(!m)return;
+  $('storicoNome').textContent=m.nome;
+  $('storicoSer').textContent=(m.marca||'—')+' · '+(m.ser||'—');
+  const storico=m.storico||[];
+  const el=$('storicoList');
+  if(!storico.length){
+    el.innerHTML='<div class="empty">Nessuna modifica registrata</div>';
+  } else {
+    const statoC={ok:'bg',out:'ba',maint:'br'};
+    el.innerHTML=[...storico].reverse().map((s,i)=>{
+      const data=new Date(s.at).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      const isFirst=i===storico.length-1;
+      return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--b)">'+
+        '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">'+
+          '<div style="width:10px;height:10px;border-radius:50%;background:'+(s.stato==='ok'?'var(--gn)':s.stato==='maint'?'var(--rd)':'var(--am)')+'"></div>'+
+          (i<storico.length-1?'<div style="width:1px;flex:1;background:var(--b)"></div>':'')+
+        '</div>'+
+        '<div style="flex:1">'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
+            '<span class="bdg '+( statoC[s.stato]||'bp')+'">'+s.statoLabel+'</span>'+
+            (isFirst?'<span style="font-size:10px;color:var(--tx3)">Creazione</span>':'')+
+          '</div>'+
+          '<div style="font-size:12px;color:var(--tx2)">👤 '+s.chi+'</div>'+
+          '<div style="font-size:11px;color:var(--tx3)">📅 '+data+'</div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }
+  // Aggiungi bottone cambio stato (solo per responsabile)
+  if(isResponsabile()){
+    const statoAttuale=m.stato||'ok';
+    const opzioni=[
+      {v:'ok',l:'✅ Disponibile'},
+      {v:'out',l:'📋 In uso'},
+      {v:'maint',l:'🔧 Manutenzione'}
+    ].filter(o=>o.v!==statoAttuale);
+    let btnH='<div style="margin-top:12px;font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">Cambia stato:</div>';
+    btnH+='<div style="display:flex;gap:8px">';
+    opzioni.forEach(o=>{
+      btnH+='<button class="btn btn-f" style="font-size:12px" onclick="aggiornaStatoArt(\''+artId+'\',\''+o.v+'\');closeMod(\'mStorico\')">'+o.l+'</button>';
+    });
+    btnH+='</div>';
+    el.innerHTML+=btnH;
+  }
+  openMod('mStorico');
 }
 
 // ── PREPARA LAVORO ──
