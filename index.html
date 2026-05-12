@@ -497,7 +497,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.05</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.06</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -872,7 +872,6 @@ function toast(msg,t='g'){
   el.style.color='#fff';el.textContent=msg;el.style.opacity='1';
   clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity='0',3000);
 }
-function openMod(id){$(id)&&$(id).classList.add('on');document.body.style.overflow='hidden';}
 function closeMod(id){$(id)&&$(id).classList.remove('on');document.body.style.overflow='';}
 function goPage(n){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
@@ -2102,28 +2101,6 @@ function plCaricaEsistente(id){
   toast('✓ Lavoro caricato — '+plArticoli.length+' articoli');
 }
 
-function openMod(id){
-  const el=document.getElementById(id);if(!el)return;
-  el.classList.add('on');document.body.style.overflow='hidden';
-  if(id==='mPreparaLavoro'){
-    plArticoli=[];plEditingId=null;
-    document.getElementById('plStep1').style.display='block';
-    document.getElementById('plStep2').style.display='none';
-    // Reset tab to nuovo
-    document.getElementById('plFormNuovo').style.display='block';
-    document.getElementById('plFormModifica').style.display='none';
-    document.getElementById('plTabNuovo').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:600;background:var(--ac);color:#fff';
-    document.getElementById('plTabModifica').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:500;background:transparent;color:var(--tx2)';
-    const sel=document.getElementById('plLoc');
-    sel.innerHTML='<option value="">-- Seleziona --</option>';
-    cacheLoc.forEach(l=>{const o=document.createElement('option');o.value=l.nome;o.textContent=l.nome;sel.appendChild(o);});
-    document.getElementById('plData').value=new Date().toISOString().slice(0,10);
-    document.getElementById('plNome').value='';
-    document.getElementById('plNote').value='';
-    renderPlItems();
-  }
-}
-
 function plGoScan(){
   const nome=val('plNome');if(!nome){toast('Inserisci il nome del lavoro','r');return;}
   document.getElementById('plStep1').style.display='none';
@@ -2642,7 +2619,7 @@ function openMod(id){
     renderPlItems();
   }
 }
-const _closeMod=window.closeMod;
+const _closeMod=null; // legacy stub
 function closeMod(id){
   if(id==='mPreparaLavoro'){stopCam();}
   if(id==='mSmarca'){smStopCam();}
