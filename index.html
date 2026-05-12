@@ -536,7 +536,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.17</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.18</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -3308,11 +3308,14 @@ function apriFirma(tipo){
     'Preparazione: '+val('plNome'):
     'Rientro: '+(smSel?smSel.nome:'—');
   $('firmaSubtitle').textContent=subtitle;
-  openMod('mFirma');
-  // Init canvas dopo apertura modal
+  // Apri modal firma
+  const modal=$('mFirma');
+  if(!modal){toast('Errore: modal firma non trovato','r');return;}
+  modal.classList.add('on');
+  // Init canvas
   setTimeout(()=>{
-    const c=$('firmaCanvas');
-    const w=c.parentElement.offsetWidth;
+    const c=$('firmaCanvas');if(!c)return;
+    const w=c.parentElement.offsetWidth||300;
     c.width=w;c.height=160;
     firmaCtx=c.getContext('2d');
     firmaCtx.strokeStyle='#1a1a2e';
@@ -3320,15 +3323,18 @@ function apriFirma(tipo){
     firmaCtx.lineCap='round';
     firmaCtx.lineJoin='round';
     firmaHasFirma=false;
-    // Mouse events
-    c.onmousedown=e=>{firmaDrawing=true;const p=getFirmaPos(e,c);firmaCtx.beginPath();firmaCtx.moveTo(p.x,p.y);$('firmaHint').style.display='none';};
-    c.onmousemove=e=>{if(!firmaDrawing)return;const p=getFirmaPos(e,c);firmaCtx.lineTo(p.x,p.y);firmaCtx.stroke();firmaHasFirma=true;};
-    c.onmouseup=()=>firmaDrawing=false;
-    // Touch events
-    c.ontouchstart=e=>{e.preventDefault();firmaDrawing=true;const p=getFirmaPos(e.touches[0],c);firmaCtx.beginPath();firmaCtx.moveTo(p.x,p.y);$('firmaHint').style.display='none';};
-    c.ontouchmove=e=>{e.preventDefault();if(!firmaDrawing)return;const p=getFirmaPos(e.touches[0],c);firmaCtx.lineTo(p.x,p.y);firmaCtx.stroke();firmaHasFirma=true;};
+    const hint=$('firmaHint');
+    const getPos=(e,cv)=>{
+      const r=cv.getBoundingClientRect();
+      return{x:(e.clientX-r.left)*(cv.width/r.width),y:(e.clientY-r.top)*(cv.height/r.height)};
+    };
+    c.onmousedown=e=>{firmaDrawing=true;const p=getPos(e,c);firmaCtx.beginPath();firmaCtx.moveTo(p.x,p.y);if(hint)hint.style.display='none';};
+    c.onmousemove=e=>{if(!firmaDrawing)return;const p=getPos(e,c);firmaCtx.lineTo(p.x,p.y);firmaCtx.stroke();firmaHasFirma=true;};
+    c.onmouseup=()=>{firmaDrawing=false;};
+    c.ontouchstart=e=>{e.preventDefault();firmaDrawing=true;const p=getPos(e.touches[0],c);firmaCtx.beginPath();firmaCtx.moveTo(p.x,p.y);if(hint)hint.style.display='none';};
+    c.ontouchmove=e=>{e.preventDefault();if(!firmaDrawing)return;const p=getPos(e.touches[0],c);firmaCtx.lineTo(p.x,p.y);firmaCtx.stroke();firmaHasFirma=true;};
     c.ontouchend=e=>{e.preventDefault();firmaDrawing=false;};
-  },100);
+  },150);
 }
 
 function getFirmaPos(e,c){
@@ -3340,7 +3346,7 @@ function cancellaFirma(){
   const c=$('firmaCanvas');if(!c||!firmaCtx)return;
   firmaCtx.clearRect(0,0,c.width,c.height);
   firmaHasFirma=false;
-  $('firmaHint').style.display='flex';
+  const h=$('firmaHint');if(h)h.style.display='flex';
 }
 
 function getFirmaImg(){
@@ -3350,7 +3356,7 @@ function getFirmaImg(){
 }
 
 function confermaPDF(){
-  closeMod('mFirma');
+  const modal=$('mFirma');if(modal)modal.classList.remove('on');
   if(firmaTipo==='prep') plGeneraPDF();
   else smGeneraPDF();
 }
