@@ -497,7 +497,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.08</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.09</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -3357,7 +3357,9 @@ async function apriChat(altroUid){
   $('chatDot').style.display='none';
   // Marca come letto
   const cid=convId(USER.id,altroUid);
-  await DB.collection('chat').doc(cid).set({'letto_'+USER.id:new Date().toISOString()},{merge:true});
+  const lettoKey='letto_'+USER.id;
+  const lettoObj={};lettoObj[lettoKey]=new Date().toISOString();
+  await DB.collection('chat').doc(cid).set(lettoObj,{merge:true});
   // Ascolta messaggi
   if(chatUnsub)chatUnsub();
   chatUnsub=DB.collection('chat').doc(cid).collection('msgs')
@@ -3365,7 +3367,8 @@ async function apriChat(altroUid){
       const msgs=snap.docs.map(d=>({id:d.id,...d.data()}));
       renderMsgs(msgs);
       // Marca letto
-      DB.collection('chat').doc(cid).set({'letto_'+USER.id:new Date().toISOString()},{merge:true});
+      const lk2={};lk2['letto_'+USER.id]=new Date().toISOString();
+      DB.collection('chat').doc(cid).set(lk2,{merge:true});
     });
 }
 
@@ -3397,10 +3400,11 @@ async function sendMsg(){
   const now=new Date().toISOString();
   $('chatInput').value='';
   try{
+    const lk={};lk['letto_'+USER.id]=now;
     await DB.collection('chat').doc(cid).set({
       partecipanti:[USER.id,chatCurrentUid],
       lastMsg:testo,lastAt:now,lastUid:USER.id,
-      ['letto_'+USER.id]:now
+      ...lk
     },{merge:true});
     await DB.collection('chat').doc(cid).collection('msgs').add({
       uid:USER.id,testo,at:now
