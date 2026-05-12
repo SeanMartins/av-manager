@@ -269,13 +269,13 @@ textarea{resize:vertical;min-height:80px}
       <div id="magRespSection" style="display:none;margin-bottom:14px">
         <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🔐 Gestione Responsabile</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--gn);color:var(--gn)" onclick="openMod('mMatNuovi')">
+          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--gn);color:var(--gn)" onclick="renderMatNuovi();openMod('mMatNuovi')">
             <span style="font-size:18px">🆕</span>Nuovi
           </button>
-          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--rd);color:var(--rd)" onclick="openMod('mMatVenduti')">
+          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--rd);color:var(--rd)" onclick="renderMatVenduti();openMod('mMatVenduti')">
             <span style="font-size:18px">💰</span>Venduti
           </button>
-          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--am);color:var(--am)" onclick="openMod('mMatInstall')">
+          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--am);color:var(--am)" onclick="renderMatInstall();openMod('mMatInstall')">
             <span style="font-size:18px">🔧</span>Installati
           </button>
         </div>
@@ -497,7 +497,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.06</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.07</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -667,7 +667,7 @@ textarea{resize:vertical;min-height:80px}
     <div class="mhd"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="stl">🆕 Materiali nuovi</div>
-      <button class="btn btn-p" style="padding:6px 12px;font-size:12px" onclick="openMod('mAddNuovo')">+ Aggiungi</button>
+      <button class="btn btn-p" style="padding:6px 12px;font-size:12px" onclick="popolaArtSel('nuovoArtSel');openMod('mAddNuovo')">+ Aggiungi</button>
     </div>
     <div id="listaNuovi"><div class="empty">Nessun materiale nuovo registrato</div></div>
     <button class="btn btn-f" style="margin-top:10px" onclick="closeMod('mMatNuovi')">Chiudi</button>
@@ -702,7 +702,7 @@ textarea{resize:vertical;min-height:80px}
     <div class="mhd"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="stl">💰 Materiali venduti</div>
-      <button class="btn btn-p" style="padding:6px 12px;font-size:12px" onclick="openMod('mAddVenduto')">+ Aggiungi</button>
+      <button class="btn btn-p" style="padding:6px 12px;font-size:12px" onclick="popolaArtSel('vendutoArtSel');openMod('mAddVenduto')">+ Aggiungi</button>
     </div>
     <div id="listaVenduti"><div class="empty">Nessun materiale venduto registrato</div></div>
     <button class="btn btn-f" style="margin-top:10px" onclick="closeMod('mMatVenduti')">Chiudi</button>
@@ -737,7 +737,7 @@ textarea{resize:vertical;min-height:80px}
     <div class="mhd"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="stl">🔧 Materiali installati</div>
-      <button class="btn btn-p" style="padding:6px 12px;font-size:12px" onclick="openMod('mAddInstall')">+ Aggiungi</button>
+      <button class="btn btn-p" style="padding:6px 12px;font-size:12px" onclick="popolaArtSel('installArtSel');openMod('mAddInstall')">+ Aggiungi</button>
     </div>
     <div id="listaInstall"><div class="empty">Nessun materiale installato registrato</div></div>
     <button class="btn btn-f" style="margin-top:10px" onclick="closeMod('mMatInstall')">Chiudi</button>
@@ -2597,27 +2597,6 @@ async function deleteMatResp(col,id){
 function openMod(id){
   const el=document.getElementById(id);if(!el)return;
   el.classList.add('on');document.body.style.overflow='hidden';
-  if(id==='mAddNuovo')setTimeout(()=>popolaArtSel('nuovoArtSel'),50);
-  if(id==='mAddVenduto')setTimeout(()=>popolaArtSel('vendutoArtSel'),50);
-  if(id==='mAddInstall')setTimeout(()=>popolaArtSel('installArtSel'),50);
-  if(id==='mMatNuovi')renderMatNuovi();
-  if(id==='mMatVenduti')renderMatVenduti();
-  if(id==='mMatInstall')renderMatInstall();
-  if(id==='mPreparaLavoro'){
-    plArticoli=[];plEditingId=null;
-    document.getElementById('plStep1').style.display='block';
-    document.getElementById('plStep2').style.display='none';
-    document.getElementById('plFormNuovo').style.display='block';
-    document.getElementById('plFormModifica').style.display='none';
-    document.getElementById('plTabNuovo').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:600;background:var(--ac);color:#fff';
-    document.getElementById('plTabModifica').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:500;background:transparent;color:var(--tx2)';
-    const sel=document.getElementById('plLoc');
-    if(sel){sel.innerHTML='<option value="">-- Seleziona --</option>';cacheLoc.forEach(l=>{const o=document.createElement('option');o.value=l.nome;o.textContent=l.nome;sel.appendChild(o);});}
-    const pd=document.getElementById('plData');if(pd)pd.value=new Date().toISOString().slice(0,10);
-    const pn=document.getElementById('plNome');if(pn)pn.value='';
-    const pno=document.getElementById('plNote');if(pno)pno.value='';
-    renderPlItems();
-  }
 }
 const _closeMod=null; // legacy stub
 function closeMod(id){
