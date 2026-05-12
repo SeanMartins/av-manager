@@ -108,6 +108,14 @@ textarea{resize:vertical;min-height:80px}
 .mpin-wrap:hover .pin-tooltip{display:block}
 .pin-tooltip{display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:10}
 .dtool.on{background:var(--acb)!important;border-color:var(--ac)!important;color:var(--ac2)!important}
+/* CHAT */
+.chat-bubble{max-width:78%;padding:9px 13px;border-radius:16px;font-size:13px;line-height:1.45;word-break:break-word}
+.chat-out{background:var(--ac);color:#fff;border-radius:16px 16px 4px 16px;align-self:flex-end}
+.chat-in{background:var(--bg2);color:var(--tx);border-radius:16px 16px 16px 4px;align-self:flex-start}
+.chat-time{font-size:10px;opacity:.6;margin-top:3px}
+.chat-conv{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--b);cursor:pointer}
+.chat-conv:hover{opacity:.8}
+.chat-unread{width:8px;height:8px;border-radius:50%;background:var(--ac);flex-shrink:0}
 /* AGENDA */
 .ag-day{background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px;overflow:hidden}
 .ag-day-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--b)}
@@ -280,8 +288,24 @@ textarea{resize:vertical;min-height:80px}
       <div id="magList"><div class="empty">Caricamento...</div></div>
     </div>
 
-    <!-- FORUM -->
-    <div class="page" id="p-forum">
+    <!-- CHAT -->
+    <div class="page" id="p-chat">
+      <div id="chatHome">
+        <div class="sec"><div class="stl">💬 Messaggi</div></div>
+        <div id="chatConvList"><div class="empty">Caricamento...</div></div>
+      </div>
+      <div id="chatThread" style="display:none;height:calc(100vh - 140px);height:calc(100dvh - 140px);display:none;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <button class="btn" style="padding:6px 12px;font-size:12px" onclick="chiudiChat()">← Torna</button>
+          <div style="font-size:15px;font-weight:600" id="chatThreadNome">—</div>
+        </div>
+        <div id="chatMsgs" style="flex:1;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px"></div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <input type="text" id="chatInput" placeholder="Scrivi un messaggio..." style="flex:1;margin:0" onkeydown="if(event.key==='Enter')sendMsg()">
+          <button class="btn btn-p" style="padding:10px 16px;flex-shrink:0" onclick="sendMsg()">➤</button>
+        </div>
+      </div>
+    </div>
       <div class="sec">
         <div class="stl">💬 Forum</div>
         <button class="btn btn-p" style="padding:7px 14px;font-size:13px" onclick="openMod('mNewPost')">+ Post</button>
@@ -407,6 +431,10 @@ textarea{resize:vertical;min-height:80px}
       <div class="ic">💬</div><div class="lb">Forum</div>
       <div class="notif-dot" id="notifDot" style="display:none"></div>
     </div>
+    <div class="ni" id="n-chat" onclick="goPage('chat')" style="position:relative">
+      <div class="ic">✉️</div><div class="lb">Chat</div>
+      <div class="notif-dot" id="chatDot" style="display:none"></div>
+    </div>
     <div class="ni" id="n-dichiarazione" onclick="goPage('dichiarazione')"><div class="ic">📁</div><div class="lb">Archivio</div></div>
   </div>
 </div>
@@ -469,7 +497,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.04</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.05</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -850,9 +878,10 @@ function goPage(n){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(b=>b.classList.remove('on'));
   $('p-'+n)&&$('p-'+n).classList.add('on');$('n-'+n)&&$('n-'+n).classList.add('on');
-  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda'};
+  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda',chat:'✉️ Messaggi'};
   $('ptitle').textContent=t[n]||n;
   if(n==='agenda'){$('agendaDot').style.display='none';renderAgenda();}
+  if(n==='chat'){$('chatDot').style.display='none';chiudiChat();}
 }
 
 // ── UI ──
@@ -953,7 +982,7 @@ function startApp(){
   $('profEmail').textContent=USER.email;
   $('profTel').textContent=USER.tel||'—';
   appStarted=true;
-  startListeners();startLocListener();startMagListener();startDichListener();startAgendaListener();restorePunch();
+  startListeners();startLocListener();startMagListener();startDichListener();startAgendaListener();startChatListener();restorePunch();
   seedMagazzino();
   // Configura UI in base al ruolo
   if(isResponsabile()){
@@ -3271,6 +3300,164 @@ async function deleteTurno(){
   if(!confirm('Eliminare questo turno?'))return;
   await DB.collection('agenda').doc(turnoEditId).delete();
   closeMod('mNewTurno');toast('✓ Turno eliminato');
+}
+
+// ── CHAT PRIVATA ──
+let cacheChat={}, chatCurrentUid=null, chatUnsub=null;
+
+function convId(uid1,uid2){ return [uid1,uid2].sort().join('_'); }
+
+function startChatListener(){
+  // Ascolta tutte le conversazioni che coinvolgono questo utente
+  DB.collection('chat')
+    .where('partecipanti','array-contains',USER.id)
+    .orderBy('lastAt','desc')
+    .onSnapshot(snap=>{
+      cacheChat={};
+      snap.docs.forEach(d=>{ cacheChat[d.id]={id:d.id,...d.data()}; });
+      renderChatList();
+      // Notifica messaggi non letti
+      const nonLetti=Object.values(cacheChat).filter(c=>
+        c.lastUid!==USER.id && c.lastAt && (!c['letto_'+USER.id]||c['letto_'+USER.id]<c.lastAt)
+      );
+      const chatPage=$('p-chat');
+      if(nonLetti.length>0&&(!chatPage||!chatPage.classList.contains('on'))){
+        $('chatDot').style.display='block';
+      }
+    });
+}
+
+function renderChatList(){
+  const el=$('chatConvList');if(!el)return;
+  const convs=Object.values(cacheChat);
+  if(!convs.length){
+    // Mostra lista contatti per iniziare chat
+    let h='<div style="font-size:13px;color:var(--tx2);margin-bottom:12px">Nessuna conversazione — inizia a scrivere a un collega:</div>';
+    const contatti=cacheTeam.filter(m=>m.id!==USER.id&&(isEsterno()?m.ruolo!=='Collaboratore esterno':true));
+    contatti.forEach((m,i)=>{
+      const ini=(m.nome[0]+m.cognome[0]).toUpperCase();
+      const avC=['a1','a2','a3','a4'];
+      h+='<div class="chat-conv" onclick="apriChat(\''+m.id+'\')">'+
+        '<div class="av '+avC[i%4]+'">'+ini+'</div>'+
+        '<div style="flex:1"><div style="font-size:14px;font-weight:500">'+m.nome+' '+m.cognome+'</div>'+
+        '<div style="font-size:12px;color:var(--tx2)">'+m.ruolo+'</div></div>'+
+        '<span style="font-size:18px;color:var(--tx3)">›</span>'+
+      '</div>';
+    });
+    el.innerHTML=h;return;
+  }
+  let h='';
+  // Bottone nuova chat
+  h+='<button class="btn btn-f" style="margin-bottom:12px" onclick="mostraNuovaChat()">✉️ Nuova conversazione</button>';
+  convs.sort((a,b)=>(b.lastAt||'').localeCompare(a.lastAt||'')).forEach(c=>{
+    const altroUid=c.partecipanti.find(u=>u!==USER.id);
+    const altro=cacheTeam.find(m=>m.id===altroUid);
+    if(!altro)return;
+    const ini=(altro.nome[0]+altro.cognome[0]).toUpperCase();
+    const avC=['a1','a2','a3','a4'];
+    const idx=cacheTeam.findIndex(m=>m.id===altroUid);
+    const nonLetto=c.lastUid!==USER.id&&c.lastAt&&(!c['letto_'+USER.id]||c['letto_'+USER.id]<c.lastAt);
+    const ora=c.lastAt?new Date(c.lastAt).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}):'';
+    h+='<div class="chat-conv" onclick="apriChat(\''+altroUid+'\')">'+
+      '<div class="av '+avC[idx%4]+'">'+ini+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:14px;font-weight:'+(nonLetto?'700':'500')+'">'+altro.nome+' '+altro.cognome+'</div>'+
+        '<div style="font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(c.lastMsg||'')+'</div>'+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'+
+        '<span style="font-size:10px;color:var(--tx3)">'+ora+'</span>'+
+        (nonLetto?'<div class="chat-unread"></div>':'')+
+      '</div>'+
+    '</div>';
+  });
+  el.innerHTML=h;
+}
+
+function mostraNuovaChat(){
+  const el=$('chatConvList');if(!el)return;
+  let h='<button class="btn btn-f" style="margin-bottom:12px" onclick="renderChatList()">← Torna</button>';
+  h+='<div style="font-size:13px;color:var(--tx2);margin-bottom:12px">Scegli un collega:</div>';
+  const contatti=cacheTeam.filter(m=>m.id!==USER.id&&(isEsterno()?m.ruolo!=='Collaboratore esterno':true));
+  const avC=['a1','a2','a3','a4'];
+  contatti.forEach((m,i)=>{
+    const ini=(m.nome[0]+m.cognome[0]).toUpperCase();
+    h+='<div class="chat-conv" onclick="apriChat(\''+m.id+'\')">'+
+      '<div class="av '+avC[i%4]+'">'+ini+'</div>'+
+      '<div style="flex:1"><div style="font-size:14px;font-weight:500">'+m.nome+' '+m.cognome+'</div>'+
+      '<div style="font-size:12px;color:var(--tx2)">'+m.ruolo+'</div></div>'+
+      '<span style="font-size:18px;color:var(--tx3)">›</span>'+
+    '</div>';
+  });
+  el.innerHTML=h;
+}
+
+async function apriChat(altroUid){
+  chatCurrentUid=altroUid;
+  const altro=cacheTeam.find(m=>m.id===altroUid);
+  if(!altro)return;
+  $('chatThreadNome').textContent=altro.nome+' '+altro.cognome;
+  $('chatHome').style.display='none';
+  const ct=$('chatThread');ct.style.display='flex';
+  $('chatDot').style.display='none';
+  // Marca come letto
+  const cid=convId(USER.id,altroUid);
+  await DB.collection('chat').doc(cid).set({'letto_'+USER.id:new Date().toISOString()},{merge:true});
+  // Ascolta messaggi
+  if(chatUnsub)chatUnsub();
+  chatUnsub=DB.collection('chat').doc(cid).collection('msgs')
+    .orderBy('at').onSnapshot(snap=>{
+      const msgs=snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderMsgs(msgs);
+      // Marca letto
+      DB.collection('chat').doc(cid).set({'letto_'+USER.id:new Date().toISOString()},{merge:true});
+    });
+}
+
+function renderMsgs(msgs){
+  const el=$('chatMsgs');if(!el)return;
+  if(!msgs.length){el.innerHTML='<div class="empty" style="padding:20px">Nessun messaggio — inizia la conversazione! 👋</div>';return;}
+  let h='',lastDate='';
+  msgs.forEach(m=>{
+    const isOut=m.uid===USER.id;
+    const d=new Date(m.at);
+    const dateStr=d.toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short'});
+    if(dateStr!==lastDate){
+      h+='<div style="text-align:center;font-size:11px;color:var(--tx3);margin:6px 0">'+dateStr+'</div>';
+      lastDate=dateStr;
+    }
+    const ora=d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+    h+='<div style="display:flex;flex-direction:column;align-items:'+(isOut?'flex-end':'flex-start')+'">'+
+      '<div class="chat-bubble '+(isOut?'chat-out':'chat-in')+'">'+m.testo+'</div>'+
+      '<div class="chat-time" style="align-self:'+(isOut?'flex-end':'flex-start')+'">'+ora+'</div>'+
+    '</div>';
+  });
+  el.innerHTML=h;
+  el.scrollTop=el.scrollHeight;
+}
+
+async function sendMsg(){
+  const testo=val('chatInput');if(!testo||!chatCurrentUid)return;
+  const cid=convId(USER.id,chatCurrentUid);
+  const now=new Date().toISOString();
+  $('chatInput').value='';
+  try{
+    await DB.collection('chat').doc(cid).set({
+      partecipanti:[USER.id,chatCurrentUid],
+      lastMsg:testo,lastAt:now,lastUid:USER.id,
+      ['letto_'+USER.id]:now
+    },{merge:true});
+    await DB.collection('chat').doc(cid).collection('msgs').add({
+      uid:USER.id,testo,at:now
+    });
+  }catch(e){console.error(e);}
+}
+
+function chiudiChat(){
+  if(chatUnsub){chatUnsub();chatUnsub=null;}
+  chatCurrentUid=null;
+  $('chatThread').style.display='none';
+  $('chatHome').style.display='block';
+  renderChatList();
 }
 
 // ── CLOCK ──
