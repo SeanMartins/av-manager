@@ -175,6 +175,11 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <div id="formLogin" style="display:none">
       <div class="ig"><label class="il">La tua email</label><input type="email" id="loginEmail" placeholder="mario@azienda.it" oninput="checkLoginPwd()"></div>
+      <!-- Toggle Responsabile -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;background:var(--bg2);border-radius:var(--rs);padding:11px 12px;cursor:pointer" onclick="toggleLoginResp()">
+        <div id="loginRespBox" class="cbox"></div>
+        <span style="font-size:13px;color:var(--tx2)">Accedo come <strong style="color:var(--tx)">Responsabile</strong></span>
+      </div>
       <div class="ig" id="loginPwdWrap" style="display:none">
         <label class="il">Password Responsabile</label>
         <input type="password" id="loginPwd" placeholder="Inserisci la tua password">
@@ -536,7 +541,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.18</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.19</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -934,6 +939,11 @@ function showTab(t){
   const r=t==='reg';
   $('formReg').style.display=r?'block':'none';
   $('formLogin').style.display=r?'none':'block';
+  // Reset toggle responsabile
+  if(!r){
+    const b=$('loginRespBox');if(b)b.classList.remove('on');
+    const w=$('loginPwdWrap');if(w)w.style.display='none';
+  }
   $('tabReg').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:'+(r?'600':'500')+';background:'+(r?'var(--ac)':'transparent')+';color:'+(r?'#fff':'var(--tx2)');
   $('tabLogin').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:'+(!r?'600':'500')+';background:'+(!r?'var(--ac)':'transparent')+';color:'+(!r?'#fff':'var(--tx2)');
 }
@@ -984,13 +994,24 @@ async function doReg(){
   }catch(e){alert('Errore: '+e.message);}
   btn.textContent='Inizia →';btn.disabled=false;
 }
+function toggleLoginResp(){
+  const box=$('loginRespBox');
+  const wrap=$('loginPwdWrap');
+  if(!box||!wrap)return;
+  const isOn=box.classList.toggle('on');
+  wrap.style.display=isOn?'block':'none';
+}
+
 // Mostra campo password se l'email corrisponde a un Responsabile
 async function checkLoginPwd(){
   const email=val('loginEmail');
-  if(!email||email.length<5){$('loginPwdWrap').style.display='none';return;}
+  if(!email||email.length<5)return;
   // Cerca in cache prima
   const m=cacheTeam.find(x=>x.email===email.toLowerCase());
-  if(m){$('loginPwdWrap').style.display=m.ruolo==='Responsabile'?'block':'none';}
+  if(m&&m.ruolo==='Responsabile'){
+    $('loginRespBox').classList.add('on');
+    $('loginPwdWrap').style.display='block';
+  }
 }
 
 async function doLogin(){
@@ -1001,8 +1022,10 @@ async function doLogin(){
     const snap=await DB.collection('team').where('email','==',email.toLowerCase()).get();
     if(snap.empty){toast('Email non trovata','r');btn.textContent='Accedi →';btn.disabled=false;return;}
     const userData={id:snap.docs[0].id,...snap.docs[0].data()};
-    // Verifica password se Responsabile
-    if(userData.ruolo==='Responsabile'){
+    // Verifica password se Responsabile (tramite toggle o ruolo)
+    const isRespToggle=$('loginRespBox')?.classList.contains('on');
+    if(userData.ruolo==='Responsabile'||isRespToggle){
+      if(userData.ruolo!=='Responsabile'){toast('Questo account non è un Responsabile','r');btn.textContent='Accedi →';btn.disabled=false;return;}
       const pwd=val('loginPwd');
       if(!pwd){toast('Inserisci la password','r');btn.textContent='Accedi →';btn.disabled=false;return;}
       const msgBuf=new TextEncoder().encode(pwd+'mmg_salt_'+userData.id);
