@@ -261,7 +261,7 @@ textarea{resize:vertical;min-height:80px}
       </div>
       <!-- Azioni principali -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <button class="btn btn-p btn-f" style="flex-direction:column;gap:4px;padding:14px" onclick="openMod('mPreparaLavoro')">
+        <button class="btn btn-p btn-f" style="flex-direction:column;gap:4px;padding:14px" onclick="apriPreparaLavoro()">
           <span style="font-size:22px">📋</span><span style="font-size:13px">Prepara lavoro</span>
         </button>
         <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:14px;border-color:var(--am);color:var(--am)" onclick="openSmarca()">
@@ -552,7 +552,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.20</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.21</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -572,7 +572,10 @@ textarea{resize:vertical;min-height:80px}
       <div id="plFormNuovo">
         <div class="ig"><label class="il">Nome evento / lavoro</label><input type="text" id="plNome" placeholder="Convegno Milano 15/06"></div>
         <div class="ig"><label class="il">Location</label><select id="plLoc"><option value="">-- Seleziona --</option></select></div>
-        <div class="ig"><label class="il">Data</label><input type="date" id="plData"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="ig"><label class="il">📅 Data inizio / uscita</label><input type="date" id="plData"></div>
+          <div class="ig"><label class="il">🔙 Data fine / rientro</label><input type="date" id="plDataFine"></div>
+        </div>
         <div class="ig"><label class="il">Note</label><textarea id="plNote" placeholder="Note per il tecnico..." style="min-height:60px"></textarea></div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-f" onclick="stopCam();closeMod('mPreparaLavoro')">Annulla</button>
@@ -2200,6 +2203,33 @@ async function mostraStorico(artId){
 // ── PREPARA LAVORO ──
 let plArticoli=[],plStream=null,plInterval=null,plEditingId=null;
 
+function apriPreparaLavoro(){
+  plArticoli=[];plEditingId=null;
+  // Reset form
+  const fields=['plNome','plNote','plData','plDataFine'];
+  fields.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const pd=document.getElementById('plData');if(pd)pd.value=new Date().toISOString().slice(0,10);
+  // Popola location
+  const sel=document.getElementById('plLoc');
+  if(sel){
+    sel.innerHTML='<option value="">-- Seleziona --</option>';
+    cacheLoc.forEach(l=>{
+      const o=document.createElement('option');
+      o.value=l.nome;o.textContent=l.nome;
+      sel.appendChild(o);
+    });
+  }
+  // Reset tabs
+  document.getElementById('plStep1').style.display='block';
+  document.getElementById('plStep2').style.display='none';
+  document.getElementById('plFormNuovo').style.display='block';
+  document.getElementById('plFormModifica').style.display='none';
+  document.getElementById('plTabNuovo').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:600;background:var(--ac);color:#fff';
+  document.getElementById('plTabModifica').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:500;background:transparent;color:var(--tx2)';
+  renderPlItems();
+  openMod('mPreparaLavoro');
+}
+
 function plSwitchTab(tab){
   const isNuovo=tab==='nuovo';
   document.getElementById('plFormNuovo').style.display=isNuovo?'block':'none';
@@ -2245,6 +2275,7 @@ function plCaricaEsistente(id){
   document.getElementById('plNome').value=d.nome||'';
   document.getElementById('plLoc').value=d.location||'';
   document.getElementById('plData').value=d.data||'';
+  document.getElementById('plDataFine').value=d.dataFine||'';
   document.getElementById('plNote').value=d.note||'';
   // Vai allo step 2
   document.getElementById('plStep1').style.display='none';
@@ -2358,8 +2389,9 @@ function renderPlItems(){
 async function plGeneraPDF(){
   if(!plArticoli.length){toast('Aggiungi almeno un articolo','r');return;}
   stopCam();
-  const nome=val('plNome'),loc=val('plLoc'),dataRaw=val('plData');
+  const nome=val('plNome'),loc=val('plLoc'),dataRaw=val('plData'),dataFineRaw=val('plDataFine');
   const data=dataRaw?new Date(dataRaw).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('it-IT');
+  const dataFine=dataFineRaw?new Date(dataFineRaw).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):'—';
   const tecnico=USER?USER.nome+' '+USER.cognome:'—',ruolo=USER?.ruolo||'';
   const now=new Date().toLocaleString('it-IT'),tot=plArticoli.reduce((s,a)=>s+(a.qtyPrep||1),0);
   // Raggruppa per categoria
@@ -2372,14 +2404,14 @@ async function plGeneraPDF(){
   const html='<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Lista — '+nome+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Helvetica,Arial,sans-serif;color:#1a1a2e}.page{max-width:800px;margin:0 auto;padding:32px 40px}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #6c63ff}.logo{font-size:22px;font-weight:700;color:#6c63ff}.logo span{font-size:12px;font-weight:400;color:#888;display:block;margin-top:2px}.info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;background:#f8f8fc;border-radius:10px;padding:16px}.info label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#888;display:block;margin-bottom:3px}.info span{font-size:14px;font-weight:500}table{width:100%;border-collapse:collapse;margin-bottom:20px;border-radius:8px;overflow:hidden;box-shadow:0 0 0 1px #e8e8f0}th{background:#6c63ff;color:#fff;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;text-align:left}th:last-child,td:last-child{text-align:center;width:70px}.totale{display:flex;justify-content:flex-end;gap:20px;font-size:13px;color:#666;margin-bottom:24px}.firma{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:32px;padding-top:20px;border-top:1px solid #eee}.fbox{border-top:1px solid #ccc;padding-top:8px;font-size:11px;color:#888}.footer{margin-top:24px;padding-top:14px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:10px;color:#aaa}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="page">'+
     '<div class="header"><div><div class="logo">MMG<span>Multimedia Meeting Group</span></div></div><div style="text-align:right;font-size:11px;color:#888">Generato il<br><strong>'+now+'</strong></div></div>'+
     '<div style="font-size:26px;font-weight:700;margin-bottom:18px">Lista preparazione materiali</div>'+
-    '<div class="info"><div><label>Evento / Lavoro</label><span>'+nome+'</span></div><div><label>Data</label><span>'+data+'</span></div><div><label>Location</label><span>'+(loc||'—')+'</span></div><div><label>Preparato da</label><span>'+tecnico+(ruolo?' · '+ruolo:'')+'</span></div>'+(val('plNote')?'<div style="grid-column:1/-1"><label>Note</label><span>'+val('plNote')+'</span></div>':'')+'</div>'+
+    '<div class="info"><div><label>Evento / Lavoro</label><span>'+nome+'</span></div><div><label>Data uscita</label><span>'+data+'</span></div><div><label>Data rientro prevista</label><span>'+dataFine+'</span></div><div><label>Location</label><span>'+(loc||'—')+'</span></div><div><label>Preparato da</label><span>'+tecnico+(ruolo?' · '+ruolo:'')+'</span></div>'+(val('plNote')?'<div style="grid-column:1/-1"><label>Note</label><span>'+val('plNote')+'</span></div>':'')+'</div>'+
     '<table><thead><tr><th>Articolo</th><th>Marca</th><th>N° Seriale</th><th>Qtà</th></tr></thead><tbody>'+righe+'</tbody></table>'+
     '<div class="totale"><span>Totale articoli: <strong>'+plArticoli.length+'</strong></span><span>Totale pezzi: <strong>'+tot+'</strong></span></div>'+
     '<div class="firma"><div class="fbox">Firma tecnico<br>'+(getFirmaImg()?'<img src="'+getFirmaImg()+'" style="max-width:160px;max-height:55px;margin:6px 0;display:block"><br>':'<br><br>')+tecnico+'</div><div class="fbox">Firma responsabile<br><br><br>___________________</div></div>'+
     '<div class="footer"><span>MMG · Lista preparazione</span><span>'+nome+' · '+data+'</span></div></div></body></html>';
   // Salva su Firebase — aggiorna se modifica, crea se nuovo
   try{
-    const lavoroData={nome,location:loc||'',data:dataRaw,tecnico,note:val('plNote'),
+    const lavoroData={nome,location:loc||'',data:dataRaw,dataFine:dataFineRaw||'',tecnico,note:val('plNote'),
       articoli:plArticoli.map(a=>({id:a.id||'',nome:a.nome,cat:a.cat||'',marca:a.marca||'',ser:a.ser||'',qty:a.qtyPrep||1})),
       updatedAt:new Date().toISOString()
     };
