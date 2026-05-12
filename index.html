@@ -552,7 +552,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.21</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.22</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2288,18 +2288,26 @@ function plCaricaEsistente(id){
 }
 
 function plGoScan(){
-  const nome=val('plNome');if(!nome){toast('Inserisci il nome del lavoro','r');return;}
+  const nome=val('plNome');
+  if(!nome){toast('Inserisci il nome del lavoro','r');return;}
   document.getElementById('plStep1').style.display='none';
   document.getElementById('plStep2').style.display='block';
   document.getElementById('plNomeLbl').textContent=nome;
-  startCam('plVideo',processPlQR);
+  const ml=document.getElementById('plModLbl');
+  if(ml)ml.textContent='';
+  renderPlItems();
+  // Avvia fotocamera con delay per permettere al DOM di aggiornarsi
+  setTimeout(()=>startCam('plVideo',processPlQR),200);
 }
 function plBack(){stopCam();document.getElementById('plStep1').style.display='block';document.getElementById('plStep2').style.display='none';}
 
 async function startCam(videoId,onCode){
   try{
     plStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-    const vid=document.getElementById(videoId);vid.srcObject=plStream;await vid.play();
+    const vid=document.getElementById(videoId);
+    if(!vid){console.error('Video element not found:',videoId);return;}
+    vid.srcObject=plStream;
+    await vid.play();
     plInterval=setInterval(()=>{
       if(!vid.videoWidth)return;
       const c=document.createElement('canvas');c.width=vid.videoWidth;c.height=vid.videoHeight;
