@@ -497,7 +497,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.07</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.08</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -872,7 +872,13 @@ function toast(msg,t='g'){
   el.style.color='#fff';el.textContent=msg;el.style.opacity='1';
   clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity='0',3000);
 }
-function closeMod(id){$(id)&&$(id).classList.remove('on');document.body.style.overflow='';}
+function closeMod(id){
+  if(id==='mPreparaLavoro')stopCam();
+  if(id==='mSmarca')smStopCam();
+  const el=document.getElementById(id);
+  if(el)el.classList.remove('on');
+  document.body.style.overflow='';
+}
 function goPage(n){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(b=>b.classList.remove('on'));
@@ -2598,13 +2604,7 @@ function openMod(id){
   const el=document.getElementById(id);if(!el)return;
   el.classList.add('on');document.body.style.overflow='hidden';
 }
-const _closeMod=null; // legacy stub
-function closeMod(id){
-  if(id==='mPreparaLavoro'){stopCam();}
-  if(id==='mSmarca'){smStopCam();}
-  document.getElementById(id)&&document.getElementById(id).classList.remove('on');
-  document.body.style.overflow='';
-}
+// camera cleanup handled in closeMod above
 
 // ── SEED MAGAZZINO DEMO ──
 async function seedMagazzino(){
