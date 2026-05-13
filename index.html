@@ -552,7 +552,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.22</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.23</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2397,43 +2397,95 @@ function renderPlItems(){
 async function plGeneraPDF(){
   if(!plArticoli.length){toast('Aggiungi almeno un articolo','r');return;}
   stopCam();
+
   const nome=val('plNome'),loc=val('plLoc'),dataRaw=val('plData'),dataFineRaw=val('plDataFine');
   const data=dataRaw?new Date(dataRaw).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('it-IT');
   const dataFine=dataFineRaw?new Date(dataFineRaw).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):'—';
   const tecnico=USER?USER.nome+' '+USER.cognome:'—',ruolo=USER?.ruolo||'';
   const now=new Date().toLocaleString('it-IT'),tot=plArticoli.reduce((s,a)=>s+(a.qtyPrep||1),0);
+
   // Raggruppa per categoria
-  const bycat={};plArticoli.forEach(a=>{const k=a.cat||'Altro';if(!bycat[k])bycat[k]=[];bycat[k].push(a);});
+  const bycat={};
+  plArticoli.forEach(a=>{const k=a.cat||'Altro';if(!bycat[k])bycat[k]=[];bycat[k].push(a);});
   let righe='';
   Object.entries(bycat).forEach(([cat,items])=>{
     righe+='<tr><td colspan="4" style="background:#f0f0f8;font-weight:600;font-size:11px;text-transform:uppercase;color:#555;padding:8px 10px">'+cat+'</td></tr>';
-    items.forEach((a,i)=>{righe+='<tr style="background:'+(i%2===0?'#fff':'#fafafa')+'"><td style="padding:8px 10px;font-size:13px;font-weight:500">'+a.nome+'</td><td style="padding:8px 10px;font-size:12px;color:#666">'+(a.marca||'—')+'</td><td style="padding:8px 10px;font-size:12px;color:#666;font-family:monospace">'+(a.ser||a.id)+'</td><td style="padding:8px 10px;font-size:14px;font-weight:700;text-align:center">'+(a.qtyPrep||1)+'</td></tr>';});
+    items.forEach((a,i)=>{
+      righe+='<tr style="background:'+(i%2===0?'#fff':'#fafafa')+'">'+
+        '<td style="padding:8px 10px;font-size:13px;font-weight:500">'+a.nome+'</td>'+
+        '<td style="padding:8px 10px;font-size:12px;color:#666">'+(a.marca||'—')+'</td>'+
+        '<td style="padding:8px 10px;font-size:12px;color:#666;font-family:monospace">'+(a.ser||a.id)+'</td>'+
+        '<td style="padding:8px 10px;font-size:14px;font-weight:700;text-align:center">'+(a.qtyPrep||1)+'</td></tr>';
+    });
   });
-  const html='<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Lista — '+nome+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Helvetica,Arial,sans-serif;color:#1a1a2e}.page{max-width:800px;margin:0 auto;padding:32px 40px}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #6c63ff}.logo{font-size:22px;font-weight:700;color:#6c63ff}.logo span{font-size:12px;font-weight:400;color:#888;display:block;margin-top:2px}.info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;background:#f8f8fc;border-radius:10px;padding:16px}.info label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#888;display:block;margin-bottom:3px}.info span{font-size:14px;font-weight:500}table{width:100%;border-collapse:collapse;margin-bottom:20px;border-radius:8px;overflow:hidden;box-shadow:0 0 0 1px #e8e8f0}th{background:#6c63ff;color:#fff;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;text-align:left}th:last-child,td:last-child{text-align:center;width:70px}.totale{display:flex;justify-content:flex-end;gap:20px;font-size:13px;color:#666;margin-bottom:24px}.firma{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:32px;padding-top:20px;border-top:1px solid #eee}.fbox{border-top:1px solid #ccc;padding-top:8px;font-size:11px;color:#888}.footer{margin-top:24px;padding-top:14px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:10px;color:#aaa}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="page">'+
-    '<div class="header"><div><div class="logo">MMG<span>Multimedia Meeting Group</span></div></div><div style="text-align:right;font-size:11px;color:#888">Generato il<br><strong>'+now+'</strong></div></div>'+
-    '<div style="font-size:26px;font-weight:700;margin-bottom:18px">Lista preparazione materiali</div>'+
-    '<div class="info"><div><label>Evento / Lavoro</label><span>'+nome+'</span></div><div><label>Data uscita</label><span>'+data+'</span></div><div><label>Data rientro prevista</label><span>'+dataFine+'</span></div><div><label>Location</label><span>'+(loc||'—')+'</span></div><div><label>Preparato da</label><span>'+tecnico+(ruolo?' · '+ruolo:'')+'</span></div>'+(val('plNote')?'<div style="grid-column:1/-1"><label>Note</label><span>'+val('plNote')+'</span></div>':'')+'</div>'+
+
+  const firmaImg=getFirmaImg();
+  const html='<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Lista — '+nome+'</title>'+
+    '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Helvetica,Arial,sans-serif;color:#1a1a2e}'+
+    '.page{max-width:800px;margin:0 auto;padding:32px 40px}'+
+    '.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #6c63ff}'+
+    '.logo{font-size:22px;font-weight:700;color:#6c63ff}.logo span{font-size:12px;font-weight:400;color:#888;display:block;margin-top:2px}'+
+    '.info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;background:#f8f8fc;border-radius:10px;padding:16px}'+
+    '.info label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#888;display:block;margin-bottom:3px}'+
+    '.info span{font-size:14px;font-weight:500}'+
+    'table{width:100%;border-collapse:collapse;margin-bottom:20px}'+
+    'th{background:#6c63ff;color:#fff;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;text-align:left}'+
+    'th:last-child,td:last-child{text-align:center;width:70px}'+
+    '.firma{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:32px;padding-top:20px;border-top:1px solid #eee}'+
+    '.fbox{border-top:1px solid #ccc;padding-top:8px;font-size:11px;color:#888}'+
+    '.footer{margin-top:24px;padding-top:14px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:10px;color:#aaa}'+
+    '@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}button{display:none}}</style></head>'+
+    '<body><div class="page">'+
+    '<div class="header"><div class="logo">MMG<span>Multimedia Meeting Group</span></div>'+
+    '<div style="text-align:right;font-size:11px;color:#888">Generato il<br><strong>'+now+'</strong></div></div>'+
+    '<div style="font-size:24px;font-weight:700;margin-bottom:18px">Lista preparazione materiali</div>'+
+    '<div class="info">'+
+      '<div><label>Evento / Lavoro</label><span>'+nome+'</span></div>'+
+      '<div><label>Data uscita</label><span>'+data+'</span></div>'+
+      '<div><label>Data rientro prevista</label><span>'+dataFine+'</span></div>'+
+      '<div><label>Location</label><span>'+(loc||'—')+'</span></div>'+
+      '<div><label>Preparato da</label><span>'+tecnico+(ruolo?' · '+ruolo:'')+'</span></div>'+
+      (val('plNote')?'<div style="grid-column:1/-1"><label>Note</label><span>'+val('plNote')+'</span></div>':'')+
+    '</div>'+
     '<table><thead><tr><th>Articolo</th><th>Marca</th><th>N° Seriale</th><th>Qtà</th></tr></thead><tbody>'+righe+'</tbody></table>'+
-    '<div class="totale"><span>Totale articoli: <strong>'+plArticoli.length+'</strong></span><span>Totale pezzi: <strong>'+tot+'</strong></span></div>'+
-    '<div class="firma"><div class="fbox">Firma tecnico<br>'+(getFirmaImg()?'<img src="'+getFirmaImg()+'" style="max-width:160px;max-height:55px;margin:6px 0;display:block"><br>':'<br><br>')+tecnico+'</div><div class="fbox">Firma responsabile<br><br><br>___________________</div></div>'+
-    '<div class="footer"><span>MMG · Lista preparazione</span><span>'+nome+' · '+data+'</span></div></div></body></html>';
-  // Salva su Firebase — aggiorna se modifica, crea se nuovo
+    '<div style="display:flex;justify-content:flex-end;gap:20px;font-size:13px;color:#666;margin-bottom:24px">'+
+      '<span>Totale articoli: <strong>'+plArticoli.length+'</strong></span>'+
+      '<span>Totale pezzi: <strong>'+tot+'</strong></span></div>'+
+    '<div class="firma">'+
+      '<div class="fbox">Firma tecnico<br>'+(firmaImg?'<img src="'+firmaImg+'" style="max-width:160px;max-height:55px;margin:6px 0;display:block"><br>':'<br><br>')+tecnico+'</div>'+
+      '<div class="fbox">Firma responsabile<br><br><br>___________________</div>'+
+    '</div>'+
+    '<div class="footer"><span>MMG · Lista preparazione</span><span>'+nome+' · '+data+'</span></div>'+
+    '</div></body></html>';
+
+  // 1. Apri PDF IMMEDIATAMENTE
+  const w=window.open('','_blank');
+  if(w){
+    w.document.write(html);
+    w.document.close();
+    setTimeout(()=>{w.focus();w.print();},300);
+  }
+
+  // 2. Chiudi modal subito
+  closeMod('mPreparaLavoro');
+  toast('✓ PDF generato!');
+
+  // 3. Salva su Firebase in background (non blocca l'utente)
+  const lavoroData={
+    nome,location:loc||'',data:dataRaw,dataFine:dataFineRaw||'',
+    tecnico,note:val('plNote'),
+    articoli:plArticoli.map(a=>({id:a.id||'',nome:a.nome,cat:a.cat||'',marca:a.marca||'',ser:a.ser||'',qty:a.qtyPrep||1})),
+    updatedAt:new Date().toISOString()
+  };
   try{
-    const lavoroData={nome,location:loc||'',data:dataRaw,dataFine:dataFineRaw||'',tecnico,note:val('plNote'),
-      articoli:plArticoli.map(a=>({id:a.id||'',nome:a.nome,cat:a.cat||'',marca:a.marca||'',ser:a.ser||'',qty:a.qtyPrep||1})),
-      updatedAt:new Date().toISOString()
-    };
     if(plEditingId){
       await DB.collection('lavori').doc(plEditingId).update(lavoroData);
-      toast('✓ Lavoro aggiornato e PDF generato!');
     } else {
       lavoroData.createdAt=new Date().toISOString();
       await DB.collection('lavori').add(lavoroData);
-      toast('✓ PDF generato!');
     }
-  }catch(e){console.warn(e);}
-  plEditingId=null;  const w=window.open('','_blank');w.document.write(html);w.document.close();setTimeout(()=>{w.focus();w.print();},400);
-  closeMod('mPreparaLavoro');toast('✓ PDF generato!');
+  }catch(e){console.warn('Salvataggio Firebase:',e);}
+  plEditingId=null;
 }
 
 // ── SMARCA RIENTRO ──
