@@ -236,7 +236,12 @@ textarea{resize:vertical;min-height:80px}
         <div class="sc"><div class="sn" id="nPresenti">0</div><div class="sl">Presenti</div></div>
         <div class="sc"><div class="sn" id="nTeam">0</div><div class="sl">Team</div></div>
       </div>
-      <div class="sec"><div class="stl">Team oggi</div><span class="bdg bg">● Live</span></div>
+      <div class="sec"><div class="stl">Team oggi</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="bdg bg">● Live</span>
+          <button class="btn" style="padding:5px 10px;font-size:12px" onclick="apriGestTimb()">✏️ Modifica</button>
+        </div>
+      </div>
       <div class="card" id="teamToday"><div class="empty">Caricamento...</div></div>
     </div>
 
@@ -446,6 +451,71 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- GESTIONE TIMBRATURE -->
+<div class="mol" id="mGestTimb" onclick="if(event.target===this)closeMod('mGestTimb')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="stl">✏️ Gestione timbrature</div>
+      <button class="btn btn-p" style="padding:6px 12px;font-size:12px" onclick="apriNuovaTimb()">+ Aggiungi</button>
+    </div>
+    <!-- Filtro data -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div><label class="il">Data</label><input type="date" id="gestTimbData" onchange="loadGestTimb()"></div>
+      <div><label class="il">Dipendente</label>
+        <select id="gestTimbDip" onchange="loadGestTimb()">
+          <option value="">Tutti</option>
+        </select>
+      </div>
+    </div>
+    <div id="gestTimbList"><div class="empty">Seleziona una data</div></div>
+    <button class="btn btn-f" style="margin-top:10px" onclick="closeMod('mGestTimb')">Chiudi</button>
+  </div>
+</div>
+
+<!-- AGGIUNGI/MODIFICA TIMBRATURA -->
+<div class="mol" id="mAddTimb" onclick="if(event.target===this)closeMod('mAddTimb')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px" id="mAddTimbTitle">➕ Aggiungi timbratura</div>
+    <div class="ig"><label class="il">Dipendente</label>
+      <select id="atDip"></select>
+    </div>
+    <div class="ig"><label class="il">Data</label>
+      <input type="date" id="atData">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">🟢 Entrata</label><input type="time" id="atEntrata"></div>
+      <div class="ig"><label class="il">🔴 Uscita</label><input type="time" id="atUscita"></div>
+    </div>
+    <div class="ig"><label class="il">Luogo</label>
+      <select id="atLuogo">
+        <option>🏢 In sede</option>
+        <option>🔧 Assistenza</option>
+        <option>✈️ Trasferta</option>
+        <option>🃏 Jolly</option>
+        <option>🤒 Malattia</option>
+      </select>
+    </div>
+    <!-- Pause -->
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <label class="il" style="margin:0">Pause</label>
+        <button class="btn" style="padding:4px 10px;font-size:12px" onclick="atAddPausa()">+ Pausa</button>
+      </div>
+      <div id="atPauseList"></div>
+    </div>
+    <div class="ig"><label class="il">Nota modifica</label>
+      <input type="text" id="atNota" placeholder="Es: dimenticato di timbrare">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" id="atDeleteBtn" style="display:none;color:var(--rd)" onclick="deleteTimb()">🗑 Elimina</button>
+      <button class="btn btn-f" onclick="closeMod('mAddTimb')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="saveTimb()">Salva</button>
+    </div>
+  </div>
+</div>
+
 <!-- STORICO MODIFICHE ARTICOLO -->
 <div class="mol" id="mStorico" onclick="if(event.target===this)closeMod('mStorico')">
   <div class="msh">
@@ -553,7 +623,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.25</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.01</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -3499,6 +3569,191 @@ async function deleteTurno(){
   if(!confirm('Eliminare questo turno?'))return;
   await DB.collection('agenda').doc(turnoEditId).delete();
   closeMod('mNewTurno');toast('✓ Turno eliminato');
+}
+
+// ── GESTIONE TIMBRATURE MANUALE ──
+let gestTimbEditId=null, atPause=[];
+
+function apriGestTimb(){
+  // Popola data con oggi
+  const today=new Date().toISOString().slice(0,10);
+  const dtEl=$('gestTimbData');if(dtEl)dtEl.value=today;
+  // Popola select dipendenti
+  const sel=$('gestTimbDip');
+  if(sel){
+    sel.innerHTML='<option value="">Tutti</option>';
+    // Responsabile vede tutti, dipendente vede solo se stesso
+    const lista=isResponsabile()?cacheTeam:[cacheTeam.find(m=>m.id===USER.id)].filter(Boolean);
+    lista.forEach(m=>{
+      const o=document.createElement('option');
+      o.value=m.id;o.textContent=m.nome+' '+m.cognome;
+      if(!isResponsabile())o.selected=true;
+      sel.appendChild(o);
+    });
+  }
+  loadGestTimb();
+  openMod('mGestTimb');
+}
+
+async function loadGestTimb(){
+  const el=$('gestTimbList');if(!el)return;
+  el.innerHTML='<div class="empty">Caricamento...</div>';
+  const dataVal=$('gestTimbData')?.value;
+  const dipVal=$('gestTimbDip')?.value;
+  if(!dataVal){el.innerHTML='<div class="empty">Seleziona una data</div>';return;}
+  const start=new Date(dataVal);start.setHours(0,0,0,0);
+  const end=new Date(dataVal);end.setHours(23,59,59,999);
+  let snap;
+  try{
+    snap=await DB.collection('presenze')
+      .where('entrata','>=',start.toISOString())
+      .where('entrata','<=',end.toISOString())
+      .orderBy('entrata').get();
+  }catch(e){el.innerHTML='<div class="empty">Errore caricamento</div>';return;}
+  let rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+  // Filtra per dipendente (se non responsabile, solo proprie)
+  if(!isResponsabile()) rows=rows.filter(r=>r.uid===USER.id);
+  else if(dipVal) rows=rows.filter(r=>r.uid===dipVal);
+  if(!rows.length){el.innerHTML='<div class="empty">Nessuna timbratura trovata</div>';return;}
+  const pad2=n=>String(n).padStart(2,'0');
+  const fmt=iso=>{if(!iso)return'—';const d=new Date(iso);return pad2(d.getHours())+':'+pad2(d.getMinutes());};
+  let h='';
+  rows.forEach(r=>{
+    const m=cacheTeam.find(x=>x.id===r.uid);
+    const pauses=r.pause||[];
+    const pauseMs=pauses.reduce((s,p)=>{if(p.inizio&&p.fine)s+=new Date(p.fine)-new Date(p.inizio);return s;},0);
+    const entMs=r.entrata?new Date(r.entrata):null;
+    const uscMs=r.uscita?new Date(r.uscita):null;
+    const nette=entMs&&uscMs?Math.max(0,((uscMs-entMs)-pauseMs)/3600000).toFixed(1):'—';
+    h+='<div style="padding:11px;border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
+        '<div>'+
+          '<div style="font-size:13px;font-weight:600">'+(m?m.nome+' '+m.cognome:r.nome||'—')+'</div>'+
+          '<div style="font-size:12px;color:var(--tx2);margin-top:2px">'+
+            '🟢 '+fmt(r.entrata)+' → 🔴 '+fmt(r.uscita)+
+            (pauses.length?' · ☕'+pauses.length+' pause':'')+
+            ' · '+nette+'h nette'+
+          '</div>'+
+          '<div style="font-size:11px;color:var(--tx2)">'+r.luogo+'</div>'+
+          (r.notaModifica?'<div style="font-size:10px;color:var(--am);margin-top:2px">✏️ '+r.notaModifica+'</div>':'')+
+        '</div>'+
+        '<button onclick="editTimb(\''+r.id+'\')" class="btn" style="padding:5px 10px;font-size:12px;flex-shrink:0">✏️</button>'+
+      '</div></div>';
+  });
+  el.innerHTML=h;
+}
+
+function editTimb(id){
+  const snap=DB.collection('presenze').doc(id).get().then(d=>{
+    if(!d.exists)return;
+    const r={id:d.id,...d.data()};
+    gestTimbEditId=id;
+    $('mAddTimbTitle').textContent='✏️ Modifica timbratura';
+    $('atDeleteBtn').style.display=isResponsabile()?'block':'none';
+    // Popola form
+    popolaAtDip(r.uid);
+    const pad2=n=>String(n).padStart(2,'0');
+    const fmtTime=iso=>{if(!iso)return'';const d=new Date(iso);return pad2(d.getHours())+':'+pad2(d.getMinutes());};
+    $('atData').value=r.entrata?new Date(r.entrata).toISOString().slice(0,10):'';
+    $('atEntrata').value=fmtTime(r.entrata);
+    $('atUscita').value=fmtTime(r.uscita);
+    $('atLuogo').value=r.luogo||'🏢 In sede';
+    $('atNota').value=r.notaModifica||'';
+    atPause=[...(r.pause||[])];
+    renderAtPause();
+    openMod('mAddTimb');
+  });
+}
+
+function apriNuovaTimb(){
+  gestTimbEditId=null;
+  $('mAddTimbTitle').textContent='➕ Aggiungi timbratura';
+  $('atDeleteBtn').style.display='none';
+  $('atData').value=$('gestTimbData')?.value||new Date().toISOString().slice(0,10);
+  $('atEntrata').value='09:00';
+  $('atUscita').value='18:00';
+  $('atLuogo').value='🏢 In sede';
+  $('atNota').value='';
+  atPause=[];renderAtPause();
+  popolaAtDip(null);
+  openMod('mAddTimb');
+}
+
+function popolaAtDip(selectedUid){
+  const sel=$('atDip');if(!sel)return;
+  sel.innerHTML='';
+  const lista=isResponsabile()?cacheTeam:[cacheTeam.find(m=>m.id===USER.id)].filter(Boolean);
+  lista.forEach(m=>{
+    const o=document.createElement('option');
+    o.value=m.id;o.textContent=m.nome+' '+m.cognome;
+    if(m.id===(selectedUid||USER.id))o.selected=true;
+    sel.appendChild(o);
+  });
+}
+
+function atAddPausa(){
+  atPause.push({inizio:'',fine:''});
+  renderAtPause();
+}
+function atRemovePausa(i){atPause.splice(i,1);renderAtPause();}
+function renderAtPause(){
+  const el=$('atPauseList');if(!el)return;
+  if(!atPause.length){el.innerHTML='<div style="font-size:12px;color:var(--tx3)">Nessuna pausa</div>';return;}
+  el.innerHTML=atPause.map((p,i)=>
+    '<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:center">'+
+      '<div><label class="il">Inizio</label><input type="time" value="'+(p.inizio?new Date(p.inizio).toTimeString().slice(0,5):'')+'" onchange="atPause['+i+'].inizioTime=this.value" style="margin:0"></div>'+
+      '<div><label class="il">Fine</label><input type="time" value="'+(p.fine?new Date(p.fine).toTimeString().slice(0,5):'')+'" onchange="atPause['+i+'].fineTime=this.value" style="margin:0"></div>'+
+      '<button onclick="atRemovePausa('+i+')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--rdb);background:var(--rdb);color:var(--rd);cursor:pointer;margin-top:16px">✕</button>'+
+    '</div>'
+  ).join('');
+}
+
+async function saveTimb(){
+  const uid=val('atDip');
+  const dataVal=val('atData');
+  const entrataTime=val('atEntrata');
+  if(!uid||!dataVal||!entrataTime){toast('Compila dipendente, data ed entrata','r');return;}
+  const m=cacheTeam.find(x=>x.id===uid);
+  // Costruisci ISO dates
+  const mkISO=(date,time)=>time?new Date(date+'T'+time+':00').toISOString():null;
+  const entrata=mkISO(dataVal,entrataTime);
+  const uscita=mkISO(dataVal,val('atUscita'));
+  // Costruisci pause
+  const pause=atPause.map(p=>{
+    const ini=p.inizioTime||( p.inizio?new Date(p.inizio).toTimeString().slice(0,5):'');
+    const fin=p.fineTime||(p.fine?new Date(p.fine).toTimeString().slice(0,5):'');
+    return{
+      inizio:ini?mkISO(dataVal,ini):p.inizio||'',
+      fine:fin?mkISO(dataVal,fin):p.fine||''
+    };
+  }).filter(p=>p.inizio);
+  const doc={
+    uid,nome:m?m.nome+' '+m.cognome:'—',
+    entrata,uscita,luogo:val('atLuogo'),
+    pause,
+    notaModifica:val('atNota')||'Modifica manuale',
+    modificatoDa:USER.nome+' '+USER.cognome,
+    modificatoIl:new Date().toISOString()
+  };
+  try{
+    if(gestTimbEditId){
+      await DB.collection('presenze').doc(gestTimbEditId).update(doc);
+      toast('✓ Timbratura aggiornata');
+    } else {
+      await DB.collection('presenze').add(doc);
+      toast('✓ Timbratura aggiunta');
+    }
+    closeMod('mAddTimb');
+    loadGestTimb();
+  }catch(e){alert('Errore: '+e.message);}
+}
+
+async function deleteTimb(){
+  if(!gestTimbEditId)return;
+  if(!confirm('Eliminare questa timbratura?'))return;
+  await DB.collection('presenze').doc(gestTimbEditId).delete();
+  closeMod('mAddTimb');loadGestTimb();
+  toast('✓ Timbratura eliminata');
 }
 
 // ── FIRMA DIGITALE ──
