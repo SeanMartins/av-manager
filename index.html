@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#1a1a6e">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -587,6 +588,19 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- GESTIONE UTENTI -->
+<div class="mol" id="mGestUtenti" onclick="if(event.target===this)closeMod('mGestUtenti')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="stl">👥 Gestione utenti</div>
+      <button class="btn" style="padding:5px 10px;font-size:12px" onclick="caricaUtentiPendenti()">↺ Aggiorna</button>
+    </div>
+    <div id="pendingList"><div class="empty">Caricamento...</div></div>
+    <button class="btn btn-f" style="margin-top:12px" onclick="closeMod('mGestUtenti')">Chiudi</button>
+  </div>
+</div>
+
 <!-- ARCHIVIO PRESENZE -->
 <div class="mol" id="mArchivioPresenze" onclick="if(event.target===this)closeMod('mArchivioPresenze')">
   <div class="msh">
@@ -786,6 +800,9 @@ textarea{resize:vertical;min-height:80px}
       <div class="row" style="padding:7px 0"><span style="font-size:13px;color:var(--tx2);width:76px">Email</span><span style="font-size:13px" id="profEmail">—</span></div>
       <div class="row" style="padding:7px 0"><span style="font-size:13px;color:var(--tx2);width:76px">Telefono</span><span style="font-size:13px" id="profTel">—</span></div>
     </div>
+    <div id="btnGestUtenti" style="display:none;margin-top:8px">
+      <button class="btn btn-f btn-p" style="width:100%" onclick="apriGestioneUtenti()">👥 Gestione utenti</button>
+    </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('tools')">🔧 Tools tecnici AV</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');apriArchivioPresenze()">📆 Archivio presenze</button>
@@ -794,7 +811,7 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-f" style="width:100%;color:var(--gn)" onclick="openExportConfermato()">✅ Esporta ore confermate</button>
     </div>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.11</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.01</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1231,24 +1248,46 @@ async function doReg(){
   }
   const btn=$('regBtn');btn.textContent='Salvataggio...';btn.disabled=true;
   try{
-    const snap=await DB.collection('team').where('email','==',email).get();
+    const snap=await DB.collection('team').where('email','==',email.toLowerCase()).get();
     if(!snap.empty){toast('Email già registrata — usa Accedi','a');btn.textContent='Inizia →';btn.disabled=false;return;}
     const uid='u'+Date.now();
-    // Hash semplice password (non crittografica, ma oscura il valore in chiaro)
     let pwdHash='';
     if(selRole==='Responsabile'){
       const pwd=val('rPwd');
-      // SHA-256 via Web Crypto
       const msgBuf=new TextEncoder().encode(pwd+'mmg_salt_'+uid);
       const hashBuf=await crypto.subtle.digest('SHA-256',msgBuf);
       pwdHash=Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
     }
-    const m={id:uid,nome,cognome,email,tel:tel||'',ruolo:selRole,pwdHash,createdAt:new Date().toISOString()};
+    const m={id:uid,nome,cognome,email:email.toLowerCase(),tel:tel||'',ruolo:selRole,pwdHash,
+      approvato:false, // in attesa di approvazione
+      createdAt:new Date().toISOString()
+    };
     await DB.collection('team').doc(uid).set(m);
-    localStorage.setItem('av_user',JSON.stringify(m));
-    USER=m;startApp();
+    // Mostra schermata attesa approvazione
+    mostraAttesaApprovazione(nome);
   }catch(e){alert('Errore: '+e.message);}
   btn.textContent='Inizia →';btn.disabled=false;
+}
+
+function mostraAttesaApprovazione(nome){
+  const regEl=$('reg');
+  if(!regEl)return;
+  regEl.innerHTML=`
+    <div style="min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div style="text-align:center;max-width:340px">
+        <div style="font-size:48px;margin-bottom:16px">⏳</div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:8px">Richiesta inviata!</div>
+        <div style="font-size:14px;color:var(--tx2);line-height:1.6;margin-bottom:20px">
+          Ciao <strong>${nome}</strong>, la tua registrazione è in attesa di approvazione.<br><br>
+          Il Responsabile riceverà una notifica e potrà approvarti a breve.<br>
+          Riprova ad accedere dopo l'approvazione.
+        </div>
+        <div style="background:var(--bg2);border-radius:var(--r);padding:14px;font-size:12px;color:var(--tx2);margin-bottom:20px">
+          📧 Riceverai conferma quando il tuo account sarà attivo
+        </div>
+        <button class="btn btn-p btn-f" onclick="location.reload()">← Torna al login</button>
+      </div>
+    </div>`;
 }
 function toggleLoginResp(){
   const box=$('loginRespBox');
@@ -1278,7 +1317,14 @@ async function doLogin(){
     const snap=await DB.collection('team').where('email','==',email.toLowerCase()).get();
     if(snap.empty){toast('Email non trovata','r');btn.textContent='Accedi →';btn.disabled=false;return;}
     const userData={id:snap.docs[0].id,...snap.docs[0].data()};
-    // Verifica password se Responsabile (tramite toggle o ruolo)
+
+    // Verifica approvazione
+    if(!userData.approvato){
+      toast('Account in attesa di approvazione dal Responsabile','a');
+      btn.textContent='Accedi →';btn.disabled=false;return;
+    }
+
+    // Verifica password se Responsabile
     const isRespToggle=$('loginRespBox')?.classList.contains('on');
     if(userData.ruolo==='Responsabile'||isRespToggle){
       if(userData.ruolo!=='Responsabile'){toast('Questo account non è un Responsabile','r');btn.textContent='Accedi →';btn.disabled=false;return;}
@@ -1289,8 +1335,18 @@ async function doLogin(){
       const hash=Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
       if(hash!==userData.pwdHash){toast('Password errata','r');btn.textContent='Accedi →';btn.disabled=false;return;}
     }
+
+    // Sessione univoca — genera token e salva su Firebase
+    const sessionToken=Date.now().toString(36)+Math.random().toString(36).slice(2);
+    await DB.collection('team').doc(userData.id).update({
+      sessionToken,
+      sessionAt:new Date().toISOString(),
+      sessionDevice:navigator.userAgent.slice(0,100)
+    });
+    userData.sessionToken=sessionToken;
     USER=userData;
-    localStorage.setItem('av_user',JSON.stringify(USER));startApp();
+    localStorage.setItem('av_user',JSON.stringify(USER));
+    startApp();
   }catch(e){alert('Errore: '+e.message);}
   btn.textContent='Accedi →';btn.disabled=false;
 }
@@ -1308,12 +1364,16 @@ function startApp(){
   appStarted=true;
   startListeners();startLocListener();startMagListener();startDichListener();startAgendaListener();startChatListener();restorePunch();
   seedMagazzino();
-  setTimeout(()=>initFCM(),2000); // Init FCM dopo 2s per non rallentare il caricamento
+  setTimeout(()=>initFCM(),2000);
+  // Verifica sessione periodicamente (ogni 2 minuti)
+  setTimeout(()=>checkSessionValid(),5000);
+  setInterval(()=>checkSessionValid(),120000);
   // Configura UI in base al ruolo
   if(isResponsabile()){
     const rs=$('magRespSection');if(rs)rs.style.display='block';
     startMatRespListeners();
     const ec=$('btnExportConfermato');if(ec)ec.style.display='block';
+    const gu=$('btnGestUtenti');if(gu)gu.style.display='block';
   }
   setTimeout(()=>initMieOreMese(),1000);
   if(isEsterno()){
@@ -3756,7 +3816,97 @@ async function deleteTurno(){
   closeMod('mNewTurno');toast('✓ Turno eliminato');
 }
 
-// ── TOOLS TECNICI AV ──
+// ── SESSIONE UNIVOCA ──
+async function checkSessionValid(){
+  if(!USER||!USER.sessionToken)return;
+  try{
+    const doc=await DB.collection('team').doc(USER.id).get();
+    if(!doc.exists)return;
+    const remote=doc.data();
+    // Se il token sul server è diverso da quello locale → sessione revocata
+    if(remote.sessionToken&&remote.sessionToken!==USER.sessionToken){
+      localStorage.removeItem('av_user');
+      localStorage.removeItem('av_punch');
+      // Mostra messaggio e forza logout
+      document.body.innerHTML='<div style="min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;background:#0a0a0f">'+
+        '<div style="text-align:center;color:#fff">'+
+          '<div style="font-size:48px;margin-bottom:16px">🔒</div>'+
+          '<div style="font-size:20px;font-weight:700;margin-bottom:8px">Sessione terminata</div>'+
+          '<div style="font-size:14px;color:#888;margin-bottom:20px">Il tuo account ha effettuato l\'accesso su un altro dispositivo.<br>Puoi usare MMG Logistics su un solo dispositivo alla volta.</div>'+
+          '<button onclick="location.reload()" style="background:#6c63ff;color:#fff;border:none;padding:12px 24px;border-radius:10px;font-size:15px;cursor:pointer">Accedi di nuovo</button>'+
+        '</div></div>';
+    }
+  }catch(e){console.warn('Session check:',e);}
+}
+
+// ── APPROVAZIONE UTENTI (Responsabile) ──
+function apriGestioneUtenti(){
+  closeMod('mProfile');
+  openMod('mGestUtenti');
+  caricaUtentiPendenti();
+}
+
+async function caricaUtentiPendenti(){
+  const el=$('pendingList');if(!el)return;
+  el.innerHTML='<div class="empty">Caricamento...</div>';
+  const snap=await DB.collection('team').orderBy('createdAt','desc').get();
+  const utenti=snap.docs.map(d=>({id:d.id,...d.data()}));
+  const pendenti=utenti.filter(u=>!u.approvato);
+  const approvati=utenti.filter(u=>u.approvato);
+  let h='';
+  if(pendenti.length){
+    h+='<div style="font-size:11px;font-weight:600;color:var(--rd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">⏳ In attesa ('+pendenti.length+')</div>';
+    pendenti.forEach(u=>{
+      const data=new Date(u.createdAt).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
+      h+='<div style="border:1px solid var(--am);border-radius:var(--rs);padding:12px;margin-bottom:8px;background:rgba(245,158,11,.05)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
+          '<div style="flex:1">'+
+            '<div style="font-size:14px;font-weight:600">'+u.nome+' '+u.cognome+'</div>'+
+            '<div style="font-size:12px;color:var(--tx2)">'+u.email+' · '+u.ruolo+'</div>'+
+            '<div style="font-size:11px;color:var(--tx3)">Registrato il '+data+'</div>'+
+          '</div>'+
+          '<div style="display:flex;gap:6px;flex-shrink:0">'+
+            '<button onclick="approvaUtente(\''+u.id+'\')" class="btn" style="padding:6px 10px;font-size:12px;border-color:var(--gn);color:var(--gn)">✅ Approva</button>'+
+            '<button onclick="rifiutaUtente(\''+u.id+'\',\''+u.nome+'\')" class="btn" style="padding:6px 10px;font-size:12px;border-color:var(--rd);color:var(--rd)">✕</button>'+
+          '</div>'+
+        '</div></div>';
+    });
+  }
+  if(approvati.length){
+    h+='<div style="font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">✅ Approvati ('+approvati.length+')</div>';
+    approvati.forEach(u=>{
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--b)">'+
+        '<div>'+
+          '<div style="font-size:13px;font-weight:500">'+u.nome+' '+u.cognome+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2)">'+u.ruolo+(u.sessionAt?' · Ultimo accesso: '+new Date(u.sessionAt).toLocaleDateString('it-IT'):'')+'</div>'+
+        '</div>'+
+        '<button onclick="revocaSessione(\''+u.id+'\')" class="btn" style="padding:5px 8px;font-size:11px;color:var(--am)">🔒 Revoca</button>'+
+      '</div>';
+    });
+  }
+  if(!h)h='<div class="empty">Nessun utente registrato</div>';
+  el.innerHTML=h;
+}
+
+async function approvaUtente(uid){
+  await DB.collection('team').doc(uid).update({approvato:true,approvatoIl:new Date().toISOString(),approvatoDa:USER.id});
+  toast('✅ Utente approvato!');
+  caricaUtentiPendenti();
+}
+
+async function rifiutaUtente(uid,nome){
+  if(!confirm('Eliminare la richiesta di '+nome+'?'))return;
+  await DB.collection('team').doc(uid).delete();
+  toast('✓ Richiesta eliminata');
+  caricaUtentiPendenti();
+}
+
+async function revocaSessione(uid){
+  if(!confirm('Disconnettere questo utente da tutti i dispositivi?'))return;
+  await DB.collection('team').doc(uid).update({sessionToken:'revocato_'+Date.now(),sessionAt:new Date().toISOString()});
+  toast('🔒 Sessione revocata');
+  caricaUtentiPendenti();
+}
 let splStream=null, splAnimFrame=null, splAnalyser=null, splPeak=-Infinity;
 
 function showTool(name){
