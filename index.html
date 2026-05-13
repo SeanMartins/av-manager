@@ -679,7 +679,7 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-f" style="width:100%;color:var(--gn)" onclick="openExportConfermato()">✅ Esporta ore confermate</button>
     </div>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.07</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.08</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -3664,9 +3664,21 @@ async function renderArchivioPresenze(){
   const end=new Date(anno,11,31,23,59,59).toISOString();
 
   try{
-    let q=DB.collection('presenze').where('entrata','>=',start).where('entrata','<=',end);
-    if(dipId)q=q.where('uid','==',dipId);
-    const snap=await q.orderBy('entrata').get();
+    let snap;
+    if(dipId){
+      // Query semplice per dipendente specifico — no indice composito
+      snap=await DB.collection('presenze')
+        .where('uid','==',dipId)
+        .where('entrata','>=',start)
+        .where('entrata','<=',end)
+        .orderBy('entrata').get();
+    } else {
+      // Tutti i dipendenti — filtra per data solo
+      snap=await DB.collection('presenze')
+        .where('entrata','>=',start)
+        .where('entrata','<=',end)
+        .orderBy('entrata').get();
+    }
     archivioCache=snap.docs.map(d=>({id:d.id,...d.data()}));
   }catch(e){el.innerHTML='<div class="empty">Errore: '+e.message+'</div>';return;}
 
