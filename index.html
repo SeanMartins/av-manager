@@ -528,7 +528,7 @@ textarea{resize:vertical;min-height:80px}
 </div>
 
 <!-- FIRMA DIGITALE -->
-<div class="mol" id="mFirma" onclick="if(event.target===this)closeMod('mFirma')">
+<div class="mol" id="mFirma" style="z-index:200" onclick="if(event.target===this)closeMod('mFirma')">
   <div class="msh">
     <div class="mhd"></div>
     <div style="font-size:16px;font-weight:700;margin-bottom:4px">✍️ Firma digitale</div>
@@ -544,8 +544,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-f" onclick="closeMod('mFirma')">Annulla</button>
-      <button class="btn btn-p btn-f" onclick="confermaPDF()">📄 Genera PDF</button>
-    </div>
+      <button class="btn btn-p btn-f" onclick="confermaPDF()">📄 Genera PDF</button>    </div>
   </div>
 </div>
 
@@ -623,7 +622,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.01</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.03</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2677,7 +2676,7 @@ async function smGeneraPDF(){
     '</div>'+
     (ok.length?'<div class="st" style="color:#155724;border-color:#27ae60">✓ Rientrati ('+ok.length+')</div><table><thead><tr><th>Articolo</th><th>Marca</th><th>Seriale</th><th>Stato</th></tr></thead><tbody>'+rigaOk+'</tbody></table>':'')+
     (miss.length?'<div class="st" style="color:#721c24;border-color:#e74c3c">⚠ Mancanti ('+miss.length+')</div><table><thead><tr><th>Articolo</th><th>Marca</th><th>Seriale</th><th>Stato</th></tr></thead><tbody>'+rigaMiss+'</tbody></table>':'')+
-    '<div class="firma"><div class="fbox">Firma responsabile verifica<br>'+(getFirmaImg()?'<img src="'+getFirmaImg()+'" style="max-width:160px;max-height:55px;margin:6px 0;display:block"><br>':'<br><br>')+tecnico+'</div><div class="fbox">Firma responsabile magazzino<br><br><br>___________________</div></div>'+
+    '<div class="firma"><div class="fbox">Firma responsabile verifica<br>'+(getFirmaImgSm()?'<img src="'+getFirmaImgSm()+'" style="max-width:160px;max-height:55px;margin:6px 0;display:block"><br>':'<br><br>')+tecnico+'</div><div class="fbox">Firma responsabile magazzino<br><br><br>___________________</div></div>'+
     '<div class="footer"><span>MMG · Report rientro</span><span>'+l.nome+' · '+now+'</span></div></div></body></html>';
   try{await DB.collection('lavori').doc(l.id).update({rientrato:allOk,rientroData:new Date().toISOString(),rientroTecnico:tecnico});}catch(e){console.warn(e);}
   const w=window.open('','_blank');w.document.write(html);w.document.close();setTimeout(()=>{w.focus();w.print();},400);
@@ -3762,42 +3761,24 @@ let firmaCtx=null, firmaDrawing=false, firmaTipo=null, firmaHasFirma=false;
 function apriFirma(tipo){
   if(tipo==='prep'&&!plArticoli.length){toast('Aggiungi almeno un articolo','r');return;}
   firmaTipo=tipo;
-  const subtitle=tipo==='prep'?
-    'Preparazione: '+val('plNome'):
-    'Rientro: '+(smSel?smSel.nome:'—');
-  $('firmaSubtitle').textContent=subtitle;
-  // Apri modal firma
-  const modal=$('mFirma');
-  if(!modal){toast('Errore: modal firma non trovato','r');return;}
+  $('firmaSubtitle').textContent=tipo==='prep'?'Preparazione: '+val('plNome'):'Rientro: '+(smSel?smSel.nome:'—');
+  const modal=$('mFirma');if(!modal)return;
   modal.classList.add('on');
-  // Init canvas
   setTimeout(()=>{
     const c=$('firmaCanvas');if(!c)return;
-    const w=c.parentElement.offsetWidth||300;
-    c.width=w;c.height=160;
+    c.width=c.parentElement.offsetWidth||300;c.height=160;
     firmaCtx=c.getContext('2d');
-    firmaCtx.strokeStyle='#1a1a2e';
-    firmaCtx.lineWidth=2.5;
-    firmaCtx.lineCap='round';
-    firmaCtx.lineJoin='round';
+    firmaCtx.strokeStyle='#1a1a2e';firmaCtx.lineWidth=2.5;firmaCtx.lineCap='round';firmaCtx.lineJoin='round';
     firmaHasFirma=false;
     const hint=$('firmaHint');
-    const getPos=(e,cv)=>{
-      const r=cv.getBoundingClientRect();
-      return{x:(e.clientX-r.left)*(cv.width/r.width),y:(e.clientY-r.top)*(cv.height/r.height)};
-    };
-    c.onmousedown=e=>{firmaDrawing=true;const p=getPos(e,c);firmaCtx.beginPath();firmaCtx.moveTo(p.x,p.y);if(hint)hint.style.display='none';};
-    c.onmousemove=e=>{if(!firmaDrawing)return;const p=getPos(e,c);firmaCtx.lineTo(p.x,p.y);firmaCtx.stroke();firmaHasFirma=true;};
-    c.onmouseup=()=>{firmaDrawing=false;};
-    c.ontouchstart=e=>{e.preventDefault();firmaDrawing=true;const p=getPos(e.touches[0],c);firmaCtx.beginPath();firmaCtx.moveTo(p.x,p.y);if(hint)hint.style.display='none';};
-    c.ontouchmove=e=>{e.preventDefault();if(!firmaDrawing)return;const p=getPos(e.touches[0],c);firmaCtx.lineTo(p.x,p.y);firmaCtx.stroke();firmaHasFirma=true;};
+    const getP=(e,cv)=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*(cv.width/r.width),y:(e.clientY-r.top)*(cv.height/r.height)};};
+    c.onmousedown=e=>{firmaDrawing=true;const p=getP(e,c);firmaCtx.beginPath();firmaCtx.moveTo(p.x,p.y);if(hint)hint.style.display='none';};
+    c.onmousemove=e=>{if(!firmaDrawing)return;const p=getP(e,c);firmaCtx.lineTo(p.x,p.y);firmaCtx.stroke();firmaHasFirma=true;};
+    c.onmouseup=()=>firmaDrawing=false;
+    c.ontouchstart=e=>{e.preventDefault();firmaDrawing=true;const p=getP(e.touches[0],c);firmaCtx.beginPath();firmaCtx.moveTo(p.x,p.y);if(hint)hint.style.display='none';};
+    c.ontouchmove=e=>{e.preventDefault();if(!firmaDrawing)return;const p=getP(e.touches[0],c);firmaCtx.lineTo(p.x,p.y);firmaCtx.stroke();firmaHasFirma=true;};
     c.ontouchend=e=>{e.preventDefault();firmaDrawing=false;};
   },150);
-}
-
-function getFirmaPos(e,c){
-  const r=c.getBoundingClientRect();
-  return{x:(e.clientX-r.left)*(c.width/r.width),y:(e.clientY-r.top)*(c.height/r.height)};
 }
 
 function cancellaFirma(){
@@ -3808,10 +3789,11 @@ function cancellaFirma(){
 }
 
 function getFirmaImg(){
-  const c=$('firmaCanvas');
-  if(!c||!firmaHasFirma)return null;
+  const c=$('firmaCanvas');if(!c||!firmaHasFirma)return null;
   return c.toDataURL('image/png');
 }
+
+function getFirmaImgSm(){return getFirmaImg();}
 
 function confermaPDF(){
   const modal=$('mFirma');if(modal)modal.classList.remove('on');
