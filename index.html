@@ -422,6 +422,16 @@ textarea{resize:vertical;min-height:80px}
 
     <!-- AGENDA -->
     <div class="page" id="p-agenda">
+      <!-- Banner turni non confermati -->
+      <div id="agConfermaWrap" style="display:none;margin-bottom:12px;background:rgba(245,158,11,.1);border:1px solid var(--am);border-radius:var(--r);padding:12px">
+        <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--am)">📅 Hai turni non confermati</div>
+            <div style="font-size:12px;color:var(--tx2);margin-top:2px" id="agConfermaCount">—</div>
+          </div>
+          <button class="btn" style="padding:8px 14px;font-size:13px;border-color:var(--am);color:var(--am);flex-shrink:0" onclick="confermaTurni()">✅ Conferma</button>
+        </div>
+      </div>
       <!-- Vista dipendente -->
       <div id="agendaDip">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -448,6 +458,8 @@ textarea{resize:vertical;min-height:80px}
           <option value="all">👥 Tutti i dipendenti</option>
         </select>
         <button class="btn btn-p btn-f" style="margin-bottom:14px" onclick="openMod('mNewTurno')">+ Assegna turno</button>
+        <!-- Stato conferme settimana -->
+        <div id="agConfermeStatus" style="margin-bottom:12px"></div>
         <div id="agCalendarAdmin"></div>
       </div>
     </div>
@@ -679,7 +691,7 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-f" style="width:100%;color:var(--gn)" onclick="openExportConfermato()">✅ Esporta ore confermate</button>
     </div>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.09</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.10</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -3453,15 +3465,20 @@ function renderAgendaDip(){
     if(!turni.length){h+='<div class="ag-empty">Nessun turno assegnato</div>';}
     else turni.forEach(t=>{
       const c=TURNO_COLORS[t.tipo]||TURNO_COLORS.lavoro;
+      const confBadge=t.confermato
+        ?'<span style="font-size:10px;background:rgba(34,197,94,.15);color:var(--gn);padding:2px 6px;border-radius:8px;margin-top:4px;display:inline-block">✅ Confermato</span>'
+        :'<span style="font-size:10px;background:rgba(245,158,11,.15);color:var(--am);padding:2px 6px;border-radius:8px;margin-top:4px;display:inline-block">⏳ Da confermare</span>';
       h+='<div class="ag-turno" style="background:'+c.bg+';border-left:3px solid '+c.border+'">'+
         '<div class="ag-turno-title" style="color:'+c.text+'">'+TURNO_ICONS[t.tipo]+' '+(t.location||t.tipo)+'</div>'+
         (t.oraIn?'<div class="ag-turno-sub" style="color:'+c.text+'">⏰ '+t.oraIn+(t.oraFin?' → '+t.oraFin:'')+'</div>':'')+
         (t.note?'<div class="ag-turno-sub" style="color:'+c.text+';opacity:.7">📝 '+t.note+'</div>':'')+
+        confBadge+
       '</div>';
     });
     h+='</div>';
   });
   $('agCalendar').innerHTML=h;
+  checkTurniNonConfermati();
 }
 
 function renderAgendaAdmin(){
@@ -3522,6 +3539,7 @@ function renderAgendaAdmin(){
     h+='</div>';
   });
   $('agCalendarAdmin').innerHTML=h;
+  renderConfermeStatus();
 }
 
 function newTurnoForDay(ds){
@@ -3611,7 +3629,8 @@ async function saveTurno(){
     location:$('turLocation').value,
     note:$('turNote').value,
     assegnatoDa:USER.id,
-    assegnatoIl:new Date().toISOString()
+    assegnatoIl:new Date().toISOString(),
+    confermato:false, confermatoIl:null
   };
   try{
     if(turnoEditId){
@@ -3634,7 +3653,79 @@ async function deleteTurno(){
   closeMod('mNewTurno');toast('✓ Turno eliminato');
 }
 
-// ── ARCHIVIO PRESENZE PER ANNO ──
+// ── CONFERMA TURNI AGENDA ──
+async function checkTurniNonConfermati(){
+  if(!USER||isResponsabile())return;
+  // Turni futuri non confermati dell'utente
+  const oggi=new Date().toISOString().slice(0,10);
+  const turniMiei=cacheAgenda.filter(t=>t.uid===USER.id&&t.data>=oggi&&!t.confermato);
+  const wrap=$('agConfermaWrap');
+  const count=$('agConfermaCount');
+  if(wrap){
+    if(turniMiei.length>0){
+      wrap.style.display='block';
+      if(count)count.textContent=turniMiei.length+' turno/i in attesa di conferma';
+    } else {
+      wrap.style.display='none';
+    }
+  }
+}
+
+async function confermaTurni(){
+  if(!USER)return;
+  const oggi=new Date().toISOString().slice(0,10);
+  const turniMiei=cacheAgenda.filter(t=>t.uid===USER.id&&t.data>=oggi&&!t.confermato);
+  if(!turniMiei.length){toast('Nessun turno da confermare');return;}
+  try{
+    const batch=[];
+    turniMiei.forEach(t=>{
+      batch.push(DB.collection('agenda').doc(t.id).update({
+        confermato:true,
+        confermatoIl:new Date().toISOString(),
+        confermatoDa:USER.nome+' '+USER.cognome
+      }));
+    });
+    await Promise.all(batch);
+    toast('✅ '+turniMiei.length+' turno/i confermati!');
+    $('agConfermaWrap').style.display='none';
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+function renderConfermeStatus(){
+  const el=$('agConfermeStatus');if(!el)return;
+  const days=getWeekDates(agWeekOffset);
+  const start=days[0].toISOString().slice(0,10);
+  const end=days[6].toISOString().slice(0,10);
+  // Turni della settimana visualizzata
+  const turniSettimana=cacheAgenda.filter(t=>t.data>=start&&t.data<=end);
+  if(!turniSettimana.length){el.innerHTML='';return;}
+  // Raggruppa per dipendente
+  const byDip={};
+  turniSettimana.forEach(t=>{
+    if(!byDip[t.uid])byDip[t.uid]={nome:t.nome||'—',turni:0,confermati:0};
+    byDip[t.uid].turni++;
+    if(t.confermato)byDip[t.uid].confermati++;
+  });
+  const righe=Object.entries(byDip).map(([uid,d])=>{
+    const tuttiConf=d.confermati===d.turni;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--b)">
+      <div style="font-size:12px">${d.nome}</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11px;color:var(--tx2)">${d.confermati}/${d.turni}</span>
+        <span style="font-size:14px">${tuttiConf?'✅':'⏳'}</span>
+      </div>
+    </div>`;
+  }).join('');
+  const totConf=Object.values(byDip).filter(d=>d.confermati===d.turni).length;
+  const tot=Object.keys(byDip).length;
+  el.innerHTML=`<div style="background:var(--bg2);border:1px solid var(--b);border-radius:var(--rs);padding:10px;margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:600;color:var(--tx2)">📋 Conferme turni settimana</div>
+      <span class="bdg ${totConf===tot?'bg':'ba'}">${totConf}/${tot} confermati</span>
+    </div>
+    ${righe}
+  </div>`;
+}
 let archivioCache=[];
 
 async function apriArchivioPresenze(){
