@@ -1,7 +1,7 @@
 {
-  "name": "MMG — Multimedia Meeting Group",
-  "short_name": "MMG",
-  "description": "Gestione eventi audio-video",
+  "name": "MMG Logistics",
+  "short_name": "MMG Logistics",
+  "description": "Gestione eventi audio-video — Multimedia Meeting Group",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0f",
