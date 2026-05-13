@@ -679,7 +679,7 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-f" style="width:100%;color:var(--gn)" onclick="openExportConfermato()">✅ Esporta ore confermate</button>
     </div>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.08</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.09</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2741,8 +2741,20 @@ async function smGeneraPDF(){
 function openExport(){
   closeMod('mProfile');
   const sel=document.getElementById('expDip');
-  sel.innerHTML='<option value="all">Tutti i dipendenti</option>';
-  cacheTeam.forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.nome+' '+m.cognome;sel.appendChild(o);});
+  if(isResponsabile()){
+    // Responsabile vede tutti
+    sel.innerHTML='<option value="all">Tutti i dipendenti</option>';
+    cacheTeam.forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.nome+' '+m.cognome;sel.appendChild(o);});
+    sel.disabled=false;
+    sel.parentElement.style.display='block';
+  } else {
+    // Dipendente normale — solo se stesso, select nascosto
+    sel.innerHTML='';
+    const o=document.createElement('option');o.value=USER.id;o.textContent=USER.nome+' '+USER.cognome;
+    sel.appendChild(o);
+    sel.disabled=true;
+    sel.parentElement.style.display='none';
+  }
   const now=new Date();
   document.getElementById('expMese').value=now.getMonth();
   const sa=document.getElementById('expAnno');sa.innerHTML='';
@@ -3892,9 +3904,8 @@ async function renderMieOre(){
       <td style="padding:7px 4px;font-size:11px;color:var(--tx2)">${luogo==='—'?'':luogo.replace(/[🏢🔧✈️🃏🤒]/u,'').trim()}</td>
       <td style="padding:7px 4px;font-size:11px;text-align:center">${entrataStr}</td>
       <td style="padding:7px 4px;font-size:11px;text-align:center">${uscitaStr}</td>
-      <td style="padding:7px 8px;font-size:12px;font-weight:600;text-align:right;color:${nette>0?'var(--gn)':'var(--tx3)'}">
-        ${netteStr}${straordStr?`<br><span style="font-size:10px;color:var(--am)">${straordStr}</span>`:''}
-      </td>
+      <td style="padding:7px 8px;font-size:12px;font-weight:600;text-align:right;color:${nette>0?'var(--gn)':'var(--tx3)'}">${netteStr}</td>
+      <td style="padding:7px 4px;font-size:12px;text-align:right;color:var(--am)">${straordMs>60000?'+'+fmtH(straordMs):''}</td>
       <td style="padding:7px 8px;text-align:center">${okIcon}</td>
     </tr>`;
   }
@@ -3934,6 +3945,7 @@ async function renderMieOre(){
             <th style="padding:8px 4px;font-size:11px;text-align:center;color:var(--tx2);font-weight:600">IN</th>
             <th style="padding:8px 4px;font-size:11px;text-align:center;color:var(--tx2);font-weight:600">OUT</th>
             <th style="padding:8px;font-size:11px;text-align:right;color:var(--tx2);font-weight:600">Ore nette</th>
+            <th style="padding:8px 4px;font-size:11px;text-align:right;color:var(--am);font-weight:600">Straord.</th>
             <th style="padding:8px;font-size:11px;text-align:center;color:var(--tx2);font-weight:600">OK</th>
           </tr>
         </thead>
@@ -3942,6 +3954,7 @@ async function renderMieOre(){
           <tr style="background:var(--bg2);border-top:2px solid var(--b)">
             <td colspan="4" style="padding:8px;font-size:12px;font-weight:600">Totale mese</td>
             <td style="padding:8px;font-size:13px;font-weight:700;text-align:right;color:var(--gn)">${fmtH(totLav)}</td>
+            <td style="padding:8px;font-size:12px;font-weight:700;text-align:right;color:var(--am)">${totStraord>0?'+'+fmtH(totStraord):''}</td>
             <td></td>
           </tr>
         </tfoot>
