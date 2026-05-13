@@ -14,6 +14,7 @@
 <title>MMG — Multimedia Meeting Group</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
@@ -552,7 +553,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.23</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.12.25</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1066,6 +1067,7 @@ function startApp(){
   appStarted=true;
   startListeners();startLocListener();startMagListener();startDichListener();startAgendaListener();startChatListener();restorePunch();
   seedMagazzino();
+  setTimeout(()=>initFCM(),2000); // Init FCM dopo 2s per non rallentare il caricamento
   // Configura UI in base al ruolo
   if(isResponsabile()){
     const rs=$('magRespSection');if(rs)rs.style.display='block';
@@ -3797,8 +3799,53 @@ try{
 // ── NO SERVICE WORKER — disabilitato per aggiornamenti immediati ──
 if('serviceWorker' in navigator){
   navigator.serviceWorker.getRegistrations().then(regs=>{
-    regs.forEach(r=>r.unregister());
+    regs.forEach(r=>{
+      // Mantieni solo il messaging SW
+      if(!r.scope.includes('firebase-messaging'))r.unregister();
+    });
   });
+}
+
+// ── FCM PUSH NOTIFICATIONS ──
+// SOSTITUISCI LA CHIAVE SOTTO con la tua VAPID key da Firebase Console
+// Project Settings → Cloud Messaging → Web Push certificates → Generate key pair
+const FCM_VAPID_KEY = 'BPUBvR7Tr6bsPzBuyLp2Ny-nuGFEtwRvb9m2nSLIwmS0P7wIEXrzlKO-hGxUmbrpUkf9i4LZoEJGvLkr-OoqzuA';
+
+async function initFCM(){
+  if(!('Notification' in window))return;
+  if(!USER)return;
+  try{
+    // Registra il service worker per le notifiche
+    const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    // Inizializza Firebase Messaging
+    if(!firebase.messaging)return;
+    const messaging = firebase.messaging();
+    // Chiedi permesso notifiche
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){console.log('Notifiche non autorizzate');return;}
+    // Ottieni token FCM
+    const token = await messaging.getToken({
+      vapidKey: FCM_VAPID_KEY,
+      serviceWorkerRegistration: reg
+    });
+    if(!token)return;
+    // Salva token su Firebase collegato all'utente
+    const tokenRef = DB.collection('fcm_tokens').doc(USER.id);
+    const existing = await tokenRef.get();
+    const tokens = existing.exists ? (existing.data().tokens||[]) : [];
+    if(!tokens.includes(token)){
+      tokens.push(token);
+      await tokenRef.set({tokens, uid: USER.id, updatedAt: new Date().toISOString()});
+    }
+    // Gestisci notifiche con app aperta
+    messaging.onMessage(payload=>{
+      const {title, body} = payload.notification||{};
+      if(title) toast('🔔 '+title+(body?' — '+body:''));
+    });
+    console.log('FCM inizializzato ✓');
+  }catch(e){
+    console.warn('FCM non disponibile:', e.message);
+  }
 }
 </script>
 </body>
