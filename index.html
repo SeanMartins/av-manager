@@ -243,6 +243,28 @@ textarea{resize:vertical;min-height:80px}
         </div>
       </div>
       <div class="card" id="teamToday"><div class="empty">Caricamento...</div></div>
+
+      <!-- LE MIE ORE -->
+      <div class="sec" style="margin-top:16px">
+        <div class="stl">📊 Le mie ore</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="mieOreMese" onchange="renderMieOre()" style="font-size:12px;padding:5px 8px"></select>
+        </div>
+      </div>
+      <!-- Stats mese -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+        <div class="sc"><div class="sn" id="moOreLav">0h</div><div class="sl">Lavorate</div></div>
+        <div class="sc"><div class="sn" id="moOreStd">0h</div><div class="sl">Standard</div></div>
+        <div class="sc"><div class="sn" id="moOreStraord" style="color:var(--am)">0h</div><div class="sl">Straord.</div></div>
+      </div>
+      <!-- Bottone conferma mese -->
+      <div id="moConfermaWrap" style="margin-bottom:12px;display:none">
+        <button id="moConfermaBtn" class="btn btn-f btn-p" style="width:100%;padding:12px;font-size:14px" onclick="confermaMese()">
+          ✅ Conferma ore del mese
+        </button>
+      </div>
+      <!-- Tabella giorni -->
+      <div id="mieOreTable"></div>
     </div>
 
     <!-- LOCATION -->
@@ -451,6 +473,37 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- ARCHIVIO PRESENZE -->
+<div class="mol" id="mArchivioPresenze" onclick="if(event.target===this)closeMod('mArchivioPresenze')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="stl">📆 Archivio presenze</div>
+    </div>
+    <!-- Filtri -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div><label class="il">Anno</label>
+        <select id="archAnno" onchange="renderArchivioPresenze()"></select>
+      </div>
+      <div id="archDipWrap" style="display:none"><label class="il">Dipendente</label>
+        <select id="archDip" onchange="renderArchivioPresenze()"></select>
+      </div>
+    </div>
+    <!-- Stats anno -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+      <div class="sc"><div class="sn" id="archOreTot">0h</div><div class="sl">Ore anno</div></div>
+      <div class="sc"><div class="sn" id="archGiorniLav">0</div><div class="sl">Giorni lav.</div></div>
+      <div class="sc"><div class="sn" id="archOreStr" style="color:var(--am)">0h</div><div class="sl">Straord.</div></div>
+    </div>
+    <!-- Mesi dell'anno -->
+    <div id="archivioMesiList"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-f btn-p" onclick="esportaArchivioAnno()" style="flex:1">⬇️ Esporta anno CSV</button>
+      <button class="btn btn-f" onclick="closeMod('mArchivioPresenze')" style="flex:1">Chiudi</button>
+    </div>
+  </div>
+</div>
+
 <!-- GESTIONE TIMBRATURE -->
 <div class="mol" id="mGestTimb" onclick="if(event.target===this)closeMod('mGestTimb')">
   <div class="msh">
@@ -620,9 +673,13 @@ textarea{resize:vertical;min-height:80px}
       <div class="row" style="padding:7px 0"><span style="font-size:13px;color:var(--tx2);width:76px">Telefono</span><span style="font-size:13px" id="profTel">—</span></div>
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
+    <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');apriArchivioPresenze()">📆 Archivio presenze</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
+    <div id="btnExportConfermato" style="display:none;margin-top:8px">
+      <button class="btn btn-f" style="width:100%;color:var(--gn)" onclick="openExportConfermato()">✅ Esporta ore confermate</button>
+    </div>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.05</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.07</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1141,7 +1198,9 @@ function startApp(){
   if(isResponsabile()){
     const rs=$('magRespSection');if(rs)rs.style.display='block';
     startMatRespListeners();
+    const ec=$('btnExportConfermato');if(ec)ec.style.display='block';
   }
+  setTimeout(()=>initMieOreMese(),1000);
   if(isEsterno()){
     // Nascondi voci non accessibili agli esterni
     ['n-location','n-magazzino','n-dichiarazione'].forEach(id=>{
@@ -3563,7 +3622,392 @@ async function deleteTurno(){
   closeMod('mNewTurno');toast('✓ Turno eliminato');
 }
 
-// ── GESTIONE TIMBRATURE MANUALE ──
+// ── ARCHIVIO PRESENZE PER ANNO ──
+let archivioCache=[];
+
+async function apriArchivioPresenze(){
+  // Popola select anni (dal primo anno disponibile a oggi)
+  const annoSel=$('archAnno');
+  if(annoSel){
+    annoSel.innerHTML='';
+    const now=new Date();
+    for(let a=now.getFullYear();a>=2024;a--){
+      const o=document.createElement('option');
+      o.value=a;o.textContent=a;
+      annoSel.appendChild(o);
+    }
+  }
+  // Mostra select dipendente solo al Responsabile
+  const dipWrap=$('archDipWrap');
+  if(dipWrap)dipWrap.style.display=isResponsabile()?'block':'none';
+  if(isResponsabile()){
+    const dipSel=$('archDip');
+    if(dipSel){
+      dipSel.innerHTML='<option value="">Tutti</option>';
+      cacheTeam.forEach(m=>{
+        const o=document.createElement('option');
+        o.value=m.id;o.textContent=m.nome+' '+m.cognome;
+        dipSel.appendChild(o);
+      });
+    }
+  }
+  openMod('mArchivioPresenze');
+  renderArchivioPresenze();
+}
+
+async function renderArchivioPresenze(){
+  const el=$('archivioMesiList');if(!el)return;
+  el.innerHTML='<div class="empty">Caricamento...</div>';
+  const anno=parseInt($('archAnno')?.value||new Date().getFullYear());
+  const dipId=isResponsabile()?($('archDip')?.value||''):USER.id;
+  const start=new Date(anno,0,1).toISOString();
+  const end=new Date(anno,11,31,23,59,59).toISOString();
+
+  try{
+    let q=DB.collection('presenze').where('entrata','>=',start).where('entrata','<=',end);
+    if(dipId)q=q.where('uid','==',dipId);
+    const snap=await q.orderBy('entrata').get();
+    archivioCache=snap.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){el.innerHTML='<div class="empty">Errore: '+e.message+'</div>';return;}
+
+  // Raggruppa per mese
+  const byMese={};
+  archivioCache.forEach(p=>{
+    const m=new Date(p.entrata).getMonth();
+    if(!byMese[m])byMese[m]=[];
+    byMese[m].push(p);
+  });
+
+  const fmtH=ms=>{const h=Math.floor(ms/3600000);const m=Math.round((ms%3600000)/60000);return h+'h'+(m>0?' '+m+'m':'');};
+  let totAnno=0,giorniAnno=0,straordAnno=0;
+  let h='';
+
+  for(let m=0;m<12;m++){
+    const pList=byMese[m]||[];
+    let totMese=0,giorniMese=0,straordMese=0;
+    pList.forEach(p=>{
+      if(!p.uscita)return;
+      const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+      const nette=Math.max(0,(new Date(p.uscita)-new Date(p.entrata))-pauseMs);
+      totMese+=nette;
+      giorniMese++;
+      straordMese+=Math.max(0,nette-8*3600000);
+    });
+    totAnno+=totMese;giorniAnno+=giorniMese;straordAnno+=straordMese;
+
+    const isFuturo=new Date(anno,m,1)>new Date();
+    const bgColor=pList.length>0?'var(--acb)':'var(--bg2)';
+    const borderColor=pList.length>0?'var(--ac)':'var(--b)';
+
+    h+=`<div style="border:1px solid ${borderColor};border-radius:var(--rs);padding:12px;margin-bottom:8px;background:${bgColor};cursor:pointer;opacity:${isFuturo?'.4':'1'}"
+      onclick="${!isFuturo?'apriDettaglioMese('+anno+','+m+')':''}">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:14px;font-weight:600">${MESI_NOMI[m]} ${anno}</div>
+          <div style="font-size:12px;color:var(--tx2);margin-top:2px">
+            ${giorniMese>0?giorniMese+' giorni lavorati':'Nessuna timbratura'}
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:16px;font-weight:700;color:var(--gn)">${totMese>0?fmtH(totMese):'—'}</div>
+          ${straordMese>0?`<div style="font-size:11px;color:var(--am)">+${fmtH(straordMese)} straord.</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Aggiorna stats anno
+  const ao=$('archOreTot');if(ao)ao.textContent=totAnno>0?fmtH(totAnno):'0h';
+  const ag=$('archGiorniLav');if(ag)ag.textContent=giorniAnno;
+  const as=$('archOreStr');if(as)as.textContent=straordAnno>0?fmtH(straordAnno):'0h';
+
+  el.innerHTML=h||'<div class="empty">Nessuna presenza registrata per il '+anno+'</div>';
+}
+
+function apriDettaglioMese(anno, mese){
+  // Vai alla sezione "Le mie ore" con quel mese selezionato
+  closeMod('mArchivioPresenze');
+  const sel=$('mieOreMese');
+  if(sel){
+    sel.value=anno+'-'+mese;
+    renderMieOre();
+  }
+  // Scrolla alla sezione ore
+  const el=$('mieOreTable');
+  if(el)setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'start'}),300);
+}
+
+async function esportaArchivioAnno(){
+  const anno=parseInt($('archAnno')?.value||new Date().getFullYear());
+  const dipId=isResponsabile()?($('archDip')?.value||''):USER.id;
+  if(!archivioCache.length){toast('Nessun dato da esportare','r');return;}
+
+  const pad=n=>String(n).padStart(2,'0');
+  const fmtT=iso=>{if(!iso)return'';const d=new Date(iso);return pad(d.getHours())+':'+pad(d.getMinutes());};
+  const gg=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  let csv='Nome,Mese,Data,Giorno,Luogo,Entrata,Uscita,Ore lorde,Pause (min),Ore nette,Straordinarie\n';
+
+  archivioCache.forEach(p=>{
+    if(dipId&&p.uid!==dipId)return;
+    const d=new Date(p.entrata);
+    const mese=MESI_NOMI[d.getMonth()]+' '+d.getFullYear();
+    const data=pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear();
+    const giorno=gg[d.getDay()];
+    const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+    const lordeMs=p.uscita?(new Date(p.uscita)-d):0;
+    const netteMs=Math.max(0,lordeMs-pauseMs);
+    const straordMs=Math.max(0,netteMs-8*3600000);
+    const h2=ms=>(ms/3600000).toFixed(2);
+    csv+=`"${p.nome||'—'}","${mese}","${data}","${giorno}","${p.luogo||'—'}","${fmtT(p.entrata)}","${fmtT(p.uscita)}","${lordeMs?h2(lordeMs):''}","${Math.round(pauseMs/60000)}","${netteMs?h2(netteMs):''}","${straordMs>0?h2(straordMs):''}"\n`;
+  });
+
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='Presenze_'+anno+'.csv';
+  a.click();URL.revokeObjectURL(url);
+  toast('✅ CSV anno '+anno+' esportato!');
+}
+
+// ── LE MIE ORE — vista mensile ──
+const MESI_NOMI=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const ORE_STD_GIORNO=8; // ore standard giornaliere
+
+function initMieOreMese(){
+  const sel=$('mieOreMese');if(!sel)return;
+  sel.innerHTML='';
+  const now=new Date();
+  const annoCorrente=now.getFullYear();
+  // Mostra ultimi 3 anni + anno corrente
+  for(let anno=annoCorrente;anno>=annoCorrente-2;anno--){
+    const meseMax=anno===annoCorrente?now.getMonth():11;
+    for(let m=meseMax;m>=0;m--){
+      const o=document.createElement('option');
+      o.value=anno+'-'+m;
+      o.textContent=MESI_NOMI[m]+' '+anno;
+      sel.appendChild(o);
+    }
+  }
+  renderMieOre();
+}
+
+async function renderMieOre(){
+  const sel=$('mieOreMese');if(!sel||!USER)return;
+  const [anno,mese]=sel.value.split('-').map(Number);
+  const start=new Date(anno,mese,1);
+  const end=new Date(anno,mese+1,0,23,59,59);
+  const el=$('mieOreTable');if(el)el.innerHTML='<div class="empty">Caricamento...</div>';
+
+  // Carica presenze del mese
+  let snap;
+  try{
+    snap=await DB.collection('presenze')
+      .where('uid','==',USER.id)
+      .where('entrata','>=',start.toISOString())
+      .where('entrata','<=',end.toISOString())
+      .orderBy('entrata').get();
+  }catch(e){if(el)el.innerHTML='<div class="empty">Errore caricamento</div>';return;}
+
+  const presenze=snap.docs.map(d=>({id:d.id,...d.data()}));
+
+  // Carica conferme mese
+  const confKey=USER.id+'_'+anno+'_'+mese;
+  let confSnap;
+  try{
+    confSnap=await DB.collection('ore_conferme').doc(confKey).get();
+  }catch(e){confSnap=null;}
+  const conferme=confSnap&&confSnap.exists?confSnap.data():{};
+  const meseConfermato=conferme.confermato||false;
+
+  // Costruisci mappa giorno→presenza
+  const byDay={};
+  presenze.forEach(p=>{
+    const d=new Date(p.entrata).toDateString();
+    if(!byDay[d])byDay[d]=[];
+    byDay[d].push(p);
+  });
+
+  // Calcola statistiche
+  let totLav=0, totStraord=0, giorniLav=0;
+  const giorni=end.getDate();
+  const pad=n=>String(n).padStart(2,'0');
+  const fmtH=ms=>{const h=Math.floor(ms/3600000);const m=Math.round((ms%3600000)/60000);return h+'h'+(m>0?m+'m':'');};
+
+  let rows='';
+  for(let g=1;g<=giorni;g++){
+    const data=new Date(anno,mese,g);
+    const key=data.toDateString();
+    const gg=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][data.getDay()];
+    const isWeekend=data.getDay()===0||data.getDay()===6;
+    const pList=byDay[key]||[];
+    const confGiorno=conferme['g_'+g]||false;
+
+    let nette=0,entrataStr='—',uscitaStr='—',luogo='—',pauseStr='—';
+    if(pList.length>0){
+      const p=pList[0];
+      luogo=p.luogo||'—';
+      const ent=new Date(p.entrata);
+      entrataStr=pad(ent.getHours())+':'+pad(ent.getMinutes());
+      if(p.uscita){
+        const usc=new Date(p.uscita);
+        uscitaStr=pad(usc.getHours())+':'+pad(usc.getMinutes());
+        const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+        nette=Math.max(0,(usc-ent)-pauseMs);
+        if((p.pause||[]).length>0){
+          pauseStr=(p.pause||[]).filter(px=>px.inizio&&px.fine).map(px=>{
+            const pi=new Date(px.inizio);const po=new Date(px.fine);
+            return pad(pi.getHours())+':'+pad(pi.getMinutes())+'→'+pad(po.getHours())+':'+pad(po.getMinutes());
+          }).join(', ')||'—';
+        }else pauseStr='Nessuna';
+        totLav+=nette;
+        giorniLav++;
+      }
+    }
+
+    const stdMs=isWeekend?0:ORE_STD_GIORNO*3600000;
+    const straordMs=Math.max(0,nette-stdMs);
+    totStraord+=straordMs;
+
+    const netteStr=nette>0?fmtH(nette):'—';
+    const straordStr=straordMs>60000?'+'+fmtH(straordMs):'';
+    const rowBg=isWeekend?'background:rgba(255,255,255,.02)':pList.length>0?'':'background:rgba(239,68,68,.03)';
+    const okIcon=confGiorno?'<span style="color:var(--gn);font-size:14px">✅</span>':'';
+
+    rows+=`<tr style="${rowBg}">
+      <td style="padding:7px 8px;font-size:12px;color:${isWeekend?'var(--tx3)':'var(--tx)'}">
+        <div style="font-weight:500">${pad(g)} ${gg}</div>
+      </td>
+      <td style="padding:7px 4px;font-size:11px;color:var(--tx2)">${luogo==='—'?'':luogo.replace(/[🏢🔧✈️🃏🤒]/u,'').trim()}</td>
+      <td style="padding:7px 4px;font-size:11px;text-align:center">${entrataStr}</td>
+      <td style="padding:7px 4px;font-size:11px;text-align:center">${uscitaStr}</td>
+      <td style="padding:7px 8px;font-size:12px;font-weight:600;text-align:right;color:${nette>0?'var(--gn)':'var(--tx3)'}">
+        ${netteStr}${straordStr?`<br><span style="font-size:10px;color:var(--am)">${straordStr}</span>`:''}
+      </td>
+      <td style="padding:7px 8px;text-align:center">${okIcon}</td>
+    </tr>`;
+  }
+
+  // Aggiorna stats
+  const moLav=$('moOreLav');if(moLav)moLav.textContent=fmtH(totLav);
+  const moStd=$('moOreStd');
+  const giorniLavorativi=Array.from({length:giorni},(_,i)=>new Date(anno,mese,i+1).getDay()).filter(d=>d>0&&d<6).length;
+  if(moStd)moStd.textContent=(giorniLavorativi*ORE_STD_GIORNO)+'h';
+  const moStr=$('moOreStraord');if(moStr)moStr.textContent=totStraord>0?fmtH(totStraord):'0h';
+
+  // Bottone conferma
+  const wrap=$('moConfermaWrap');
+  const btn=$('moConfermaBtn');
+  if(wrap&&btn){
+    wrap.style.display='block';
+    if(meseConfermato){
+      btn.style.background='var(--gnb)';btn.style.color='var(--gn)';btn.style.borderColor='var(--gn)';
+      btn.textContent='✅ Ore confermate il '+new Date(conferme.confermataIl||'').toLocaleDateString('it-IT');
+      btn.disabled=true;
+    } else {
+      btn.style.background='';btn.style.color='';btn.style.borderColor='';
+      btn.textContent='✅ Conferma ore del mese';
+      btn.disabled=false;
+    }
+  }
+
+  // Tabella
+  if(el){
+    el.innerHTML=`
+    <div style="overflow-x:auto;border:1px solid var(--b);border-radius:var(--r);margin-bottom:14px">
+      <table style="width:100%;border-collapse:collapse;min-width:300px">
+        <thead>
+          <tr style="background:var(--bg2)">
+            <th style="padding:8px;font-size:11px;text-align:left;color:var(--tx2);font-weight:600">Giorno</th>
+            <th style="padding:8px 4px;font-size:11px;color:var(--tx2);font-weight:600">Luogo</th>
+            <th style="padding:8px 4px;font-size:11px;text-align:center;color:var(--tx2);font-weight:600">IN</th>
+            <th style="padding:8px 4px;font-size:11px;text-align:center;color:var(--tx2);font-weight:600">OUT</th>
+            <th style="padding:8px;font-size:11px;text-align:right;color:var(--tx2);font-weight:600">Ore nette</th>
+            <th style="padding:8px;font-size:11px;text-align:center;color:var(--tx2);font-weight:600">OK</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr style="background:var(--bg2);border-top:2px solid var(--b)">
+            <td colspan="4" style="padding:8px;font-size:12px;font-weight:600">Totale mese</td>
+            <td style="padding:8px;font-size:13px;font-weight:700;text-align:right;color:var(--gn)">${fmtH(totLav)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>`;
+  }
+}
+
+async function confermaMese(){
+  if(!USER)return;
+  const sel=$('mieOreMese');if(!sel)return;
+  const [anno,mese]=sel.value.split('-').map(Number);
+  const meseNome=MESI_NOMI[mese]+' '+anno;
+  if(!confirm('Confermi le ore di '+meseNome+'? Non potrai più modificarle.'))return;
+  const confKey=USER.id+'_'+anno+'_'+mese;
+  try{
+    await DB.collection('ore_conferme').doc(confKey).set({
+      uid:USER.id,nome:USER.nome+' '+USER.cognome,
+      anno,mese,meseNome,confermato:true,
+      confermataIl:new Date().toISOString()
+    });
+    toast('✅ Ore di '+meseNome+' confermate!');
+    renderMieOre();
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+// Export ore confermate (solo Responsabile)
+async function openExportConfermato(){
+  closeMod('mProfile');
+  const now=new Date();
+  // Chiedi mese
+  const mese=parseInt(prompt('Mese (1-12):',now.getMonth()+1))-1;
+  const anno=parseInt(prompt('Anno:',now.getFullYear()));
+  if(isNaN(mese)||isNaN(anno))return;
+
+  const start=new Date(anno,mese,1);
+  const end=new Date(anno,mese+1,0,23,59,59);
+  const snap=await DB.collection('presenze')
+    .where('entrata','>=',start.toISOString())
+    .where('entrata','<=',end.toISOString())
+    .orderBy('uid').orderBy('entrata').get();
+
+  const presenze=snap.docs.map(d=>({id:d.id,...d.data()}));
+  const confSnap=await DB.collection('ore_conferme')
+    .where('anno','==',anno).where('mese','==',mese).where('confermato','==',true).get();
+  const confermati=new Set(confSnap.docs.map(d=>d.data().uid));
+
+  const giorni=end.getDate();
+  const pad=n=>String(n).padStart(2,'0');
+  const fmtT=iso=>{if(!iso)return'';const d=new Date(iso);return pad(d.getHours())+':'+pad(d.getMinutes());};
+
+  let csv='Nome,Data,Giorno,Luogo,Entrata,Uscita,Ore nette,Pause,Confermato\n';
+  const mesiNomi=['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  const gg=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+
+  // Raggruppa per dipendente
+  const byDip={};
+  presenze.forEach(p=>{if(!byDip[p.uid])byDip[p.uid]=[];byDip[p.uid].push(p);});
+
+  Object.entries(byDip).forEach(([uid,pList])=>{
+    const confermato=confermati.has(uid)?'✅ Sì':'❌ No';
+    pList.forEach(p=>{
+      const d=new Date(p.entrata);
+      const dataStr=pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear();
+      const giornoStr=gg[d.getDay()];
+      const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+      const nette=p.uscita?Math.max(0,(new Date(p.uscita)-d-pauseMs)/3600000).toFixed(2):'';
+      csv+=`"${p.nome||'—'}","${dataStr}","${giornoStr}","${p.luogo||'—'}","${fmtT(p.entrata)}","${fmtT(p.uscita)}","${nette}","${Math.round(pauseMs/60000)}min","${confermato}"\n`;
+    });
+  });
+
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='Ore_'+MESI_NOMI[mese]+'_'+anno+'.csv';
+  a.click();URL.revokeObjectURL(url);
+  toast('✅ CSV esportato!');
+}
 let gestTimbEditId=null, atPause=[];
 
 function apriGestTimb(){
