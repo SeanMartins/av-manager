@@ -622,7 +622,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="openExport()">📊 Esporta presenze</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.04</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.13.05</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -3750,31 +3750,24 @@ async function deleteTimb(){
 
 // ── PDF VIEWER — non blocca l'app ──
 function openPDF(html, filename){
-  // Crea blob URL
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
-  // Mostra overlay con iframe
   let overlay=document.getElementById('pdfOverlay');
   if(!overlay){
     overlay=document.createElement('div');
     overlay.id='pdfOverlay';
     overlay.style.cssText='position:fixed;inset:0;z-index:500;background:#000;display:flex;flex-direction:column';
-    overlay.innerHTML=
-      '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#1a1a2e;flex-shrink:0">'+
-        '<span style="color:#fff;font-size:14px;font-weight:600">📄 '+filename+'</span>'+
-        '<div style="display:flex;gap:8px">'+
-          '<a id="pdfDownload" download="'+filename+'.html" style="background:#6c63ff;color:#fff;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;text-decoration:none">⬇️ Scarica</a>'+
-          '<button onclick="chiudiPDF()" style="background:#ef4444;color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">✕ Chiudi</button>'+
-        '</div>'+
-      '</div>'+
-      '<iframe id="pdfFrame" style="flex:1;border:none;background:#fff"></iframe>';
     document.body.appendChild(overlay);
   }
+  overlay.innerHTML=
+    '<iframe id="pdfFrame" style="flex:1;border:none;background:#fff;width:100%"></iframe>'+
+    '<div style="display:flex;gap:8px;padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom));background:#1a1a2e;flex-shrink:0">'+
+      '<a id="pdfDownload" download="'+filename+'.html" style="flex:1;background:#6c63ff;color:#fff;padding:12px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px">⬇️ Scarica</a>'+
+      '<button onclick="chiudiPDF()" style="flex:1;background:#ef4444;color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">✕ Chiudi</button>'+
+    '</div>';
   overlay.style.display='flex';
   document.getElementById('pdfDownload').href=url;
-  document.getElementById('pdfDownload').download=filename+'.html';
   document.getElementById('pdfFrame').src=url;
-  // Libera memoria dopo 5 minuti
   setTimeout(()=>URL.revokeObjectURL(url),300000);
 }
 
