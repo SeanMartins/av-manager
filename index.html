@@ -830,7 +830,7 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-f" style="width:100%;color:var(--gn)" onclick="openExportConfermato()">✅ Esporta ore confermate</button>
     </div>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.06</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.07</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2747,8 +2747,8 @@ async function plGeneraPDF(){
       </tr>`;
     }
   });
-  // Righe vuote per raggiungere minimo 20
-  for(let i=n;i<20;i++){
+  // Righe vuote per raggiungere minimo 12
+  for(let i=n;i<12;i++){
     righe+=`<tr>
       <td style="padding:5px 8px;border:1px solid #ccc;height:22px">&nbsp;</td>
       <td style="padding:5px 8px;border:1px solid #ccc"></td>
@@ -2760,37 +2760,47 @@ async function plGeneraPDF(){
 
   const noteVal=val('plNote')||'';
 
+  // Carica logo come base64
+  let logoSrc='';
+  try{
+    const resp=await fetch('/logo.png');
+    const blob2=await resp.blob();
+    logoSrc=await new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result);fr.readAsDataURL(blob2);});
+  }catch(e){logoSrc='';}
+
   const html=`<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">
   <title>Dichiarazione Esonero Bolla — ${nome}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#000}
-    .page{max-width:210mm;margin:0 auto;padding:12mm 14mm}
-    .intestazione{text-align:center;margin-bottom:6px}
-    .ragione{font-size:11px;color:#444;margin-bottom:10px;text-align:center;line-height:1.5}
-    .titolo{font-size:13px;font-weight:bold;text-align:center;border:2px solid #000;padding:8px;margin-bottom:10px;text-transform:uppercase}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
-    .campo{border:1px solid #999;padding:6px 10px}
-    .campo label{font-size:10px;color:#555;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:bold;letter-spacing:.4px}
-    .campo span{font-size:13px;font-weight:600}
-    .testo-legale{font-size:10.5px;line-height:1.6;margin-bottom:10px;text-align:justify;border:1px solid #ccc;padding:8px 10px;background:#fafafa}
-    table{width:100%;border-collapse:collapse;margin-bottom:12px}
-    th{background:#2c3e7a;color:#fff;padding:6px 8px;font-size:11px;text-align:left;font-weight:600}
-    td{font-size:11.5px}
-    .firma-row{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:16px}
-    .firma-box{border-top:1px solid #000;padding-top:6px;font-size:11px;min-height:70px}
-    .footer-doc{margin-top:10px;padding-top:8px;border-top:1px solid #ccc;font-size:9px;color:#888;display:flex;justify-content:space-between}
-    @media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}button{display:none}.page{padding:8mm 10mm}}
+    body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#000}
+    .page{max-width:210mm;margin:0 auto;padding:8mm 12mm}
+    .intestazione{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;padding-bottom:6px;border-bottom:2px solid #2c3e7a}
+    .ragione{font-size:8.5px;color:#555;margin-bottom:6px;line-height:1.4}
+    .titolo{font-size:10.5px;font-weight:bold;text-align:center;border:2px solid #000;padding:5px;margin-bottom:7px;text-transform:uppercase}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:7px}
+    .campo{border:1px solid #999;padding:4px 8px}
+    .campo label{font-size:8px;color:#555;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:bold;letter-spacing:.4px}
+    .campo span{font-size:11px;font-weight:600}
+    .testo-legale{font-size:8.5px;line-height:1.5;margin-bottom:7px;text-align:justify;border:1px solid #ccc;padding:6px 8px;background:#fafafa}
+    table{width:100%;border-collapse:collapse;margin-bottom:6px}
+    th{background:#2c3e7a;color:#fff;padding:4px 6px;font-size:9px;text-align:left;font-weight:600}
+    td{font-size:9.5px}
+    .firma-row{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:10px}
+    .firma-box{border-top:1px solid #000;padding-top:4px;font-size:9px;min-height:55px}
+    .footer-doc{margin-top:6px;padding-top:5px;border-top:1px solid #ccc;font-size:7.5px;color:#888;display:flex;justify-content:space-between}
+    @media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}button{display:none}.page{padding:6mm 10mm}}
   </style></head>
   <body><div class="page">
 
     <!-- INTESTAZIONE -->
     <div class="intestazione">
-      <div style="font-size:18px;font-weight:900;color:#2c3e7a;letter-spacing:2px">MMG</div>
-      <div style="font-size:11px;font-weight:600;color:#444">Multimedia Meeting Group S.n.c.</div>
-    </div>
-    <div class="ragione">
-      Via Frusa, 49 – 50131 Firenze – P.I. 04996950483 – C.I.I.A.A. n. 53852 n. 507030
+      <div>
+        ${logoSrc?`<img src="${logoSrc}" style="height:36px;width:auto;display:block">`:`<div style="font-size:20px;font-weight:900;color:#2c3e7a;letter-spacing:2px">MMG</div>`}
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:9px;font-weight:600;color:#2c3e7a">Multimedia Meeting Group S.n.c.</div>
+        <div class="ragione" style="margin:0">Via Frusa, 49 – 50131 Firenze<br>P.I. 04996950483 – C.I.I.A.A. n. 53852 R.E.A. 507030</div>
+      </div>
     </div>
 
     <!-- TITOLO DOCUMENTO -->
