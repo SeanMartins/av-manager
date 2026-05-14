@@ -18,6 +18,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -811,7 +813,7 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-f" style="width:100%;color:var(--gn)" onclick="openExportConfermato()">✅ Esporta ore confermate</button>
     </div>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.03</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.05</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2851,18 +2853,19 @@ async function plGeneraPDF(){
 
   </div></body></html>`;
 
-  // 1. Apri PDF IMMEDIATAMENTE
+  // 1. Apri PDF nell'overlay
   openPDF(html, 'Bolla_'+nome.replace(/\s+/g,'_'));
 
   // 2. Chiudi modal subito
   closeMod('mPreparaLavoro');
-  toast('✓ Dichiarazione generata!');
+  toast('✓ Documento pronto — vedi in Archivio');
 
-  // 3. Salva su Firebase in background
+  // 3. Salva su Firebase in background con HTML incluso
   const lavoroData={
     nome,location:loc||'',data:dataRaw,dataFine:dataFineRaw||'',
     tecnico,note:val('plNote'),
     articoli:plArticoli.map(a=>({id:a.id||'',nome:a.nome,cat:a.cat||'',marca:a.marca||'',ser:a.ser||'',qty:a.qtyPrep||1})),
+    htmlPrep:html, // salva HTML per riapertura dall'archivio
     updatedAt:new Date().toISOString()
   };
   try{
@@ -2995,7 +2998,7 @@ async function smGeneraPDF(){
     (miss.length?'<div class="st" style="color:#721c24;border-color:#e74c3c">⚠ Mancanti ('+miss.length+')</div><table><thead><tr><th>Articolo</th><th>Marca</th><th>Seriale</th><th>Stato</th></tr></thead><tbody>'+rigaMiss+'</tbody></table>':'')+
     '<div class="firma"><div class="fbox">Firma responsabile verifica<br>'+(getFirmaImgSm()?'<img src="'+getFirmaImgSm()+'" style="max-width:160px;max-height:55px;margin:6px 0;display:block"><br>':'<br><br>')+tecnico+'</div><div class="fbox">Firma responsabile magazzino<br><br><br>___________________</div></div>'+
     '<div class="footer"><span>MMG · Report rientro</span><span>'+l.nome+' · '+now+'</span></div></div></body></html>';
-  try{await DB.collection('lavori').doc(l.id).update({rientrato:allOk,rientroData:new Date().toISOString(),rientroTecnico:tecnico});}catch(e){console.warn(e);}
+  try{await DB.collection('lavori').doc(l.id).update({rientrato:allOk,rientroData:new Date().toISOString(),rientroTecnico:tecnico,htmlRient:html});}catch(e){console.warn(e);}
   openPDF(html, l.nome||'rientro');
   closeMod('mSmarca');toast('✓ Report generato!');
 }
@@ -3412,7 +3415,16 @@ function dichCardHtml(d){
 function dichOpenDoc(id){
   const d=cacheDich.find(x=>x.id===id);if(!d)return;
   const isRient=!!d.rientroData;
-  // Rigenera il PDF del documento
+  // Se abbiamo l'HTML salvato usalo direttamente
+  if(!isRient&&d.htmlPrep){
+    openPDF(d.htmlPrep,'Bolla_'+(d.nome||'preparazione').replace(/\s+/g,'_'));
+    return;
+  }
+  if(isRient&&d.htmlRient){
+    openPDF(d.htmlRient,'Rientro_'+(d.nome||'rientro').replace(/\s+/g,'_'));
+    return;
+  }
+  // Altrimenti rigenera
   if(isRient) dichGeneraPDFRientro(d);
   else dichGeneraPDFPrep(d);
 }
@@ -4871,8 +4883,6 @@ async function deleteTimb(){
 
 // ── PDF VIEWER — non blocca l'app ──
 function openPDF(html, filename){
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
   let overlay=document.getElementById('pdfOverlay');
   if(!overlay){
     overlay=document.createElement('div');
@@ -4880,16 +4890,25 @@ function openPDF(html, filename){
     overlay.style.cssText='position:fixed;inset:0;z-index:500;background:#000;display:flex;flex-direction:column';
     document.body.appendChild(overlay);
   }
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
   overlay.innerHTML=
-    '<iframe id="pdfFrame" style="flex:1;border:none;background:#fff;width:100%"></iframe>'+
+    '<iframe id="pdfFrame" style="flex:1;border:none;background:#fff;width:100%" src="'+url+'"></iframe>'+
     '<div style="display:flex;gap:8px;padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom));background:#1a1a2e;flex-shrink:0">'+
-      '<a id="pdfDownload" download="'+filename+'.html" style="flex:1;background:#6c63ff;color:#fff;padding:12px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px">⬇️ Scarica</a>'+
+      '<button onclick="stampaPDF()" style="flex:1;background:#6c63ff;color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">🖨 Stampa / Salva PDF</button>'+
       '<button onclick="chiudiPDF()" style="flex:1;background:#ef4444;color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">✕ Chiudi</button>'+
     '</div>';
   overlay.style.display='flex';
-  document.getElementById('pdfDownload').href=url;
-  document.getElementById('pdfFrame').src=url;
-  setTimeout(()=>URL.revokeObjectURL(url),300000);
+  overlay._url=url;
+  setTimeout(()=>URL.revokeObjectURL(url),600000);
+}
+
+function stampaPDF(){
+  const frame=document.getElementById('pdfFrame');
+  if(frame&&frame.contentWindow){
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+  }
 }
 
 function chiudiPDF(){
