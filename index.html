@@ -830,7 +830,7 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-f" style="width:100%;color:var(--gn)" onclick="openExportConfermato()">✅ Esporta ore confermate</button>
     </div>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.07</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.09</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2731,30 +2731,27 @@ async function plGeneraPDF(){
   const firmaImg=getFirmaImg();
   const now=new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
 
-  // Costruisci righe elenco beni
-  let righe='';
-  let n=0;
-  // Raggruppa per categoria con tutte le righe
+  // Costruisci righe elenco beni — due colonne affiancate
+  const articoliFlat=[];
   plArticoli.forEach(a=>{
-    for(let q=0;q<(a.qtyPrep||1);q++){
-      n++;
-      righe+=`<tr>
-        <td style="padding:5px 8px;font-size:12px;border:1px solid #ccc">${n}</td>
-        <td style="padding:5px 8px;font-size:12px;border:1px solid #ccc">${a.nome}</td>
-        <td style="padding:5px 8px;font-size:12px;border:1px solid #ccc">${a.marca||'—'}</td>
-        <td style="padding:5px 8px;font-size:12px;border:1px solid #ccc;font-family:monospace">${a.ser||'—'}</td>
-        <td style="padding:5px 8px;font-size:12px;border:1px solid #ccc;text-align:center">${a.cat||'—'}</td>
-      </tr>`;
-    }
+    for(let q=0;q<(a.qtyPrep||1);q++) articoliFlat.push(a);
   });
-  // Righe vuote per raggiungere minimo 12
-  for(let i=n;i<12;i++){
-    righe+=`<tr>
-      <td style="padding:5px 8px;border:1px solid #ccc;height:22px">&nbsp;</td>
-      <td style="padding:5px 8px;border:1px solid #ccc"></td>
-      <td style="padding:5px 8px;border:1px solid #ccc"></td>
-      <td style="padding:5px 8px;border:1px solid #ccc"></td>
-      <td style="padding:5px 8px;border:1px solid #ccc"></td>
+  // Dividi in due colonne
+  const metà=Math.ceil(articoliFlat.length/2);
+  const colSx=articoliFlat.slice(0,metà);
+  const colDx=articoliFlat.slice(metà);
+  // Righe minime 14 per colonna
+  const minRighe=Math.max(14,metà);
+  let righe='';
+  for(let i=0;i<minRighe;i++){
+    const sx=colSx[i];const dx=colDx[i];
+    const n1=i+1;const n2=metà+i+1;
+    const bg=i%2===0?'#fff':'#f9f9f9';
+    righe+=`<tr style="background:${bg}">
+      <td style="padding:3px 5px;border:1px solid #ddd;width:22px;text-align:center;font-size:9px;color:#888">${sx?n1:''}</td>
+      <td style="padding:3px 6px;border:1px solid #ddd;font-size:9.5px">${sx?sx.nome:''}</td>
+      <td style="padding:3px 5px;border-left:2px solid #2c3e7a;border-right:1px solid #ddd;border-top:1px solid #ddd;border-bottom:1px solid #ddd;width:22px;text-align:center;font-size:9px;color:#888">${dx?n2:''}</td>
+      <td style="padding:3px 6px;border:1px solid #ddd;font-size:9.5px">${dx?dx.nome:''}</td>
     </tr>`;
   }
 
@@ -2798,7 +2795,6 @@ async function plGeneraPDF(){
         ${logoSrc?`<img src="${logoSrc}" style="height:36px;width:auto;display:block">`:`<div style="font-size:20px;font-weight:900;color:#2c3e7a;letter-spacing:2px">MMG</div>`}
       </div>
       <div style="text-align:right">
-        <div style="font-size:9px;font-weight:600;color:#2c3e7a">Multimedia Meeting Group S.n.c.</div>
         <div class="ragione" style="margin:0">Via Frusa, 49 – 50131 Firenze<br>P.I. 04996950483 – C.I.I.A.A. n. 53852 R.E.A. 507030</div>
       </div>
     </div>
@@ -2842,18 +2838,17 @@ async function plGeneraPDF(){
     <table>
       <thead>
         <tr>
-          <th style="width:40px">N°</th>
+          <th style="width:24px;text-align:center">N°</th>
           <th>Descrizione articolo</th>
-          <th style="width:120px">Marca</th>
-          <th style="width:130px">N° Seriale / Cod.</th>
-          <th style="width:90px">Categoria</th>
+          <th style="width:24px;text-align:center;background:#1e2d5a">N°</th>
+          <th>Descrizione articolo</th>
         </tr>
       </thead>
       <tbody>${righe}</tbody>
     </table>
 
-    <div style="text-align:right;font-size:11px;color:#555;margin-bottom:12px">
-      Totale articoli: <strong>${n}</strong>
+    <div style="text-align:right;font-size:9px;color:#555;margin-bottom:8px">
+      Totale articoli: <strong>${articoliFlat.length}</strong>
       ${noteVal?` &nbsp;·&nbsp; Note: <em>${noteVal}</em>`:''}
     </div>
 
