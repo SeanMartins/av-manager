@@ -634,6 +634,43 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- TIMBRATURA RETROATTIVA DA MIEI ORE -->
+<div class="mol" id="mTimbRiga" onclick="if(event.target===this)closeMod('mTimbRiga')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:2px" id="timbRigaData">—</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:14px" id="timbRigaStato">—</div>
+    <div class="ig"><label class="il">Luogo</label>
+      <select id="timbRigaLuogo">
+        <option>🏢 In sede</option>
+        <option>🔧 Assistenza</option>
+        <option>✈️ Trasferta</option>
+        <option>🃏 Jolly</option>
+        <option>🤒 Malattia</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">🟢 Entrata</label><input type="time" id="timbRigaIn"></div>
+      <div class="ig"><label class="il">🔴 Uscita</label><input type="time" id="timbRigaOut"></div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <label class="il" style="margin:0">Pause</label>
+        <button class="btn" style="padding:4px 10px;font-size:12px" onclick="timbRigaAddPausa()">+ Pausa</button>
+      </div>
+      <div id="timbRigaPauseList"></div>
+    </div>
+    <div class="ig"><label class="il">Nota</label>
+      <input type="text" id="timbRigaNota" placeholder="Es: dimenticato di timbrare">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button id="timbRigaDeleteBtn" class="btn" style="display:none;color:var(--rd)" onclick="deleteTimbRiga()">🗑 Elimina</button>
+      <button class="btn btn-f" onclick="closeMod('mTimbRiga')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="saveTimbRiga()">Salva</button>
+    </div>
+  </div>
+</div>
+
 <!-- NOTE MANCANTI -->
 <div class="mol" id="mNoteMancanti" onclick="if(event.target===this)closeMod('mNoteMancanti')">
   <div class="msh">
@@ -830,7 +867,7 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-f" style="width:100%;color:var(--gn)" onclick="openExportConfermato()">✅ Esporta ore confermate</button>
     </div>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.11</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.12</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1430,6 +1467,10 @@ function startListeners(){
     .onSnapshot(snap=>{
       cachePresenze=snap.docs.map(d=>({id:d.id,...d.data()}));
       renderPresenze();
+      // Aggiorna "Le mie ore" in tempo reale
+      if($('mieOreTable')&&$('p-presenze')&&$('p-presenze').classList.contains('on')){
+        renderMieOre();
+      }
     });
   // Forum — realtime con notifiche
   DB.collection('forum').orderBy('createdAt','desc').onSnapshot(snap=>{
@@ -4585,13 +4626,15 @@ async function renderMieOre(){
     const rowBg=isWeekend?'background:rgba(255,255,255,.02)':pList.length>0?'':'background:rgba(239,68,68,.03)';
     const okIcon=confGiorno?'<span style="color:var(--gn);font-size:14px">✅</span>':'';
 
-    rows+=`<tr style="${rowBg}">
+    const presenzaId=pList.length>0?pList[0].id:'';
+    const dataISO=`${anno}-${pad(mese+1)}-${pad(g)}`;
+    rows+=`<tr style="${rowBg};cursor:pointer" onclick="apriTimbRiga('${dataISO}','${presenzaId}')" title="Clicca per aggiungere/modificare">
       <td style="padding:7px 8px;font-size:12px;color:${isWeekend?'var(--tx3)':'var(--tx)'}">
         <div style="font-weight:500">${pad(g)} ${gg}</div>
       </td>
       <td style="padding:7px 4px;font-size:11px;color:var(--tx2)">${luogo==='—'?'':luogo.replace(/[🏢🔧✈️🃏🤒]/u,'').trim()}</td>
-      <td style="padding:7px 4px;font-size:11px;text-align:center">${entrataStr}</td>
-      <td style="padding:7px 4px;font-size:11px;text-align:center">${uscitaStr}</td>
+      <td style="padding:7px 4px;font-size:11px;text-align:center;color:${entrataStr==='—'?'var(--tx3)':'var(--gn)'}">${entrataStr}</td>
+      <td style="padding:7px 4px;font-size:11px;text-align:center;color:${uscitaStr==='—'?'var(--tx3)':'var(--rd)'}">${uscitaStr}</td>
       <td style="padding:7px 8px;font-size:12px;font-weight:600;text-align:right;color:${nette>0?'var(--gn)':'var(--tx3)'}">${netteStr}</td>
       <td style="padding:7px 4px;font-size:12px;text-align:right;color:var(--am)">${straordMs>60000?'+'+fmtH(straordMs):''}</td>
       <td style="padding:7px 8px;text-align:center">${okIcon}</td>
@@ -4721,7 +4764,111 @@ async function openExportConfermato(){
   a.click();URL.revokeObjectURL(url);
   toast('✅ CSV esportato!');
 }
-// ── NOTE MANCANTI ──
+// ── TIMBRATURA RETROATTIVA DA MIEI ORE ──
+let timbRigaDataISO=null, timbRigaPresenzaId=null, timbRigaPause=[];
+
+async function apriTimbRiga(dataISO, presenzaId){
+  timbRigaDataISO=dataISO;
+  timbRigaPresenzaId=presenzaId||null;
+  timbRigaPause=[];
+
+  const d=new Date(dataISO);
+  const gg=['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+  $('timbRigaData').textContent=gg[d.getDay()]+' '+d.toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'});
+
+  const pad=n=>String(n).padStart(2,'0');
+  const fmtT=iso=>{if(!iso)return'';const d=new Date(iso);return pad(d.getHours())+':'+pad(d.getMinutes());};
+
+  if(presenzaId){
+    // Carica dati esistenti
+    try{
+      const doc=await DB.collection('presenze').doc(presenzaId).get();
+      if(doc.exists){
+        const p=doc.data();
+        $('timbRigaStato').textContent='✏️ Modifica timbratura esistente';
+        $('timbRigaLuogo').value=p.luogo||'🏢 In sede';
+        $('timbRigaIn').value=fmtT(p.entrata);
+        $('timbRigaOut').value=fmtT(p.uscita);
+        $('timbRigaNota').value=p.notaModifica||'';
+        timbRigaPause=[...(p.pause||[])];
+        $('timbRigaDeleteBtn').style.display='block';
+      }
+    }catch(e){console.warn(e);}
+  } else {
+    // Nuova timbratura
+    $('timbRigaStato').textContent='➕ Aggiungi timbratura per questo giorno';
+    $('timbRigaLuogo').value='🏢 In sede';
+    $('timbRigaIn').value='09:00';
+    $('timbRigaOut').value='18:00';
+    $('timbRigaNota').value='';
+    $('timbRigaDeleteBtn').style.display='none';
+  }
+  renderTimbRigaPause();
+  openMod('mTimbRiga');
+}
+
+function timbRigaAddPausa(){
+  timbRigaPause.push({inizio:'',fine:''});
+  renderTimbRigaPause();
+}
+
+function renderTimbRigaPause(){
+  const el=$('timbRigaPauseList');if(!el)return;
+  if(!timbRigaPause.length){el.innerHTML='<div style="font-size:12px;color:var(--tx3)">Nessuna pausa</div>';return;}
+  const pad=n=>String(n).padStart(2,'0');
+  const fmtT=iso=>{if(!iso)return'';const d=new Date(iso);return pad(d.getHours())+':'+pad(d.getMinutes());};
+  el.innerHTML=timbRigaPause.map((p,i)=>
+    '<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:center">'+
+      '<div><label class="il">Inizio</label><input type="time" value="'+(p.inizio?fmtT(p.inizio):'')+'" onchange="timbRigaPause['+i+'].inizioTime=this.value" style="margin:0"></div>'+
+      '<div><label class="il">Fine</label><input type="time" value="'+(p.fine?fmtT(p.fine):'')+'" onchange="timbRigaPause['+i+'].fineTime=this.value" style="margin:0"></div>'+
+      '<button onclick="timbRigaPause.splice('+i+',1);renderTimbRigaPause()" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--rdb);background:var(--rdb);color:var(--rd);cursor:pointer;margin-top:16px">✕</button>'+
+    '</div>'
+  ).join('');
+}
+
+async function saveTimbRiga(){
+  if(!timbRigaDataISO)return;
+  const entrataTime=$('timbRigaIn').value;
+  if(!entrataTime){toast('Inserisci l\'orario di entrata','r');return;}
+
+  const mkISO=(date,time)=>time?new Date(date+'T'+time+':00').toISOString():null;
+  const entrata=mkISO(timbRigaDataISO,entrataTime);
+  const uscita=mkISO(timbRigaDataISO,$('timbRigaOut').value);
+  const pause=timbRigaPause.map(p=>{
+    const ini=p.inizioTime||(p.inizio?new Date(p.inizio).toTimeString().slice(0,5):'');
+    const fin=p.fineTime||(p.fine?new Date(p.fine).toTimeString().slice(0,5):'');
+    return{inizio:ini?mkISO(timbRigaDataISO,ini):null,fine:fin?mkISO(timbRigaDataISO,fin):null};
+  }).filter(p=>p.inizio);
+
+  const doc={
+    uid:USER.id,nome:USER.nome+' '+USER.cognome,
+    entrata,uscita,luogo:$('timbRigaLuogo').value,
+    pause,
+    notaModifica:$('timbRigaNota').value||'Aggiunta manuale',
+    modificatoDa:USER.nome+' '+USER.cognome,
+    modificatoIl:new Date().toISOString()
+  };
+
+  try{
+    if(timbRigaPresenzaId){
+      await DB.collection('presenze').doc(timbRigaPresenzaId).update(doc);
+      toast('✓ Timbratura aggiornata');
+    } else {
+      await DB.collection('presenze').add(doc);
+      toast('✓ Timbratura aggiunta');
+    }
+    closeMod('mTimbRiga');
+    setTimeout(()=>renderMieOre(),500);
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function deleteTimbRiga(){
+  if(!timbRigaPresenzaId||!confirm('Eliminare questa timbratura?'))return;
+  await DB.collection('presenze').doc(timbRigaPresenzaId).delete();
+  closeMod('mTimbRiga');
+  setTimeout(()=>renderMieOre(),500);
+  toast('✓ Timbratura eliminata');
+}
 let nmLavoroId=null;
 
 function apriNoteMancanti(lavoroId, nomeEnc){
