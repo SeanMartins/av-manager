@@ -193,6 +193,16 @@ textarea{resize:vertical;min-height:80px}
         <input type="password" id="rPwd" placeholder="Scegli una password sicura">
         <div style="font-size:11px;color:var(--tx3);margin-top:4px">Richiesta ad ogni accesso come Responsabile</div>
       </div>
+      <!-- PIN per tutti -->
+      <div class="ig">
+        <label class="il">🔑 PIN personale (6 cifre)</label>
+        <input type="password" id="rPin" placeholder="Es: 123456" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+        <div style="font-size:11px;color:var(--tx3);margin-top:4px">Il tuo PIN personale per accedere all'app</div>
+      </div>
+      <div class="ig">
+        <label class="il">Conferma PIN</label>
+        <input type="password" id="rPinConf" placeholder="Ripeti il PIN" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+      </div>
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
         <div id="privBox" class="cbox" onclick="togglePriv()"></div>
         <span style="font-size:11px;color:var(--tx2);line-height:1.5;cursor:pointer" onclick="togglePriv()">Acconsento al trattamento dei dati personali (GDPR).</span>
@@ -201,6 +211,11 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <div id="formLogin" style="display:none">
       <div class="ig"><label class="il">La tua email</label><input type="email" id="loginEmail" placeholder="mario@azienda.it" oninput="checkLoginPwd()"></div>
+      <!-- PIN per tutti -->
+      <div class="ig">
+        <label class="il">🔑 PIN personale</label>
+        <input type="password" id="loginPin" placeholder="Il tuo PIN a 6 cifre" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+      </div>
       <!-- Toggle Responsabile -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;background:var(--bg2);border-radius:var(--rs);padding:11px 12px;cursor:pointer" onclick="toggleLoginResp()">
         <div id="loginRespBox" class="cbox"></div>
@@ -885,8 +900,9 @@ textarea{resize:vertical;min-height:80px}
     <div id="btnExportConfermato" style="display:none;margin-top:8px">
       <button class="btn btn-f" style="width:100%;color:var(--gn)" onclick="openExportConfermato()">✅ Esporta ore confermate</button>
     </div>
+    <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.15</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.16</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1330,6 +1346,12 @@ async function doReg(){
   const nome=val('rNome'),cognome=val('rCognome'),email=val('rEmail'),tel=val('rTel');
   if(!nome||!cognome||!email){toast('Compila nome, cognome ed email','r');return;}
   if(!privOk){toast('Accetta la privacy policy','r');return;}
+  // Valida PIN per tutti
+  const pin=val('rPin');const pinConf=val('rPinConf');
+  if(!pin||pin.length<4){toast('Inserisci un PIN di almeno 4 cifre','r');return;}
+  if(!/^\d+$/.test(pin)){toast('Il PIN deve contenere solo numeri','r');return;}
+  if(pin!==pinConf){toast('I PIN non coincidono','r');return;}
+  // Valida password Responsabile
   if(selRole==='Responsabile'){
     const pwd=val('rPwd');
     if(!pwd||pwd.length<6){toast('Inserisci una password di almeno 6 caratteri','r');return;}
@@ -1339,6 +1361,11 @@ async function doReg(){
     const snap=await DB.collection('team').where('email','==',email.toLowerCase()).get();
     if(!snap.empty){toast('Email già registrata — usa Accedi','a');btn.textContent='Inizia →';btn.disabled=false;return;}
     const uid='u'+Date.now();
+    // Hash PIN
+    const pinBuf=new TextEncoder().encode(pin+'mmg_pin_'+uid);
+    const pinHashBuf=await crypto.subtle.digest('SHA-256',pinBuf);
+    const pinHash=Array.from(new Uint8Array(pinHashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    // Hash password Responsabile
     let pwdHash='';
     if(selRole==='Responsabile'){
       const pwd=val('rPwd');
@@ -1346,12 +1373,10 @@ async function doReg(){
       const hashBuf=await crypto.subtle.digest('SHA-256',msgBuf);
       pwdHash=Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
     }
-    const m={id:uid,nome,cognome,email:email.toLowerCase(),tel:tel||'',ruolo:selRole,pwdHash,
-      approvato:false, // in attesa di approvazione
-      createdAt:new Date().toISOString()
+    const m={id:uid,nome,cognome,email:email.toLowerCase(),tel:tel||'',ruolo:selRole,pwdHash,pinHash,
+      approvato:false,createdAt:new Date().toISOString()
     };
     await DB.collection('team').doc(uid).set(m);
-    // Mostra schermata attesa approvazione
     mostraAttesaApprovazione(nome);
   }catch(e){alert('Errore: '+e.message);}
   btn.textContent='Inizia →';btn.disabled=false;
@@ -1400,6 +1425,8 @@ async function checkLoginPwd(){
 async function doLogin(){
   const email=val('loginEmail');
   if(!email){toast('Inserisci la tua email','r');return;}
+  const pin=val('loginPin');
+  if(!pin){toast('Inserisci il tuo PIN','r');return;}
   const btn=$('loginBtn');btn.textContent='Accesso...';btn.disabled=true;
   try{
     const snap=await DB.collection('team').where('email','==',email.toLowerCase()).get();
@@ -1412,7 +1439,15 @@ async function doLogin(){
       btn.textContent='Accedi →';btn.disabled=false;return;
     }
 
-    // Verifica password se Responsabile
+    // Verifica PIN
+    if(userData.pinHash){
+      const pinBuf=new TextEncoder().encode(pin+'mmg_pin_'+userData.id);
+      const pinHashBuf=await crypto.subtle.digest('SHA-256',pinBuf);
+      const pinHash=Array.from(new Uint8Array(pinHashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      if(pinHash!==userData.pinHash){toast('PIN errato','r');btn.textContent='Accedi →';btn.disabled=false;return;}
+    }
+
+    // Verifica password Responsabile
     const isRespToggle=$('loginRespBox')?.classList.contains('on');
     if(userData.ruolo==='Responsabile'||isRespToggle){
       if(userData.ruolo!=='Responsabile'){toast('Questo account non è un Responsabile','r');btn.textContent='Accedi →';btn.disabled=false;return;}
@@ -1424,11 +1459,10 @@ async function doLogin(){
       if(hash!==userData.pwdHash){toast('Password errata','r');btn.textContent='Accedi →';btn.disabled=false;return;}
     }
 
-    // Sessione univoca — genera token e salva su Firebase
+    // Sessione univoca
     const sessionToken=Date.now().toString(36)+Math.random().toString(36).slice(2);
     await DB.collection('team').doc(userData.id).update({
-      sessionToken,
-      sessionAt:new Date().toISOString(),
+      sessionToken,sessionAt:new Date().toISOString(),
       sessionDevice:navigator.userAgent.slice(0,100)
     });
     userData.sessionToken=sessionToken;
@@ -1438,7 +1472,31 @@ async function doLogin(){
   }catch(e){alert('Errore: '+e.message);}
   btn.textContent='Accedi →';btn.disabled=false;
 }
-function doLogout(){localStorage.removeItem('av_user');localStorage.removeItem('av_punch');location.reload();}
+async function cambiaPin(){
+  closeMod('mProfile');
+  const vecchio=prompt('Inserisci il PIN attuale:');
+  if(!vecchio)return;
+  // Verifica PIN attuale
+  const pinBufOld=new TextEncoder().encode(vecchio+'mmg_pin_'+USER.id);
+  const pinHashOld=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',pinBufOld))).map(b=>b.toString(16).padStart(2,'0')).join('');
+  if(pinHashOld!==USER.pinHash){toast('PIN attuale errato','r');return;}
+  const nuovo=prompt('Nuovo PIN (4-6 cifre):');
+  if(!nuovo||!/^\d{4,6}$/.test(nuovo)){toast('PIN non valido','r');return;}
+  const conf=prompt('Conferma nuovo PIN:');
+  if(nuovo!==conf){toast('I PIN non coincidono','r');return;}
+  const pinBuf=new TextEncoder().encode(nuovo+'mmg_pin_'+USER.id);
+  const pinHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',pinBuf))).map(b=>b.toString(16).padStart(2,'0')).join('');
+  await DB.collection('team').doc(USER.id).update({pinHash});
+  USER.pinHash=pinHash;
+  localStorage.setItem('av_user',JSON.stringify(USER));
+  toast('✅ PIN aggiornato!');
+}
+
+function doLogout(){
+  localStorage.removeItem('av_user');
+  localStorage.removeItem('av_punch');
+  location.reload();
+}
 
 // ── START APP ──
 function startApp(){
@@ -4077,9 +4135,12 @@ async function caricaUtentiPendenti(){
       h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--b)">'+
         '<div>'+
           '<div style="font-size:13px;font-weight:500">'+u.nome+' '+u.cognome+'</div>'+
-          '<div style="font-size:11px;color:var(--tx2)">'+u.ruolo+(u.sessionAt?' · Ultimo accesso: '+new Date(u.sessionAt).toLocaleDateString('it-IT'):'')+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2)">'+u.ruolo+(u.sessionAt?' · Accesso: '+new Date(u.sessionAt).toLocaleDateString('it-IT'):'')+(u.pinHash?' · 🔑 PIN impostato':' · ⚠️ Nessun PIN')+'</div>'+
         '</div>'+
-        '<button onclick="revocaSessione(\''+u.id+'\')" class="btn" style="padding:5px 8px;font-size:11px;color:var(--am)">🔒 Revoca</button>'+
+        '<div style="display:flex;gap:5px">'+
+          '<button onclick="resetPin(\''+u.id+'\',\''+u.nome+'\')" class="btn" style="padding:5px 8px;font-size:11px;color:var(--am)">🔑 PIN</button>'+
+          '<button onclick="revocaSessione(\''+u.id+'\')" class="btn" style="padding:5px 8px;font-size:11px;color:var(--rd)">🔒</button>'+
+        '</div>'+
       '</div>';
     });
   }
@@ -4097,6 +4158,18 @@ async function rifiutaUtente(uid,nome){
   if(!confirm('Eliminare la richiesta di '+nome+'?'))return;
   await DB.collection('team').doc(uid).delete();
   toast('✓ Richiesta eliminata');
+  caricaUtentiPendenti();
+}
+
+async function resetPin(uid, nome){
+  const nuovoPin=prompt('Nuovo PIN per '+nome+' (4-6 cifre numeriche):');
+  if(!nuovoPin)return;
+  if(!/^\d{4,6}$/.test(nuovoPin)){toast('PIN non valido — inserisci 4-6 cifre','r');return;}
+  const pinBuf=new TextEncoder().encode(nuovoPin+'mmg_pin_'+uid);
+  const pinHashBuf=await crypto.subtle.digest('SHA-256',pinBuf);
+  const pinHash=Array.from(new Uint8Array(pinHashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  await DB.collection('team').doc(uid).update({pinHash});
+  toast('✓ PIN di '+nome+' aggiornato');
   caricaUtentiPendenti();
 }
 
