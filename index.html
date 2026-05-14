@@ -634,6 +634,23 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- NOTE MANCANTI -->
+<div class="mol" id="mNoteMancanti" onclick="if(event.target===this)closeMod('mNoteMancanti')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:2px">📝 Note mancanti</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:14px" id="nmLavoro">—</div>
+    <!-- Aggiungi nota -->
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <input type="text" id="nmInput" placeholder="Es: manca PC portatile, cavo HDMI..." style="flex:1;margin:0" onkeydown="if(event.key==='Enter')aggiungiNota()">
+      <button class="btn btn-p" style="padding:10px 14px;flex-shrink:0" onclick="aggiungiNota()">+</button>
+    </div>
+    <!-- Lista note -->
+    <div id="nmList"><div class="empty">Nessuna nota — tutto presente!</div></div>
+    <button class="btn btn-f" style="margin-top:12px" onclick="closeMod('mNoteMancanti')">Chiudi</button>
+  </div>
+</div>
+
 <!-- GESTIONE TIMBRATURE -->
 <div class="mol" id="mGestTimb" onclick="if(event.target===this)closeMod('mGestTimb')">
   <div class="msh">
@@ -813,7 +830,7 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-f" style="width:100%;color:var(--gn)" onclick="openExportConfermato()">✅ Esporta ore confermate</button>
     </div>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.05</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.06</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -3405,7 +3422,13 @@ function dichCardHtml(d){
         '<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">👤 Tecnico</div>'+
           '<div style="font-size:12px;font-weight:500">'+(d.tecnico||'—')+(isRient&&d.rientroTecnico&&d.rientroTecnico!==d.tecnico?' · Rientro: '+d.rientroTecnico:'')+'</div></div>'+
       '</div>'+
-      '<button onclick="dichOpenDoc(\''+d.id+'\')" class="btn btn-p btn-f" style="font-size:13px;padding:10px">'+
+      // Note mancanti (solo per preparazioni non ancora rientrate)
+      ((!isRient)?(
+        '<button onclick="apriNoteMancanti(\''+d.id+'\',\''+encodeURIComponent(d.nome)+'\')" class="btn btn-f" style="font-size:13px;padding:10px;margin-top:8px;width:100%;border-color:'+(d.noteMancanti&&d.noteMancanti.some(n=>!n.completata)?'var(--am)':'var(--b)')+';color:'+(d.noteMancanti&&d.noteMancanti.some(n=>!n.completata)?'var(--am)':'var(--tx2)')+'">'+
+          '📝 Note mancanti'+(d.noteMancanti&&d.noteMancanti.some(n=>!n.completata)?' ('+d.noteMancanti.filter(n=>!n.completata).length+' aperte)':'')+
+        '</button>'
+      ):'')+
+      '<button onclick="dichOpenDoc(\''+d.id+'\')" class="btn btn-p btn-f" style="font-size:13px;padding:10px;margin-top:8px">'+
         '📄 Apri PDF '+(isRient?'rientro':'preparazione')+
       '</button>'+
     '</div>'+
@@ -4697,6 +4720,90 @@ async function openExportConfermato(){
   a.click();URL.revokeObjectURL(url);
   toast('✅ CSV esportato!');
 }
+// ── NOTE MANCANTI ──
+let nmLavoroId=null;
+
+function apriNoteMancanti(lavoroId, nomeEnc){
+  nmLavoroId=lavoroId;
+  $('nmLavoro').textContent=decodeURIComponent(nomeEnc);
+  $('nmInput').value='';
+  renderNoteMancanti();
+  openMod('mNoteMancanti');
+}
+
+function renderNoteMancanti(){
+  const el=$('nmList');if(!el||!nmLavoroId)return;
+  const lavoro=cacheDich.find(d=>d.id===nmLavoroId);
+  const note=(lavoro?.noteMancanti||[]);
+  if(!note.length){el.innerHTML='<div class="empty">Nessuna nota — tutto presente! ✅</div>';return;}
+  const aperte=note.filter(n=>!n.completata);
+  const chiuse=note.filter(n=>n.completata);
+  let h='';
+  if(aperte.length){
+    h+='<div style="font-size:11px;font-weight:600;color:var(--am);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">⚠️ Mancanti ('+aperte.length+')</div>';
+    aperte.forEach(n=>{
+      const idx=note.indexOf(n);
+      h+='<div style="display:flex;align-items:center;gap:10px;padding:10px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.3);border-radius:var(--rs);margin-bottom:6px">'+
+        '<div style="flex:1">'+
+          '<div style="font-size:13px;font-weight:500">'+n.testo+'</div>'+
+          '<div style="font-size:11px;color:var(--tx3);margin-top:2px">📅 '+new Date(n.creatoIl).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})+'</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px;flex-shrink:0">'+
+          '<button onclick="segnaAggiunto('+idx+')" style="background:rgba(34,197,94,.15);color:var(--gn);border:1px solid var(--gn);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:var(--font)">✅ Aggiunto</button>'+
+          '<button onclick="eliminaNota('+idx+')" style="background:var(--rdb);color:var(--rd);border:1px solid var(--rdb);border-radius:8px;padding:6px 8px;font-size:12px;cursor:pointer">✕</button>'+
+        '</div>'+
+      '</div>';
+    });
+  }
+  if(chiuse.length){
+    h+='<div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin:12px 0 8px">✅ Aggiunti ('+chiuse.length+')</div>';
+    chiuse.forEach(n=>{
+      const idx=note.indexOf(n);
+      h+='<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--b);border-radius:var(--rs);margin-bottom:6px;opacity:.6">'+
+        '<div style="flex:1">'+
+          '<div style="font-size:12px;text-decoration:line-through;color:var(--tx2)">'+n.testo+'</div>'+
+          '<div style="font-size:11px;color:var(--tx3)">✅ '+( n.aggiuntoDA||'—')+' · '+new Date(n.aggiuntoIl||n.creatoIl).toLocaleDateString('it-IT',{day:'2-digit',month:'short'})+'</div>'+
+        '</div>'+
+        '<button onclick="eliminaNota('+idx+')" style="background:var(--rdb);color:var(--rd);border:1px solid var(--rdb);border-radius:8px;padding:6px 8px;font-size:12px;cursor:pointer">✕</button>'+
+      '</div>';
+    });
+  }
+  el.innerHTML=h;
+}
+
+async function aggiungiNota(){
+  const testo=($('nmInput')?.value||'').trim();
+  if(!testo||!nmLavoroId){toast('Scrivi la nota','r');return;}
+  const lavoro=cacheDich.find(d=>d.id===nmLavoroId);
+  const note=[...(lavoro?.noteMancanti||[])];
+  note.push({testo,completata:false,creatoIl:new Date().toISOString(),creatoDa:USER.nome+' '+USER.cognome});
+  await DB.collection('lavori').doc(nmLavoroId).update({noteMancanti:note});
+  $('nmInput').value='';
+  if(lavoro)lavoro.noteMancanti=note;
+  renderNoteMancanti();renderDich();
+  toast('✓ Nota aggiunta');
+}
+
+async function segnaAggiunto(idx){
+  const lavoro=cacheDich.find(d=>d.id===nmLavoroId);if(!lavoro)return;
+  const note=[...(lavoro.noteMancanti||[])];
+  note[idx]={...note[idx],completata:true,aggiuntoDA:USER.nome+' '+USER.cognome,aggiuntoIl:new Date().toISOString()};
+  await DB.collection('lavori').doc(nmLavoroId).update({noteMancanti:note});
+  lavoro.noteMancanti=note;
+  renderNoteMancanti();renderDich();
+  toast('✅ Segnato come aggiunto!');
+}
+
+async function eliminaNota(idx){
+  const lavoro=cacheDich.find(d=>d.id===nmLavoroId);if(!lavoro)return;
+  const note=[...(lavoro.noteMancanti||[])];
+  note.splice(idx,1);
+  await DB.collection('lavori').doc(nmLavoroId).update({noteMancanti:note});
+  lavoro.noteMancanti=note;
+  renderNoteMancanti();renderDich();
+}
+
+// ── GESTIONE TIMBRATURE MANUALE ──
 let gestTimbEditId=null, atPause=[];
 
 function apriGestTimb(){
