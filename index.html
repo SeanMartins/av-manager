@@ -37,7 +37,7 @@
 html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--font);overflow:hidden}
 ::-webkit-scrollbar{width:0}
 #app{display:none;flex-direction:column;height:100vh;height:100dvh}
-#topbar{padding:calc(var(--st) + 14px) 18px 12px;display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-bottom:1px solid var(--b);flex-shrink:0}
+#topbar{padding:calc(var(--st) + 14px) 18px 12px;display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-bottom:1px solid var(--b);flex-shrink:0;gap:8px;min-width:0}
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .page{display:none;padding:16px 16px calc(80px + var(--sb))}
 .page.on{display:block}
@@ -234,11 +234,11 @@ textarea{resize:vertical;min-height:80px}
 <!-- APP -->
 <div id="app">
   <div id="topbar">
-    <div style="display:flex;align-items:center;gap:10px">
-      <img src="logo.png" alt="MMG" style="height:32px;width:auto">
-      <div style="font-size:13px;color:var(--tx2)" id="ptitle">Presenze</div>
+    <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
+      <img src="logo.png" alt="MMG" style="height:28px;width:auto;flex-shrink:0">
+      <div style="font-size:13px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="ptitle">Presenze</div>
     </div>
-    <div class="avbtn" id="avbtn" onclick="openMod('mProfile')">?</div>
+    <div class="avbtn" id="avbtn" onclick="openMod('mProfile')" style="flex-shrink:0">?</div>
   </div>
   <div id="content">
 
@@ -902,7 +902,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.16</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.17</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
