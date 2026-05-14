@@ -218,11 +218,11 @@ textarea{resize:vertical;min-height:80px}
           <span class="chip on" onclick="pickChip(this,'luogo')">🏢 In sede</span>
           <span class="chip" onclick="pickChip(this,'luogo')">🔧 Assistenza</span>
           <span class="chip" onclick="pickChip(this,'luogo')">✈️ Trasferta</span>
-          <span class="chip" onclick="pickChip(this,'luogo')">🃏 Jolly</span>
           <span class="chip" onclick="pickChip(this,'luogo')">🤒 Malattia</span>
+          <span class="chip" onclick="pickChip(this,'luogo');mostraLuogoCustom()">📍 Altro</span>
         </div>
         <div id="luogoExtra" style="display:none;margin-top:8px">
-          <input type="text" id="luogoCustom" placeholder="Specifica il luogo...">
+          <input type="text" id="luogoCustom" placeholder="Scrivi il luogo..." oninput="aggiornaLuogoCustom()">
         </div>
       </div>
       <!-- Bottoni timbratura -->
@@ -645,7 +645,7 @@ textarea{resize:vertical;min-height:80px}
         <option>🏢 In sede</option>
         <option>🔧 Assistenza</option>
         <option>✈️ Trasferta</option>
-        <option>🃏 Jolly</option>
+        <option>📍 Altro (specifica)</option>
         <option>🤒 Malattia</option>
       </select>
     </div>
@@ -730,7 +730,7 @@ textarea{resize:vertical;min-height:80px}
         <option>🏢 In sede</option>
         <option>🔧 Assistenza</option>
         <option>✈️ Trasferta</option>
-        <option>🃏 Jolly</option>
+        <option>📍 Altro (specifica)</option>
         <option>🤒 Malattia</option>
       </select>
     </div>
@@ -824,7 +824,7 @@ textarea{resize:vertical;min-height:80px}
         <option value="lavoro">💼 Lavoro</option>
         <option value="assistenza">🔧 Assistenza</option>
         <option value="trasferta">✈️ Trasferta</option>
-        <option value="jolly">🃏 Jolly</option>
+        <option value="altro">📍 Altro</option>
         <option value="riposo">😴 Riposo</option>
         <option value="ferie">🏖 Ferie</option>
         <option value="formazione">📚 Formazione</option>
@@ -867,7 +867,7 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-f" style="width:100%;color:var(--gn)" onclick="openExportConfermato()">✅ Esporta ore confermate</button>
     </div>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.12</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.13</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1287,8 +1287,21 @@ function pickChip(el,group){
   if(group==='luogo'){
     selLuogo=el.textContent.trim();
     const isExtra=selLuogo.includes('Assistenza')||selLuogo.includes('Trasferta');
-    $('luogoExtra').style.display=isExtra?'block':'none';
+    const isAltro=selLuogo.includes('Altro');
+    $('luogoExtra').style.display=(isExtra||isAltro)?'block':'none';
+    if(!isAltro) $('luogoCustom').value='';
+    if(isAltro) setTimeout(()=>$('luogoCustom').focus(),100);
   }
+}
+
+function mostraLuogoCustom(){
+  const ex=$('luogoExtra');if(ex)ex.style.display='block';
+  setTimeout(()=>$('luogoCustom')?.focus(),100);
+}
+
+function aggiornaLuogoCustom(){
+  const v=($('luogoCustom')?.value||'').trim();
+  if(v) selLuogo='📍 '+v;
 }
 function togglePriv(){privOk=!privOk;$('privBox').classList.toggle('on',privOk);}
 function clearNotif(){$('notifDot').style.display='none';}
@@ -1500,7 +1513,8 @@ async function punch(){
     punchedIn=true;punchStart=Date.now();inPausa=false;pause=[];
     btn.className='pbtn pout';btn.textContent='⏹ Timbra uscita';
     const extra=val('luogoCustom');
-    const luogo=extra?selLuogo+' — '+extra:selLuogo;
+    const luogo=selLuogo.includes('Altro')?(extra?'📍 '+extra:'📍 Luogo personalizzato'):
+                (extra&&(selLuogo.includes('Assistenza')||selLuogo.includes('Trasferta'))?selLuogo+' — '+extra:selLuogo);
     const isSpeciale=luogo.includes('Malattia');
     pauseBtn.style.display=isSpeciale?'none':'block';
     stat.innerHTML='Entrata timbrata alle '+t+' <span class="lbdg">'+luogo+'</span>';
