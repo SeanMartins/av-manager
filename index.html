@@ -912,7 +912,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.08</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.09</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5491,22 +5491,25 @@ let cacheConv={}, chatAltroUid=null, chatUnsub=null;
 function chatConvId(a,b){ return [a,b].sort().join('_'); }
 
 function startChatListener(){
+  let chatFirstLoad=true;
   DB.collection('chat').where('partecipanti','array-contains',USER.id)
     .orderBy('lastAt','desc').onSnapshot(snap=>{
       cacheConv={};
       snap.docs.forEach(d=>{ cacheConv[d.id]={id:d.id,...d.data()}; });
       if($('p-chat')&&$('p-chat').classList.contains('on')) renderConvList();
-      // Notifica
+      // Conta conversazioni con messaggi non letti
       const nonLetti=snap.docs.filter(d=>{
         const c=d.data();
         const lk='letto_'+USER.id;
         return c.lastUid!==USER.id&&c.lastAt&&(!c[lk]||c[lk]<c.lastAt);
       });
-      if(nonLetti.length&&!($('p-chat')&&$('p-chat').classList.contains('on'))){
+      const isChatOpen=$('p-chat')&&$('p-chat').classList.contains('on');
+      if(!chatFirstLoad&&nonLetti.length&&!isChatOpen){
         setBadge('chatDot', nonLetti.length);
       } else if(!nonLetti.length){
         clearChatDot();
       }
+      chatFirstLoad=false;
     });
 }
 
