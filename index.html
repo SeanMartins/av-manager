@@ -372,9 +372,11 @@ textarea{resize:vertical;min-height:80px}
     <!-- CHAT -->
     <!-- CHAT -->
     <div class="page" id="p-chat">
+      <!-- Lista colleghi -->
       <div id="chatHome" style="padding-bottom:10px">
-        <div id="chatConvList"><div class="empty">Caricamento...</div></div>
+        <div id="chatTeamList"><div class="empty">Caricamento...</div></div>
       </div>
+      <!-- Thread conversazione -->
       <div id="chatThread" style="display:none;flex-direction:column;height:calc(100dvh - 140px)">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
           <button class="btn" style="padding:6px 12px;font-size:12px" onclick="chiudiChat()">← Torna</button>
@@ -912,7 +914,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.10</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.11</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1304,7 +1306,7 @@ function goPage(n){
   const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda',chat:'✉️ Messaggi',tools:'🔧 Tools Tecnici AV'};
   $('ptitle').textContent=t[n]||n;
   if(n==='agenda'){clearAgendaDot();renderAgenda();}
-  if(n==='chat'){clearChatDot();chiudiChat();}
+  if(n==='chat'){clearChatDot();chiudiChat();renderChatTeam();}
   
 }
 
@@ -5491,14 +5493,16 @@ let cacheConv={}, chatAltroUid=null, chatUnsub=null;
 function chatConvId(a,b){ return [a,b].sort().join('_'); }
 
 function apriUltimaConv(){
-  const convs=Object.values(cacheConv);
-  const nonLetta=convs.find(c=>{
+  // Apri direttamente la conversazione non letta se c'è
+  const nonLetta=Object.values(cacheConv).find(c=>{
     const lk='letto_'+USER.id;
     return c.lastUid!==USER.id&&c.lastAt&&(!c[lk]||c[lk]<c.lastAt);
   });
   if(nonLetta){
     const altroUid=nonLetta.partecipanti.find(u=>u!==USER.id);
-    if(altroUid) setTimeout(()=>apriConv(altroUid),100);
+    if(altroUid) setTimeout(()=>apriConv(altroUid),150);
+  } else {
+    renderChatTeam();
   }
 }
 
@@ -5508,7 +5512,9 @@ function startChatListener(){
     .orderBy('lastAt','desc').onSnapshot(snap=>{
       cacheConv={};
       snap.docs.forEach(d=>{ cacheConv[d.id]={id:d.id,...d.data()}; });
-      if($('p-chat')&&$('p-chat').classList.contains('on')) renderConvList();
+      // Aggiorna lista team con badge messaggi
+      renderChatTeam();
+      // Conta non letti
       const nonLetti=snap.docs.filter(d=>{
         const c=d.data();
         const lk='letto_'+USER.id;
@@ -5517,9 +5523,10 @@ function startChatListener(){
       const isChatOpen=$('p-chat')&&$('p-chat').classList.contains('on');
       if(nonLetti.length&&!isChatOpen){
         setBadge('chatDot', nonLetti.length);
-      } else if(!nonLetti.length||isChatOpen){
+      } else if(!nonLetti.length){
         clearChatDot();
       }
+      // Toast su nuovi messaggi
       if(!chatFirstLoad&&nonLetti.length&&!isChatOpen){
         const ultima=nonLetti[0].data();
         const mitt=cacheTeam.find(m=>m.id===ultima.lastUid);
@@ -5529,51 +5536,34 @@ function startChatListener(){
     });
 }
 
-function renderConvList(){
-  const el=$('chatConvList');if(!el)return;
-  const convs=Object.values(cacheConv);
+function renderChatTeam(){
+  const el=$('chatTeamList');if(!el)return;
   const avC=['a1','a2','a3','a4'];
-  let h='<button class="btn btn-p btn-f" style="margin-bottom:14px" onclick="mostraNuovaChat()">✉️ Nuovo messaggio</button>';
-  if(!convs.length){
-    h+='<div class="empty">Nessun messaggio ancora — inizia una conversazione!</div>';
-  } else {
-    convs.sort((a,b)=>(b.lastAt||'').localeCompare(a.lastAt||'')).forEach(c=>{
-      const altroUid=c.partecipanti.find(u=>u!==USER.id);
-      const altro=cacheTeam.find(m=>m.id===altroUid);
-      if(!altro)return;
-      const ini=(altro.nome[0]+altro.cognome[0]).toUpperCase();
-      const idx=cacheTeam.findIndex(m=>m.id===altroUid)%4;
-      const lk='letto_'+USER.id;
-      const nonLetto=c.lastUid!==USER.id&&c.lastAt&&(!c[lk]||c[lk]<c.lastAt);
-      const ora=c.lastAt?new Date(c.lastAt).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}):'';
-      h+='<div class="cconv" onclick="apriConv(\''+altroUid+'\')">'+
-        '<div class="av '+avC[idx]+'">'+ini+'</div>'+
-        '<div style="flex:1;min-width:0">'+
-          '<div style="font-size:14px;font-weight:'+(nonLetto?700:500)+'">'+altro.nome+' '+altro.cognome+'</div>'+
-          '<div style="font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(c.lastMsg||'')+'</div>'+
-        '</div>'+
-        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+
-          '<span style="font-size:10px;color:var(--tx3)">'+ora+'</span>'+
-          (nonLetto?'<div style="width:8px;height:8px;border-radius:50%;background:var(--ac)"></div>':'')+
-        '</div>'+
-      '</div>';
-    });
-  }
-  el.innerHTML=h;
-}
-
-function mostraNuovaChat(){
-  const el=$('chatConvList');if(!el)return;
-  const avC=['a1','a2','a3','a4'];
-  let h='<button class="btn btn-f" style="margin-bottom:12px" onclick="renderConvList()">← Torna</button>';
-  const lista=cacheTeam.filter(m=>m.id!==USER.id&&(isEsterno()?m.ruolo!=='Collaboratore esterno':true));
+  const lista=cacheTeam.filter(m=>m.id!==USER.id&&m.approvato&&(isEsterno()?m.ruolo!=='Collaboratore esterno':true));
+  if(!lista.length){el.innerHTML='<div class="empty">Nessun collega disponibile</div>';return;}
+  lista.sort((a,b)=>(a.nome+a.cognome).localeCompare(b.nome+b.cognome));
+  let h='';
   lista.forEach((m,i)=>{
     const ini=(m.nome[0]+m.cognome[0]).toUpperCase();
-    h+='<div class="cconv" onclick="apriConv(\''+m.id+'\')">'+
-      '<div class="av '+avC[i%4]+'">'+ini+'</div>'+
-      '<div style="flex:1"><div style="font-size:14px;font-weight:500">'+m.nome+' '+m.cognome+'</div>'+
-      '<div style="font-size:12px;color:var(--tx2)">'+m.ruolo+'</div></div>'+
-      '<span style="font-size:18px;color:var(--tx3)">›</span>'+
+    const cid=chatConvId(USER.id,m.id);
+    const conv=cacheConv[cid];
+    const lk='letto_'+USER.id;
+    const nonLetto=conv&&conv.lastUid!==USER.id&&conv.lastAt&&(!conv[lk]||conv[lk]<conv.lastAt);
+    const lastMsg=conv?.lastMsg||'';
+    const lastOra=conv?.lastAt?new Date(conv.lastAt).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}):'';
+    h+='<div class="row" onclick="apriConv(\''+m.id+'\')" style="display:flex;align-items:center;gap:12px;position:relative">'+
+      '<div style="position:relative;flex-shrink:0">'+
+        '<div class="av '+avC[i%4]+'" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">'+ini+'</div>'+
+        (nonLetto?'<div style="position:absolute;top:-2px;right:-2px;width:12px;height:12px;background:var(--rd);border-radius:50%;border:2px solid var(--bg1)"></div>':'')+
+      '</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:14px;font-weight:'+(nonLetto?700:500)+'">'+m.nome+' '+m.cognome+'</div>'+
+        '<div style="font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(lastMsg||m.ruolo)+'</div>'+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'+
+        (lastOra?'<span style="font-size:10px;color:var(--tx3)">'+lastOra+'</span>':'')+
+        (nonLetto?'<div style="min-width:18px;height:18px;background:var(--ac);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;padding:0 4px">●</div>':'')+
+      '</div>'+
     '</div>';
   });
   el.innerHTML=h;
@@ -5644,6 +5634,7 @@ function chiudiChat(){
   chatAltroUid=null;
   const ct=$('chatThread');if(ct)ct.style.display='none';
   const ch=$('chatHome');if(ch)ch.style.display='block';
+  renderChatTeam();
   renderConvList();
 }
 
