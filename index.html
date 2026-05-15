@@ -914,7 +914,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.13</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.14</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1546,7 +1546,15 @@ function startApp(){
   }
   if(isResponsabile()||isAdmin()){
     const gu=$('btnGestUtenti');if(gu)gu.style.display='block';
-    // Ascolta notifiche conferme turni
+    // Ascolta messaggi dal Service Worker (click su notifica)
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.addEventListener('message', event=>{
+      if(event.data?.type==='NAVIGATE'){
+        const page=event.data.page;
+        if(page) goPage(page);
+      }
+    });
+  }
     DB.collection('notifiche_resp')
       .where('destinatario','==',USER.id)
       .where('letto','==',false)
@@ -5509,8 +5517,8 @@ function apriUltimaConv(){
 }
 
 function startChatListener(){
-  let chatFirstLoad=true;
-  let lastNonLettiIds=new Set();
+  let prevNonLettiCount=0;
+  let chatReady=false;
 
   DB.collection('chat').onSnapshot(snap=>{
     cacheConv={};
@@ -5521,37 +5529,31 @@ function startChatListener(){
       }
     });
 
-    // Aggiorna UI chat se aperta
-    if($('p-chat')&&$('p-chat').classList.contains('on')) renderChatTeam();
+    const isChatOpen=$('p-chat')&&$('p-chat').classList.contains('on');
+    if(isChatOpen) renderChatTeam();
 
-    // Calcola non letti
     const nonLetti=Object.values(cacheConv).filter(c=>{
       const lk='letto_'+USER.id;
       return c.lastUid!==USER.id&&c.lastAt&&(!c[lk]||c[lk]<c.lastAt);
     });
+    const count=nonLetti.length;
 
-    const isChatOpen=$('p-chat')&&$('p-chat').classList.contains('on');
-
-    // Badge
-    if(nonLetti.length&&!isChatOpen){
-      setBadge('chatDot', nonLetti.length);
-    } else if(!nonLetti.length){
+    if(count>0&&!isChatOpen){
+      setBadge('chatDot', count);
+    } else {
       clearChatDot();
     }
 
-    // Toast solo su messaggi veramente nuovi (non al primo load)
-    if(!chatFirstLoad){
-      const nuoviIds=nonLetti.map(c=>c.id+'_'+c.lastAt);
-      const davveroNuovi=nuoviIds.filter(id=>!lastNonLettiIds.has(id));
-      if(davveroNuovi.length&&!isChatOpen){
-        const ultima=nonLetti.sort((a,b)=>(b.lastAt||'').localeCompare(a.lastAt||''))[0];
-        const mitt=cacheTeam.find(m=>m.id===ultima.lastUid);
-        if(mitt) toast('✉️ '+(mitt.nome+' '+mitt.cognome)+': '+(ultima.lastMsg||'').substring(0,40));
-      }
+    // Toast solo su nuovi messaggi reali
+    if(chatReady&&count>prevNonLettiCount&&!isChatOpen){
+      const sorted=nonLetti.sort((a,b)=>(b.lastAt||'').localeCompare(a.lastAt||''));
+      const ultima=sorted[0];
+      const mitt=cacheTeam.find(m=>m.id===ultima.lastUid);
+      if(mitt) toast('✉️ '+(mitt.nome+' '+mitt.cognome)+': '+(ultima.lastMsg||'').substring(0,40));
     }
 
-    lastNonLettiIds=new Set(nonLetti.map(c=>c.id+'_'+c.lastAt));
-    chatFirstLoad=false;
+    prevNonLettiCount=count;
+    chatReady=true;
   });
 }
 
