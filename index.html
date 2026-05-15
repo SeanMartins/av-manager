@@ -626,7 +626,7 @@ textarea{resize:vertical;min-height:80px}
       <div class="ic">💬</div><div class="lb">Forum</div>
       <div class="notif-badge" id="notifDot" style="display:none"></div>
     </div>
-    <div class="ni" id="n-chat" onclick="goPage('chat')" style="position:relative">
+    <div class="ni" id="n-chat" onclick="goPage('chat');apriUltimaConv()" style="position:relative">
       <div class="ic">✉️</div><div class="lb">Chat</div>
       <div class="notif-badge" id="chatDot" style="display:none"></div>
     </div>
@@ -912,7 +912,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.09</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.10</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5490,6 +5490,18 @@ let cacheConv={}, chatAltroUid=null, chatUnsub=null;
 
 function chatConvId(a,b){ return [a,b].sort().join('_'); }
 
+function apriUltimaConv(){
+  const convs=Object.values(cacheConv);
+  const nonLetta=convs.find(c=>{
+    const lk='letto_'+USER.id;
+    return c.lastUid!==USER.id&&c.lastAt&&(!c[lk]||c[lk]<c.lastAt);
+  });
+  if(nonLetta){
+    const altroUid=nonLetta.partecipanti.find(u=>u!==USER.id);
+    if(altroUid) setTimeout(()=>apriConv(altroUid),100);
+  }
+}
+
 function startChatListener(){
   let chatFirstLoad=true;
   DB.collection('chat').where('partecipanti','array-contains',USER.id)
@@ -5497,17 +5509,21 @@ function startChatListener(){
       cacheConv={};
       snap.docs.forEach(d=>{ cacheConv[d.id]={id:d.id,...d.data()}; });
       if($('p-chat')&&$('p-chat').classList.contains('on')) renderConvList();
-      // Conta conversazioni con messaggi non letti
       const nonLetti=snap.docs.filter(d=>{
         const c=d.data();
         const lk='letto_'+USER.id;
         return c.lastUid!==USER.id&&c.lastAt&&(!c[lk]||c[lk]<c.lastAt);
       });
       const isChatOpen=$('p-chat')&&$('p-chat').classList.contains('on');
-      if(!chatFirstLoad&&nonLetti.length&&!isChatOpen){
+      if(nonLetti.length&&!isChatOpen){
         setBadge('chatDot', nonLetti.length);
-      } else if(!nonLetti.length){
+      } else if(!nonLetti.length||isChatOpen){
         clearChatDot();
+      }
+      if(!chatFirstLoad&&nonLetti.length&&!isChatOpen){
+        const ultima=nonLetti[0].data();
+        const mitt=cacheTeam.find(m=>m.id===ultima.lastUid);
+        if(mitt) toast('✉️ '+(mitt.nome+' '+mitt.cognome)+': '+(ultima.lastMsg||'').substring(0,40));
       }
       chatFirstLoad=false;
     });
