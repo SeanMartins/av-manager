@@ -20,6 +20,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -910,7 +911,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.14.21</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.01</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -3190,78 +3191,105 @@ async function doExport(){
   const mese=parseInt(document.getElementById('expMese').value);
   const anno=parseInt(document.getElementById('expAnno').value);
   const dipId=document.getElementById('expDip').value;
-  const mesiN=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-  toast('⏳ Caricamento...','a');
+  const MESI_NOMI_LONG=['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
+  const MESI_SHORT=['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'];
+  const GG=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  toast('⏳ Generazione Excel...','a');
+
   const start=new Date(anno,mese,1).toISOString();
   const end=new Date(anno,mese+1,0,23,59,59).toISOString();
   let snap;
-  try{snap=await DB.collection('presenze').where('entrata','>=',start).where('entrata','<=',end).orderBy('entrata').get();}
-  catch(e){alert('Errore: '+e.message);return;}
+  try{
+    let q=DB.collection('presenze').where('entrata','>=',start).where('entrata','<=',end).orderBy('entrata');
+    snap=await q.get();
+  }catch(e){alert('Errore: '+e.message);return;}
+
   let rows=snap.docs.map(d=>({id:d.id,...d.data()}));
   if(dipId!=='all')rows=rows.filter(r=>r.uid===dipId);
-  if(!rows.length){toast('Nessuna timbratura trovata','a');return;}
-  const pad2=n=>String(n).padStart(2,'0');
-  const dd=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-  const fmtTime=iso=>{if(!iso)return'—';const d=new Date(iso);return pad2(d.getHours())+':'+pad2(d.getMinutes());};
 
-  const data=rows.map(r=>{
-    const ent=new Date(r.entrata),usc=r.uscita?new Date(r.uscita):null;
-    const durTotMs=usc?(usc-ent):0;
-    // Calcola durata pause
-    const pauses=r.pause||[];
-    const pauseMs=pauses.reduce((s,p)=>{if(p.inizio&&p.fine)s+=new Date(p.fine)-new Date(p.inizio);return s;},0);
-    const oreNetteMs=Math.max(0,durTotMs-pauseMs);
-    const oreNette=usc?(oreNetteMs/3600000).toFixed(2):'—';
-    const oreLorde=usc?(durTotMs/3600000).toFixed(2):'—';
-    const durPauseMin=Math.round(pauseMs/60000);
-    // Formatta dettaglio pause
-    const pauseStr=pauses.map((p,i)=>'P'+(i+1)+':'+fmtTime(p.inizio)+'→'+fmtTime(p.fine)).join(' / ')||'—';
-    return{
-      nome:r.nome||'—',
-      data:pad2(ent.getDate())+'/'+pad2(ent.getMonth()+1)+'/'+ent.getFullYear(),
-      giorno:dd[ent.getDay()],
-      luogo:r.luogo||'In sede',
-      entrata:fmtTime(r.entrata),
-      uscita:fmtTime(r.uscita),
-      ore_lorde:oreLorde,
-      n_pause:pauses.length,
-      dur_pause:durPauseMin>0?durPauseMin+' min':'0',
-      pause_dettaglio:pauseStr,
-      ore_nette:oreNette,
-    };
+  // Raggruppa per dipendente
+  const byDip={};
+  rows.forEach(r=>{
+    const uid=r.uid||r.nome||'—';
+    if(!byDip[uid])byDip[uid]={nome:r.nome||'—',rows:[]};
+    byDip[uid].rows.push(r);
+  });
+  if(!Object.keys(byDip).length){toast('Nessuna timbratura trovata','a');return;}
+
+  const pad=n=>String(n).padStart(2,'0');
+  const fmtT=iso=>{if(!iso)return'';const d=new Date(iso);return pad(d.getHours())+':'+pad(d.getMinutes());};
+
+  // Usa SheetJS per generare Excel
+  const XLSX=window.XLSX;
+  if(!XLSX){toast('Errore: libreria XLSX non caricata','r');return;}
+
+  const wb=XLSX.utils.book_new();
+
+  // Un foglio per dipendente oppure uno per mese se tutti
+  const dimsInMonth=new Date(anno,mese+1,0).getDate();
+
+  Object.entries(byDip).forEach(([uid,dip])=>{
+    // Mappa giorno→presenza
+    const byDay={};
+    dip.rows.forEach(p=>{
+      const g=new Date(p.entrata).getDate();
+      if(!byDay[g])byDay[g]=p;
+    });
+
+    const wsData=[];
+    // Riga 1: titolo
+    wsData.push([`${MESI_NOMI_LONG[mese]} ${anno} — ${dip.nome}`,'','','','','','','','','','','']);
+    // Riga 2: intestazioni
+    wsData.push(['GIORNO','LUOGO','IN','OUT','PAUSA 1 IN','PAUSA 1 OUT','PAUSA 2 IN','PAUSA 2 OUT','ORE STANDARD','ORE LAVORATE','ORE STRAORD.','OK']);
+
+    let totStd=0,totLav=0,totStr=0;
+
+    for(let g=1;g<=dimsInMonth;g++){
+      const d=new Date(anno,mese,g);
+      const isWeekend=d.getDay()===0||d.getDay()===6;
+      const p=byDay[g];
+      const giorno=`${pad(g)} ${GG[d.getDay()]}`;
+      let luogo='',entr='',usc='',p1i='',p1o='',p2i='',p2o='',oreLav='',oreStd=isWeekend?0:8,oreStr='';
+
+      if(p){
+        luogo=p.luogo||'';
+        entr=fmtT(p.entrata);
+        usc=fmtT(p.uscita);
+        const pauses=p.pause||[];
+        if(pauses[0]){p1i=fmtT(pauses[0].inizio);p1o=fmtT(pauses[0].fine);}
+        if(pauses[1]){p2i=fmtT(pauses[1].inizio);p2o=fmtT(pauses[1].fine);}
+        if(p.uscita&&p.entrata){
+          const pauseMs=pauses.reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+          const nette=Math.max(0,(new Date(p.uscita)-new Date(p.entrata)-pauseMs)/3600000);
+          oreLav=parseFloat(nette.toFixed(2));
+          oreStr=parseFloat((nette-oreStd).toFixed(2));
+          totLav+=nette;
+          totStr+=(nette-oreStd);
+        }
+      }
+      if(!isWeekend)totStd+=oreStd;
+      wsData.push([giorno,luogo,entr,usc,p1i,p1o,p2i,p2o,isWeekend?0:oreStd,oreLav||'',oreStr||'','']);
+    }
+
+    // Riga totale
+    wsData.push(['TOTALE MESE','','','','','','','',totStd.toFixed(2),totLav.toFixed(2),totStr.toFixed(2),'']);
+
+    const ws=XLSX.utils.aoa_to_sheet(wsData);
+
+    // Larghezze colonne
+    ws['!cols']=[{wch:12},{wch:28},{wch:8},{wch:8},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:5}];
+
+    // Merge titolo A1:L1
+    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:11}}];
+
+    XLSX.utils.book_append_sheet(wb, ws, dip.nome.substring(0,31));
   });
 
-  // Totali per dipendente
-  const totali={};
-  data.forEach(r=>{
-    if(!totali[r.nome])totali[r.nome]={lorde:0,nette:0,pause:0,giorni:0};
-    const l=parseFloat(r.ore_lorde),n=parseFloat(r.ore_nette),p=parseInt(r.dur_pause);
-    if(!isNaN(l))totali[r.nome].lorde+=l;
-    if(!isNaN(n))totali[r.nome].nette+=n;
-    if(!isNaN(p))totali[r.nome].pause+=p;
-    totali[r.nome].giorni++;
-  });
-
-  // Genera CSV
-  let csv='\uFEFF';
-  const headers=['Nome','Data','Giorno','Luogo','Entrata','Uscita','Ore lorde','N° pause','Durata pause','Dettaglio pause','Ore nette lavorate'];
-  csv+=headers.join(';')+'\n';
-  data.forEach(r=>{
-    csv+=[r.nome,r.data,r.giorno,r.luogo,r.entrata,r.uscita,r.ore_lorde,r.n_pause,r.dur_pause,r.pause_dettaglio,r.ore_nette]
-      .map(c=>'"'+c+'"').join(';')+'\n';
-  });
-  // Totali mensili
-  csv+='\n"═══ TOTALE MENSILE — '+mesiN[mese]+' '+anno+' ═══"\n';
-  csv+='"Dipendente";"Giorni lavorati";"Ore lorde";"Totale pause";"Ore nette"\n';
-  Object.entries(totali).forEach(([nome,t])=>{
-    csv+='"'+nome+'";"'+t.giorni+' giorni";"'+t.lorde.toFixed(2)+' h";"'+t.pause+' min";"'+t.nette.toFixed(2)+' h"\n';
-  });
-  csv+='\n"Generato il: '+new Date().toLocaleString('it-IT')+'"\n';
-
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='MMG_Presenze_'+mesiN[mese]+'_'+anno+'.csv';a.click();
-  toast('✓ '+data.length+' righe esportate');closeMod('mExport');
+  // Scarica
+  const nomeMese=MESI_SHORT[mese];
+  XLSX.writeFile(wb, `MMG_Ore_${nomeMese}${anno}.xlsx`);
+  toast('✓ Excel generato!');
+  closeMod('mExport');
 }
 
 // ── MATERIALI RESPONSABILE ──
