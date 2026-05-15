@@ -911,7 +911,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.04</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.05</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2581,7 +2581,7 @@ function mostraDovetUsato(artId, artNomeEnc){
     '<div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Presente nei seguenti lavori in corso:</div>';
 
   lavori.forEach(d=>{
-    const data=d.data?new Date(d.data).toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
+    const data=d.data?fmtData(d.data,{weekday:'short',day:'2-digit',month:'short',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
     const art=(d.articoli||[]).find(a=>
       a.id===artId||(artSer&&a.ser===artSer)||
       (a.nome||'').toLowerCase()===artNomeClean
@@ -2733,7 +2733,7 @@ function plRenderExisting(list){
   if(!prep.length){el.innerHTML='<div class="empty">Nessun lavoro preparato trovato</div>';return;}
   let h='';
   prep.forEach(d=>{
-    const data=d.data?new Date(d.data).toLocaleDateString('it-IT'):new Date(d.createdAt).toLocaleDateString('it-IT');
+    const data=d.data?fmtData(d.data,{}):new Date(d.createdAt).toLocaleDateString('it-IT');
     const nPezzi=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
     h+='<div onclick="plCaricaEsistente(\''+d.id+'\')" style="padding:12px;border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor=\'var(--ac)\'" onmouseout="this.style.borderColor=\'var(--b)\'">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
@@ -3638,7 +3638,7 @@ function dichOpenDoc(id){
 
 function dichGeneraPDFPrep(d){
   const nome=d.nome||'—',loc=d.location||'—';
-  const data=d.data?new Date(d.data).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
+  const data=d.data?fmtData(d.data,{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
   const tecnico=d.tecnico||'—';
   const now=new Date(d.createdAt).toLocaleString('it-IT');
   const tot=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
@@ -3660,7 +3660,7 @@ function dichGeneraPDFPrep(d){
 function dichGeneraPDFRientro(d){
   const allOk=d.rientrato;
   const nome=d.nome||'—',loc=d.location||'—';
-  const data=d.data?new Date(d.data).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
+  const data=d.data?fmtData(d.data,{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
   const tecnico=d.rientroTecnico||d.tecnico||'—';
   const now=new Date(d.rientroData||d.createdAt).toLocaleString('it-IT');
   const arts=d.articoliRientro||d.articoli||[];
@@ -3809,7 +3809,7 @@ async function downloadZip(){
 // Helper per buildHTML — riutilizzano le funzioni esistenti ma restituiscono stringa
 function buildHTMLPrep(d){
   const nome=d.nome||'—',loc=d.location||'—';
-  const data=d.data?new Date(d.data).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
+  const data=d.data?fmtData(d.data,{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
   const tecnico=d.tecnico||'—';
   const tot=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
   const bycat={};(d.articoli||[]).forEach(a=>{const k=a.cat||'Altro';if(!bycat[k])bycat[k]=[];bycat[k].push(a);});
@@ -3829,7 +3829,7 @@ function buildHTMLPrep(d){
 function buildHTMLRientro(d){
   const allOk=d.rientrato;
   const nome=d.nome||'—',loc=d.location||'—';
-  const data=d.data?new Date(d.data).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
+  const data=d.data?fmtData(d.data,{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
   const tecnico=d.rientroTecnico||d.tecnico||'—';
   const arts=d.articoliRientro||d.articoli||[];
   const ok=arts.filter(a=>a.rientrato!==false);
@@ -3902,7 +3902,9 @@ function startAgendaListener(){
         const t=nuovi[0].doc.data();
         const tipo=t.tipo||'lavoro';
         const icona={lavoro:'💼',assistenza:'🔧',trasferta:'✈️',jolly:'🃏',riposo:'😴',ferie:'🏖',formazione:'📚'}[tipo]||'📅';
-        const data=t.data?new Date(t.data).toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short'}):'';
+        const [ay,am,ad]=t.data.split('-').map(Number);
+        const dataTurno=new Date(ay,am-1,ad);
+        const data=t.data?dataTurno.toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short'}):'';
         toast(icona+' Nuovo turno: '+data+(t.location?' — '+t.location:''));
       }
     }
@@ -3937,8 +3939,8 @@ function renderAgendaDip(){
     else turni.forEach(t=>{
       const c=TURNO_COLORS[t.tipo]||TURNO_COLORS.lavoro;
       const confBadge=t.confermato
-        ?'<span style="font-size:10px;background:rgba(34,197,94,.15);color:var(--gn);padding:2px 6px;border-radius:8px;margin-top:4px;display:inline-block">✅ Confermato</span>'
-        :'<span style="font-size:10px;background:rgba(245,158,11,.15);color:var(--am);padding:2px 6px;border-radius:8px;margin-top:4px;display:inline-block">⏳ Da confermare</span>';
+        ?'<span style="font-size:10px;background:rgba(34,197,94,.15);color:var(--gn);padding:2px 8px;border-radius:8px;margin-top:4px;display:inline-block">✅ Confermato</span>'
+        :'<button onclick="event.stopPropagation();confermaSingoloTurno(\''+t.id+'\')" style="font-size:10px;background:rgba(245,158,11,.15);color:var(--am);border:1px solid var(--am);padding:2px 8px;border-radius:8px;margin-top:4px;cursor:pointer;font-family:var(--font)">⏳ Tocca per confermare</button>';
       h+='<div class="ag-turno" style="background:'+c.bg+';border-left:3px solid '+c.border+'">'+
         '<div class="ag-turno-title" style="color:'+c.text+'">'+TURNO_ICONS[t.tipo]+' '+(t.location||t.tipo)+'</div>'+
         (t.oraIn?'<div class="ag-turno-sub" style="color:'+c.text+'">⏰ '+t.oraIn+(t.oraFin?' → '+t.oraFin:'')+'</div>':'')+
@@ -4474,34 +4476,48 @@ async function checkTurniNonConfermati(){
   }
 }
 
+async function confermaSingoloTurno(turnoId){
+  try{
+    await DB.collection('agenda').doc(turnoId).update({
+      confermato:true,
+      confermatoIl:new Date().toISOString(),
+      confermatoDa:USER.nome+' '+USER.cognome
+    });
+    toast('✅ Turno confermato!');
+    const responsabili=cacheTeam.filter(m=>m.ruolo==='Responsabile'||m.isAdmin);
+    await Promise.all(responsabili.map(r=>
+      DB.collection('notifiche_resp').add({
+        tipo:'conferma_turni',uid:USER.id,
+        nome:USER.nome+' '+USER.cognome,
+        nTurni:1,destinatario:r.id,
+        letto:false,createdAt:new Date().toISOString()
+      })
+    ));
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
 async function confermaTurni(){
   if(!USER)return;
   const oggi=new Date().toISOString().slice(0,10);
   const turniMiei=cacheAgenda.filter(t=>t.uid===USER.id&&t.data>=oggi&&!t.confermato);
   if(!turniMiei.length){toast('Nessun turno da confermare');return;}
   try{
-    const batch=[];
-    turniMiei.forEach(t=>{
-      batch.push(DB.collection('agenda').doc(t.id).update({
+    await Promise.all(turniMiei.map(t=>
+      DB.collection('agenda').doc(t.id).update({
         confermato:true,
         confermatoIl:new Date().toISOString(),
         confermatoDa:USER.nome+' '+USER.cognome
-      }));
-    });
-    await Promise.all(batch);
+      })
+    ));
     toast('✅ '+turniMiei.length+' turno/i confermati!');
-    $('agConfermaWrap').style.display='none';
-    // Notifica al Responsabile
+    const wrap=$('agConfermaWrap');if(wrap)wrap.style.display='none';
     const responsabili=cacheTeam.filter(m=>m.ruolo==='Responsabile'||m.isAdmin);
     await Promise.all(responsabili.map(r=>
       DB.collection('notifiche_resp').add({
-        tipo:'conferma_turni',
-        uid:USER.id,
+        tipo:'conferma_turni',uid:USER.id,
         nome:USER.nome+' '+USER.cognome,
-        nTurni:turniMiei.length,
-        destinatario:r.id,
-        letto:false,
-        createdAt:new Date().toISOString()
+        nTurni:turniMiei.length,destinatario:r.id,
+        letto:false,createdAt:new Date().toISOString()
       })
     ));
   }catch(e){toast('Errore: '+e.message,'r');}
@@ -5129,7 +5145,16 @@ async function eliminaNota(idx){
   renderNoteMancanti();renderDich();
 }
 
-// ── GESTIONE TIMBRATURE MANUALE ──
+// Helper: parsa date YYYY-MM-DD senza shift fuso orario
+function parseData(iso){
+  if(!iso)return new Date();
+  const[y,m,d]=iso.split('-').map(Number);
+  return new Date(y,m-1,d);
+}
+function fmtData(iso,opts){
+  if(!iso)return'—';
+  return parseData(iso).toLocaleDateString('it-IT',opts);
+}
 let gestTimbEditId=null, atPause=[];
 
 function apriGestTimb(){
