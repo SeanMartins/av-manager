@@ -915,7 +915,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.17</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.19</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -3336,7 +3336,8 @@ async function doExport(){
       const oreStd=isWeekend?0:8;
 
       if(p){
-        luogo=p.luogo||'';
+        // Rimuovi emoji dalla location per Excel
+        luogo=(p.luogo||'').replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|🏢|🔧|✈️|📍|🤒/gu,'').trim();
         entr=fmtT(p.entrata);
         usc=fmtT(p.uscita);
         const pauses=p.pause||[];
@@ -3388,12 +3389,15 @@ async function doExport(){
     ws.getRow(totRow).height=20;
   }
 
-  // Scarica
+  // Scarica — nome file con dipendente
+  const nomeDip=Object.values(byDip).length===1
+    ?Object.values(byDip)[0].nome.replace(/\s+/g,'_')
+    :'Team';
   const buffer=await wb.xlsx.writeBuffer();
   const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download=`MMG_Ore_${MESI_SHORT[mese]}${anno}.xlsx`;
+  a.download=`${nomeDip}_Ore_${MESI_SHORT[mese]}${anno}.xlsx`;
   a.click();
   URL.revokeObjectURL(a.href);
   toast('✓ Excel generato!');
