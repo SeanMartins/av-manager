@@ -21,6 +21,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -914,7 +915,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.14</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.17</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1821,17 +1822,28 @@ function renderPresenze(){
       const pauses=tp.pause||[];
       const pauseMs=pauses.reduce((s,p)=>{if(p.inizio&&p.fine)s+=new Date(p.fine)-new Date(p.inizio);return s;},0);
       const pauseMin=Math.round(pauseMs/60000);
+      const puoVedereOrari=isResponsabile()||isAdmin()||(m.id===USER.id);
       if(tp.uscita){
         const u=new Date(tp.uscita);
         const uS=pad(u.getHours())+':'+pad(u.getMinutes());
         const lordeH=((u-ent)/3600000);
         const netteH=Math.max(0,lordeH-pauseMs/3600000);
-        orario='🟢 '+eS+' → 🔴 '+uS+' · '+netteH.toFixed(1)+'h nette';
-        if(pauses.length>0) orario+=' <span style="font-size:10px;color:var(--am)">☕'+pauses.length+'</span>';
+        if(puoVedereOrari){
+          orario='🟢 '+eS+' → 🔴 '+uS+' · '+netteH.toFixed(1)+'h nette';
+          if(pauses.length>0) orario+=' <span style="font-size:10px;color:var(--am)">☕'+pauses.length+'</span>';
+        } else {
+          orario='✅ Turno completato'+(luogo?' · '+luogo.replace(/[🏢🔧✈️📍🤒]/u,'').trim():'');
+          if(pauses.length>0) orario+=' <span style="font-size:10px;color:var(--am)">☕'+pauses.length+' pause</span>';
+        }
       } else {
-        orario='🟢 Entrata '+eS;
-        if(pauses.length>0) orario+=' <span style="font-size:10px;color:var(--am)">☕'+pauses.length+' pause</span>';
-        if(pauseMin>0) orario+=' <span style="font-size:10px;color:var(--tx3)">('+pauseMin+'min)</span>';
+        if(puoVedereOrari){
+          orario='🟢 Entrata '+eS;
+          if(pauses.length>0) orario+=' <span style="font-size:10px;color:var(--am)">☕'+pauses.length+' pause</span>';
+          if(pauseMin>0) orario+=' <span style="font-size:10px;color:var(--tx3)">('+pauseMin+'min)</span>';
+        } else {
+          orario='🟢 Al lavoro'+(luogo?' · '+luogo.replace(/[🏢🔧✈️📍🤒]/u,'').trim():'');
+          if(pauses.length>0) orario+=' <span style="font-size:10px;color:var(--am)">☕ In pausa</span>';
+        }
       }
     }
     h+='<div class="row"><div class="av '+avC[i%4]+'">'+ini+'</div>'+
@@ -3234,7 +3246,7 @@ async function doExport(){
   const mese=parseInt(document.getElementById('expMese').value);
   const anno=parseInt(document.getElementById('expAnno').value);
   const dipId=document.getElementById('expDip').value;
-  const MESI_NOMI_LONG=['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
+  const MESI_LONG=['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
   const MESI_SHORT=['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'];
   const GG=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
   toast('⏳ Generazione Excel...','a');
@@ -3243,17 +3255,15 @@ async function doExport(){
   const end=new Date(anno,mese+1,0,23,59,59).toISOString();
   let snap;
   try{
-    let q=DB.collection('presenze').where('entrata','>=',start).where('entrata','<=',end).orderBy('entrata');
-    snap=await q.get();
+    snap=await DB.collection('presenze').where('entrata','>=',start).where('entrata','<=',end).orderBy('entrata').get();
   }catch(e){alert('Errore: '+e.message);return;}
 
   let rows=snap.docs.map(d=>({id:d.id,...d.data()}));
   if(dipId!=='all')rows=rows.filter(r=>r.uid===dipId);
 
-  // Raggruppa per dipendente
   const byDip={};
   rows.forEach(r=>{
-    const uid=r.uid||r.nome||'—';
+    const uid=r.uid||'—';
     if(!byDip[uid])byDip[uid]={nome:r.nome||'—',rows:[]};
     byDip[uid].rows.push(r);
   });
@@ -3261,38 +3271,69 @@ async function doExport(){
 
   const pad=n=>String(n).padStart(2,'0');
   const fmtT=iso=>{if(!iso)return'';const d=new Date(iso);return pad(d.getHours())+':'+pad(d.getMinutes());};
-
-  // Usa SheetJS per generare Excel
-  const XLSX=window.XLSX;
-  if(!XLSX){toast('Errore: libreria XLSX non caricata','r');return;}
-
-  const wb=XLSX.utils.book_new();
-
-  // Un foglio per dipendente oppure uno per mese se tutti
   const dimsInMonth=new Date(anno,mese+1,0).getDate();
 
-  Object.entries(byDip).forEach(([uid,dip])=>{
+  // Colori identici al modello originale
+  const C_TITLE={argb:'FFCC0000'};      // Rosso titolo
+  const C_HEADER={argb:'FF2C3E7A'};     // Blu intestazioni
+  const C_WEEKEND={argb:'FFD8D8D8'};    // Grigio weekend
+  const C_WHITE={argb:'FFFFFFFF'};
+  const C_TOTAL={argb:'FF2C3E7A'};      // Blu totale
+  const F_WHITE={argb:'FFFFFFFF'};
+  const F_BLACK={argb:'FF000000'};
+  const F_GREY={argb:'FF666666'};
+
+  const wb=new ExcelJS.Workbook();
+  wb.creator='MMG Logistics';
+  wb.created=new Date();
+
+  for(const [uid,dip] of Object.entries(byDip)){
+    const ws=wb.addWorksheet(dip.nome.substring(0,31));
+
+    // Larghezze colonne identiche al modello
+    ws.columns=[
+      {width:12},{width:28},{width:8},{width:8},
+      {width:10},{width:10},{width:10},{width:10},
+      {width:10},{width:10},{width:10},{width:5}
+    ];
+
+    // Riga 1 — Titolo mese (merge A1:L1)
+    ws.mergeCells('A1:L1');
+    const titleCell=ws.getCell('A1');
+    titleCell.value=`${MESI_LONG[mese]} ${anno} — ${dip.nome}`;
+    titleCell.font={name:'Tahoma',bold:true,size:11,color:F_WHITE};
+    titleCell.fill={type:'pattern',pattern:'solid',fgColor:C_TITLE};
+    titleCell.alignment={horizontal:'center',vertical:'middle'};
+    ws.getRow(1).height=20;
+
+    // Riga 2 — Intestazioni
+    const headers=['GIORNO','LUOGO','IN','OUT','PAUSA 1\nIN','PAUSA 1\nOUT','PAUSA 2\nIN','PAUSA 2\nOUT','ORE\nSTAND.','ORE\nLAV.','ORE\nSTRAORD.','OK'];
+    headers.forEach((h,i)=>{
+      const cell=ws.getCell(2,i+1);
+      cell.value=h;
+      cell.font={name:'Tahoma',bold:true,size:9,color:F_WHITE};
+      cell.fill={type:'pattern',pattern:'solid',fgColor:C_HEADER};
+      cell.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+      cell.border={top:{style:'thin',color:{argb:'FFCCCCCC'}},bottom:{style:'thin',color:{argb:'FFCCCCCC'}},left:{style:'thin',color:{argb:'FFCCCCCC'}},right:{style:'thin',color:{argb:'FFCCCCCC'}}};
+    });
+    ws.getRow(2).height=30;
+
     // Mappa giorno→presenza
     const byDay={};
-    dip.rows.forEach(p=>{
-      const g=new Date(p.entrata).getDate();
-      if(!byDay[g])byDay[g]=p;
-    });
-
-    const wsData=[];
-    // Riga 1: titolo
-    wsData.push([`${MESI_NOMI_LONG[mese]} ${anno} — ${dip.nome}`,'','','','','','','','','','','']);
-    // Riga 2: intestazioni
-    wsData.push(['GIORNO','LUOGO','IN','OUT','PAUSA 1 IN','PAUSA 1 OUT','PAUSA 2 IN','PAUSA 2 OUT','ORE STANDARD','ORE LAVORATE','ORE STRAORD.','OK']);
+    dip.rows.forEach(p=>{const g=new Date(p.entrata).getDate();if(!byDay[g])byDay[g]=p;});
 
     let totStd=0,totLav=0,totStr=0;
 
     for(let g=1;g<=dimsInMonth;g++){
+      const rowNum=g+2;
       const d=new Date(anno,mese,g);
       const isWeekend=d.getDay()===0||d.getDay()===6;
       const p=byDay[g];
-      const giorno=`${pad(g)} ${GG[d.getDay()]}`;
-      let luogo='',entr='',usc='',p1i='',p1o='',p2i='',p2o='',oreLav='',oreStd=isWeekend?0:8,oreStr='';
+      const fillColor=isWeekend?C_WEEKEND:C_WHITE;
+      const fontColor=isWeekend?F_GREY:F_BLACK;
+
+      let luogo='',entr='',usc='',p1i='',p1o='',p2i='',p2o='',oreLav='',oreStr='';
+      const oreStd=isWeekend?0:8;
 
       if(p){
         luogo=p.luogo||'';
@@ -3311,26 +3352,50 @@ async function doExport(){
         }
       }
       if(!isWeekend)totStd+=oreStd;
-      wsData.push([giorno,luogo,entr,usc,p1i,p1o,p2i,p2o,isWeekend?0:oreStd,oreLav||'',oreStr||'','']);
+
+      const rowData=[`${pad(g)} ${GG[d.getDay()]}`,luogo,entr,usc,p1i,p1o,p2i,p2o,oreStd||'',oreLav||'',oreStr||'',''];
+      rowData.forEach((val,i)=>{
+        const cell=ws.getCell(rowNum,i+1);
+        cell.value=val;
+        cell.font={name:'Tahoma',bold:i===0,size:9,color:fontColor};
+        cell.fill={type:'pattern',pattern:'solid',fgColor:fillColor};
+        cell.alignment={horizontal:i===0?'right':'center',vertical:'middle'};
+        cell.border={top:{style:'thin',color:{argb:'FFCCCCCC'}},bottom:{style:'thin',color:{argb:'FFCCCCCC'}},left:{style:'thin',color:{argb:'FFCCCCCC'}},right:{style:'thin',color:{argb:'FFCCCCCC'}}};
+        if(i>=8)cell.numFmt='0.00';
+      });
+      ws.getRow(rowNum).height=18;
     }
 
     // Riga totale
-    wsData.push(['TOTALE MESE','','','','','','','',totStd.toFixed(2),totLav.toFixed(2),totStr.toFixed(2),'']);
+    const totRow=dimsInMonth+3;
+    ws.mergeCells(totRow,1,totRow,8);
+    const totCell=ws.getCell(totRow,1);
+    totCell.value='TOTALE MESE';
+    totCell.font={name:'Tahoma',bold:true,size:9,color:F_WHITE};
+    totCell.fill={type:'pattern',pattern:'solid',fgColor:C_TOTAL};
+    totCell.alignment={horizontal:'center',vertical:'middle'};
 
-    const ws=XLSX.utils.aoa_to_sheet(wsData);
-
-    // Larghezze colonne
-    ws['!cols']=[{wch:12},{wch:28},{wch:8},{wch:8},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:5}];
-
-    // Merge titolo A1:L1
-    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:11}}];
-
-    XLSX.utils.book_append_sheet(wb, ws, dip.nome.substring(0,31));
-  });
+    [[totStd,9],[totLav,10],[totStr,11]].forEach(([val,col])=>{
+      const c=ws.getCell(totRow,col);
+      c.value=parseFloat(val.toFixed(2));
+      c.font={name:'Tahoma',bold:true,size:9,color:F_WHITE};
+      c.fill={type:'pattern',pattern:'solid',fgColor:C_TOTAL};
+      c.alignment={horizontal:'center',vertical:'middle'};
+      c.numFmt='0.00';
+      c.border={top:{style:'thin',color:{argb:'FFCCCCCC'}},bottom:{style:'thin',color:{argb:'FFCCCCCC'}},left:{style:'thin',color:{argb:'FFCCCCCC'}},right:{style:'thin',color:{argb:'FFCCCCCC'}}};
+    });
+    ws.getCell(totRow,12).fill={type:'pattern',pattern:'solid',fgColor:C_TOTAL};
+    ws.getRow(totRow).height=20;
+  }
 
   // Scarica
-  const nomeMese=MESI_SHORT[mese];
-  XLSX.writeFile(wb, `MMG_Ore_${nomeMese}${anno}.xlsx`);
+  const buffer=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`MMG_Ore_${MESI_SHORT[mese]}${anno}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(a.href);
   toast('✓ Excel generato!');
   closeMod('mExport');
 }
