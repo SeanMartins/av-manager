@@ -912,7 +912,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.07</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.08</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1351,9 +1351,13 @@ function aggiornaLuogoCustom(){
 function togglePriv(){privOk=!privOk;$('privBox').classList.toggle('on',privOk);}
 function setBadge(id, count){
   const el=$(id);if(!el)return;
-  if(!count||count<=0){el.style.display='none';el.textContent='';return;}
-  el.style.display='flex';
-  el.textContent=count>99?'99+':count>1?count:'';
+  if(!count||count<=0){
+    el.style.display='none';
+    el.textContent='';
+    return;
+  }
+  el.style.cssText='display:flex!important;min-width:16px;height:16px;background:var(--rd);border-radius:8px;border:2px solid var(--bg1);font-size:10px;font-weight:700;color:#fff;align-items:center;justify-content:center;padding:0 3px;position:absolute;top:4px;right:6px;line-height:1';
+  el.textContent=count>99?'99+':count>1?String(count):'';
 }
 function clearNotif(){setBadge('notifDot',0);}
 function clearChatDot(){setBadge('chatDot',0);}
@@ -1596,21 +1600,24 @@ function startListeners(){
       }
     });
   // Forum — realtime con notifiche
+  let forumFirstLoad=true;
   DB.collection('forum').orderBy('createdAt','desc').onSnapshot(snap=>{
     const prev=cacheForum.length;
     cacheForum=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderForum();
-    // Notifica solo dopo il primo caricamento e se non siamo nella pagina forum
-    if(appStarted && prev>0 && cacheForum.length>prev){
+    if(forumFirstLoad){forumFirstLoad=false;return;}
+    // Nuovo post arrivato
+    if(cacheForum.length>prev){
       const page=$('p-forum');
       const isForumOpen=page&&page.classList.contains('on');
+      const last=cacheForum[0];
+      // Conta post non letti (creati dopo l'ultimo accesso)
       if(!isForumOpen){
-        setBadge('notifDot',1);
-        const last=cacheForum[0];
+        const nonLetti=cacheForum.filter(p=>p.uid!==USER.id&&(!p.lettoDA||!p.lettoDA[USER.id]));
+        setBadge('notifDot', nonLetti.length||1);
         toast('💬 '+last.nomeAutore+': '+last.titolo,'g');
       }
     }
-    lastForumCount=cacheForum.length;
   });
 }
 
@@ -3904,7 +3911,7 @@ function startAgendaListener(){
     renderAgenda();
     // Notifica solo dopo il primo caricamento
     if(firstLoad){firstLoad=false;return;}
-    // Controlla se ci sono turni nuovi o modificati per questo utente
+    // Controlla turni nuovi o modificati per questo utente
     const nuovi=snap.docChanges().filter(c=>
       (c.type==='added'||c.type==='modified') &&
       c.doc.data().uid===USER?.id
@@ -3913,10 +3920,13 @@ function startAgendaListener(){
       const pg=$('p-agenda');
       const isAgendaAperta=pg&&pg.classList.contains('on');
       if(!isAgendaAperta){
-        setBadge('agendaDot',1);
+        // Conta turni futuri non confermati
+        const oggi=toLocalISO(new Date());
+        const daConf=cacheAgenda.filter(t=>t.uid===USER?.id&&t.data>=oggi&&!t.confermato);
+        setBadge('agendaDot', daConf.length||1);
         const t=nuovi[0].doc.data();
         const tipo=t.tipo||'lavoro';
-        const icona={lavoro:'💼',assistenza:'🔧',trasferta:'✈️',jolly:'🃏',riposo:'😴',ferie:'🏖',formazione:'📚'}[tipo]||'📅';
+        const icona={lavoro:'💼',assistenza:'🔧',trasferta:'✈️',riposo:'😴',ferie:'🏖',formazione:'📚'}[tipo]||'📅';
         const [ay,am,ad]=t.data.split('-').map(Number);
         const dataTurno=new Date(ay,am-1,ad);
         const data=t.data?dataTurno.toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short'}):'';
