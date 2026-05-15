@@ -914,7 +914,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.11</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.12</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5508,32 +5508,37 @@ function apriUltimaConv(){
 
 function startChatListener(){
   let chatFirstLoad=true;
-  DB.collection('chat').where('partecipanti','array-contains',USER.id)
-    .orderBy('lastAt','desc').onSnapshot(snap=>{
-      cacheConv={};
-      snap.docs.forEach(d=>{ cacheConv[d.id]={id:d.id,...d.data()}; });
-      // Aggiorna lista team con badge messaggi
-      renderChatTeam();
-      // Conta non letti
-      const nonLetti=snap.docs.filter(d=>{
-        const c=d.data();
-        const lk='letto_'+USER.id;
-        return c.lastUid!==USER.id&&c.lastAt&&(!c[lk]||c[lk]<c.lastAt);
-      });
-      const isChatOpen=$('p-chat')&&$('p-chat').classList.contains('on');
-      if(nonLetti.length&&!isChatOpen){
-        setBadge('chatDot', nonLetti.length);
-      } else if(!nonLetti.length){
-        clearChatDot();
+  // Carica tutte le conversazioni che contengono l'utente
+  // Usa due query separate per evitare indice composito
+  DB.collection('chat').onSnapshot(snap=>{
+    cacheConv={};
+    snap.docs.forEach(d=>{
+      const data=d.data();
+      // Filtra solo conversazioni dell'utente corrente
+      if(data.partecipanti&&data.partecipanti.includes(USER.id)){
+        cacheConv[d.id]={id:d.id,...data};
       }
-      // Toast su nuovi messaggi
-      if(!chatFirstLoad&&nonLetti.length&&!isChatOpen){
-        const ultima=nonLetti[0].data();
-        const mitt=cacheTeam.find(m=>m.id===ultima.lastUid);
-        if(mitt) toast('✉️ '+(mitt.nome+' '+mitt.cognome)+': '+(ultima.lastMsg||'').substring(0,40));
-      }
-      chatFirstLoad=false;
     });
+    renderChatTeam();
+    // Conta non letti
+    const nonLetti=Object.values(cacheConv).filter(c=>{
+      const lk='letto_'+USER.id;
+      return c.lastUid!==USER.id&&c.lastAt&&(!c[lk]||c[lk]<c.lastAt);
+    });
+    const isChatOpen=$('p-chat')&&$('p-chat').classList.contains('on');
+    if(nonLetti.length&&!isChatOpen){
+      setBadge('chatDot', nonLetti.length);
+    } else if(!nonLetti.length){
+      clearChatDot();
+    }
+    // Toast su nuovi messaggi
+    if(!chatFirstLoad&&nonLetti.length&&!isChatOpen){
+      const ultima=nonLetti.sort((a,b)=>(b.lastAt||'').localeCompare(a.lastAt||''))[0];
+      const mitt=cacheTeam.find(m=>m.id===ultima.lastUid);
+      if(mitt) toast('✉️ '+(mitt.nome+' '+mitt.cognome)+': '+(ultima.lastMsg||'').substring(0,40));
+    }
+    chatFirstLoad=false;
+  });
 }
 
 function renderChatTeam(){
