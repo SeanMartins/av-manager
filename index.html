@@ -51,6 +51,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 .ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 6px;cursor:pointer;gap:2px;min-width:0}
 .ni .ic{font-size:19px;color:var(--tx3)}.ni .lb{font-size:9px;color:var(--tx3);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center}
 .ni.on .ic,.ni.on .lb{color:var(--ac2)}
+.notif-badge{position:absolute;top:4px;right:6px;min-width:16px;height:16px;background:var(--rd);border-radius:8px;border:2px solid var(--bg1);font-size:10px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
 @media(min-width:600px){
   .ni{padding:10px 8px 8px}
   .ni .ic{font-size:20px}
@@ -619,15 +620,15 @@ textarea{resize:vertical;min-height:80px}
     <div class="ni" id="n-magazzino" onclick="goPage('magazzino')"><div class="ic">📦</div><div class="lb">Magazz.</div></div>
     <div class="ni" id="n-agenda" onclick="goPage('agenda')" style="position:relative">
       <div class="ic">📅</div><div class="lb">Agenda</div>
-      <div class="notif-dot" id="agendaDot" style="display:none"></div>
+      <div class="notif-badge" id="agendaDot" style="display:none"></div>
     </div>
     <div class="ni" id="n-forum" onclick="goPage('forum');clearNotif()" style="position:relative">
       <div class="ic">💬</div><div class="lb">Forum</div>
-      <div class="notif-dot" id="notifDot" style="display:none"></div>
+      <div class="notif-badge" id="notifDot" style="display:none"></div>
     </div>
     <div class="ni" id="n-chat" onclick="goPage('chat')" style="position:relative">
       <div class="ic">✉️</div><div class="lb">Chat</div>
-      <div class="notif-dot" id="chatDot" style="display:none"></div>
+      <div class="notif-badge" id="chatDot" style="display:none"></div>
     </div>
     <div class="ni" id="n-dichiarazione" onclick="goPage('dichiarazione')"><div class="ic">📁</div><div class="lb">Archivio</div></div>
   </div>
@@ -911,7 +912,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.06</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.07</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1302,8 +1303,8 @@ function goPage(n){
   $('p-'+n)&&$('p-'+n).classList.add('on');$('n-'+n)&&$('n-'+n).classList.add('on');
   const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda',chat:'✉️ Messaggi',tools:'🔧 Tools Tecnici AV'};
   $('ptitle').textContent=t[n]||n;
-  if(n==='agenda'){$('agendaDot').style.display='none';renderAgenda();}
-  if(n==='chat'){const cd=$('chatDot');if(cd)cd.style.display='none';chiudiChat();}
+  if(n==='agenda'){clearAgendaDot();renderAgenda();}
+  if(n==='chat'){clearChatDot();chiudiChat();}
   
 }
 
@@ -1348,7 +1349,15 @@ function aggiornaLuogoCustom(){
   if(v) selLuogo='📍 '+v;
 }
 function togglePriv(){privOk=!privOk;$('privBox').classList.toggle('on',privOk);}
-function clearNotif(){$('notifDot').style.display='none';}
+function setBadge(id, count){
+  const el=$(id);if(!el)return;
+  if(!count||count<=0){el.style.display='none';el.textContent='';return;}
+  el.style.display='flex';
+  el.textContent=count>99?'99+':count>1?count:'';
+}
+function clearNotif(){setBadge('notifDot',0);}
+function clearChatDot(){setBadge('chatDot',0);}
+function clearAgendaDot(){setBadge('agendaDot',0);}
 
 // ── AUTH ──
 async function doReg(){
@@ -1543,7 +1552,7 @@ function startApp(){
         });
         // Mostra dot sull'agenda se ci sono conferme nuove
         if(snap.docs.length>0){
-          const dot=$('agendaDot');if(dot)dot.style.display='block';
+          setBadge('agendaDot',1);
         }
       });
   }
@@ -1596,7 +1605,7 @@ function startListeners(){
       const page=$('p-forum');
       const isForumOpen=page&&page.classList.contains('on');
       if(!isForumOpen){
-        $('notifDot').style.display='block';
+        setBadge('notifDot',1);
         const last=cacheForum[0];
         toast('💬 '+last.nomeAutore+': '+last.titolo,'g');
       }
@@ -3904,7 +3913,7 @@ function startAgendaListener(){
       const pg=$('p-agenda');
       const isAgendaAperta=pg&&pg.classList.contains('on');
       if(!isAgendaAperta){
-        $('agendaDot').style.display='block';
+        setBadge('agendaDot',1);
         const t=nuovi[0].doc.data();
         const tipo=t.tipo||'lavoro';
         const icona={lavoro:'💼',assistenza:'🔧',trasferta:'✈️',jolly:'🃏',riposo:'😴',ferie:'🏖',formazione:'📚'}[tipo]||'📅';
@@ -4476,8 +4485,11 @@ async function checkTurniNonConfermati(){
     if(turniMiei.length>0){
       wrap.style.display='block';
       if(count)count.textContent=turniMiei.length+' turno/i in attesa di conferma';
+      if(!($('p-agenda')&&$('p-agenda').classList.contains('on')))
+        setBadge('agendaDot', turniMiei.length);
     } else {
       wrap.style.display='none';
+      clearAgendaDot();
     }
   }
 }
@@ -5481,7 +5493,9 @@ function startChatListener(){
         return c.lastUid!==USER.id&&c.lastAt&&(!c[lk]||c[lk]<c.lastAt);
       });
       if(nonLetti.length&&!($('p-chat')&&$('p-chat').classList.contains('on'))){
-        const cd=$('chatDot');if(cd)cd.style.display='block';
+        setBadge('chatDot', nonLetti.length);
+      } else if(!nonLetti.length){
+        clearChatDot();
       }
     });
 }
@@ -5542,7 +5556,7 @@ async function apriConv(altroUid){
   $('chatThreadNome').textContent=altro?altro.nome+' '+altro.cognome:'—';
   $('chatHome').style.display='none';
   const ct=$('chatThread');ct.style.display='flex';
-  const cd=$('chatDot');if(cd)cd.style.display='none';
+  clearChatDot();
   const cid=chatConvId(USER.id,altroUid);
   // Marca letto
   const lk={};lk['letto_'+USER.id]=new Date().toISOString();
