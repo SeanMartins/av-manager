@@ -911,7 +911,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.05</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.06</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2690,7 +2690,7 @@ function apriPreparaLavoro(){
   // Reset form
   const fields=['plNome','plNote','plData','plDataFine'];
   fields.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const pd=document.getElementById('plData');if(pd)pd.value=new Date().toISOString().slice(0,10);
+  const pd=document.getElementById('plData');if(pd)pd.value=toLocalISO(new Date());
   // Popola location
   const sel=document.getElementById('plLoc');
   if(sel){
@@ -3879,6 +3879,12 @@ function getWeekDates(offset){
   return days;
 }
 
+// Converte Date in YYYY-MM-DD usando ora locale (evita shift UTC)
+function toLocalISO(d){
+  const pad=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+
 function agendaWeek(dir){agWeekOffset+=dir;renderAgenda();}
 
 function startAgendaListener(){
@@ -3928,7 +3934,7 @@ function renderAgendaDip(){
   let h='';
   const GG=['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
   days.forEach((d,i)=>{
-    const ds=d.toISOString().slice(0,10);
+    const ds=toLocalISO(d);
     const isToday=d.toDateString()===today;
     const turni=cacheAgenda.filter(t=>t.uid===USER.id&&t.data===ds);    h+='<div class="ag-day'+(isToday?' today':'')+'">'+
       '<div class="ag-day-header">'+
@@ -3979,7 +3985,7 @@ function renderAgendaAdmin(){
   const GG=['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
   let h='';
   days.forEach((d,i)=>{
-    const ds=d.toISOString().slice(0,10);
+    const ds=toLocalISO(d);
     const isToday=d.toDateString()===today;
     let turni=cacheAgenda.filter(t=>t.data===ds);
     if(filterUid!=='all')turni=turni.filter(t=>t.uid===filterUid);
@@ -4462,7 +4468,7 @@ function drawCoverageCanvas(angH,dist,covW){
 }
 async function checkTurniNonConfermati(){
   if(!USER||isResponsabile()||isAdmin())return;
-  const oggi=new Date().toISOString().slice(0,10);
+  const oggi=toLocalISO(new Date());
   const turniMiei=cacheAgenda.filter(t=>t.uid===USER.id&&t.data>=oggi&&!t.confermato);
   const wrap=$('agConfermaWrap');
   const count=$('agConfermaCount');
@@ -4498,7 +4504,7 @@ async function confermaSingoloTurno(turnoId){
 
 async function confermaTurni(){
   if(!USER)return;
-  const oggi=new Date().toISOString().slice(0,10);
+  const oggi=toLocalISO(new Date());
   const turniMiei=cacheAgenda.filter(t=>t.uid===USER.id&&t.data>=oggi&&!t.confermato);
   if(!turniMiei.length){toast('Nessun turno da confermare');return;}
   try{
@@ -4526,8 +4532,8 @@ async function confermaTurni(){
 function renderConfermeStatus(){
   const el=$('agConfermeStatus');if(!el)return;
   const days=getWeekDates(agWeekOffset);
-  const start=days[0].toISOString().slice(0,10);
-  const end=days[6].toISOString().slice(0,10);
+  const start=toLocalISO(days[0]);
+  const end=toLocalISO(days[6]);
   // Turni della settimana visualizzata
   const turniSettimana=cacheAgenda.filter(t=>t.data>=start&&t.data<=end);
   if(!turniSettimana.length){el.innerHTML='';return;}
@@ -5159,7 +5165,7 @@ let gestTimbEditId=null, atPause=[];
 
 function apriGestTimb(){
   // Popola data con oggi
-  const today=new Date().toISOString().slice(0,10);
+  const today=toLocalISO(new Date());
   const dtEl=$('gestTimbData');if(dtEl)dtEl.value=today;
   // Popola select dipendenti
   const sel=$('gestTimbDip');
@@ -5252,7 +5258,7 @@ function apriNuovaTimb(){
   gestTimbEditId=null;
   $('mAddTimbTitle').textContent='➕ Aggiungi timbratura';
   $('atDeleteBtn').style.display='none';
-  $('atData').value=$('gestTimbData')?.value||new Date().toISOString().slice(0,10);
+  $('atData').value=$('gestTimbData')?.value||toLocalISO(new Date());
   $('atEntrata').value='09:00';
   $('atUscita').value='18:00';
   $('atLuogo').value='🏢 In sede';
