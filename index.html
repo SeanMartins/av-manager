@@ -335,39 +335,51 @@ textarea{resize:vertical;min-height:80px}
     <div class="page" id="p-magazzino">
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
         <div class="sc"><div class="sn" id="nArt">0</div><div class="sl">Articoli</div></div>
-        <div class="sc"><div class="sn" id="nDisp">0</div><div class="sl">Disponibili</div></div>
-        <div class="sc"><div class="sn" id="nInUso">0</div><div class="sl">In uso</div></div>
+        <div class="sc" style="cursor:pointer" onclick="mostraStatusMag()"><div class="sn" id="nDisp">0</div><div class="sl">Disponibili</div></div>
+        <div class="sc" style="cursor:pointer" onclick="mostraStatusMag()"><div class="sn" id="nInUso">0</div><div class="sl">In uso</div></div>
       </div>
-      <!-- Azioni principali -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <button class="btn btn-p btn-f" style="flex-direction:column;gap:4px;padding:14px" onclick="apriPreparaLavoro()">
-          <span style="font-size:22px">📋</span><span style="font-size:13px">Prepara lavoro</span>
-        </button>
-        <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:14px;border-color:var(--am);color:var(--am)" onclick="openSmarca()">
-          <span style="font-size:22px">✅</span><span style="font-size:13px">Smarca rientro</span>
-        </button>
+      <!-- Tab Inventario / Status -->
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button id="tabInventario" class="btn btn-p btn-f" onclick="switchMagTab('inventario')" style="flex:1;padding:10px;font-size:13px">📦 Inventario</button>
+        <button id="tabStatus" class="btn btn-f" onclick="switchMagTab('status')" style="flex:1;padding:10px;font-size:13px">📊 Status</button>
       </div>
-      <!-- Sezione Responsabile -->
-      <div id="magRespSection" style="display:none;margin-bottom:14px">
-        <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🔐 Gestione Responsabile</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--gn);color:var(--gn)" onclick="renderMatNuovi();openMod('mMatNuovi')">
-            <span style="font-size:18px">🆕</span>Nuovi
+      <!-- Tab Inventario -->
+      <div id="magTabInventario">
+        <!-- Azioni principali -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <button class="btn btn-p btn-f" style="flex-direction:column;gap:4px;padding:14px" onclick="apriPreparaLavoro()">
+            <span style="font-size:22px">📋</span><span style="font-size:13px">Prepara lavoro</span>
           </button>
-          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--rd);color:var(--rd)" onclick="renderMatVenduti();openMod('mMatVenduti')">
-            <span style="font-size:18px">💰</span>Venduti
-          </button>
-          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--am);color:var(--am)" onclick="renderMatInstall();openMod('mMatInstall')">
-            <span style="font-size:18px">🔧</span>Installati
+          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:14px;border-color:var(--am);color:var(--am)" onclick="openSmarca()">
+            <span style="font-size:22px">✅</span><span style="font-size:13px">Smarca rientro</span>
           </button>
         </div>
+        <!-- Sezione Responsabile -->
+        <div id="magRespSection" style="display:none;margin-bottom:14px">
+          <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🔐 Gestione Responsabile</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+            <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--gn);color:var(--gn)" onclick="renderMatNuovi();openMod('mMatNuovi')">
+              <span style="font-size:18px">🆕</span>Nuovi
+            </button>
+            <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--rd);color:var(--rd)" onclick="renderMatVenduti();openMod('mMatVenduti')">
+              <span style="font-size:18px">💰</span>Venduti
+            </button>
+            <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:12px;font-size:11px;border-color:var(--am);color:var(--am)" onclick="renderMatInstall();openMod('mMatInstall')">
+              <span style="font-size:18px">🔧</span>Installati
+            </button>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="stl">Inventario</div>
+          <button class="btn btn-p" style="padding:7px 14px;font-size:13px" onclick="openMod('mNewArt')">+ Articolo</button>
+        </div>
+        <input type="text" id="magSearch" placeholder="🔍 Cerca articolo..." oninput="renderMag()" style="margin-bottom:12px">
+        <div id="magList"><div class="empty">Caricamento...</div></div>
       </div>
-      <div class="sec">
-        <div class="stl">Inventario</div>
-        <button class="btn btn-p" style="padding:7px 14px;font-size:13px" onclick="openMod('mNewArt')">+ Articolo</button>
+      <!-- Tab Status -->
+      <div id="magTabStatus" style="display:none">
+        <div id="magStatusContent"><div class="empty">Caricamento...</div></div>
       </div>
-      <input type="text" id="magSearch" placeholder="🔍 Cerca articolo..." oninput="renderMag()" style="margin-bottom:12px">
-      <div id="magList"><div class="empty">Caricamento...</div></div>
     </div>
 
     <!-- CHAT -->
@@ -915,7 +927,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.19</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.21</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2535,22 +2547,63 @@ function renderMag(){
   const q=($('magSearch')?.value||'').toLowerCase();
   const fil=q?cacheMag.filter(m=>m.nome.toLowerCase().includes(q)||(m.marca||'').toLowerCase().includes(q)):cacheMag;
   $('nArt').textContent=cacheMag.length;
-  $('nDisp').textContent=cacheMag.filter(m=>m.stato==='ok').length;
-  $('nInUso').textContent=cacheMag.filter(m=>m.stato!=='ok').length;
+
+  // Calcola quantità in uso per ogni articolo dai lavori aperti
+  const inUsoMap={};
+  cacheDich.filter(d=>!d.rientroData).forEach(d=>{
+    (d.articoli||[]).forEach(a=>{
+      const key=a.id||a.ser||a.nome;
+      if(!inUsoMap[key])inUsoMap[key]={qty:0,lavori:[]};
+      inUsoMap[key].qty+=(a.qty||1);
+      if(!inUsoMap[key].lavori.find(l=>l.id===d.id))
+        inUsoMap[key].lavori.push({id:d.id,nome:d.nome,data:d.data});
+    });
+  });
+
+  $('nDisp').textContent=cacheMag.filter(m=>{
+    const key=m.id||m.ser||m.nome;
+    const inUso=(inUsoMap[key]?.qty||0);
+    return (m.qty||1)-inUso>0&&m.stato==='ok';
+  }).length;
+  $('nInUso').textContent=cacheMag.filter(m=>{
+    const key=m.id||m.ser||m.nome;
+    return (inUsoMap[key]?.qty||0)>0;
+  }).length;
+
   let h='';
   ['audio','luci','ledwall','traduzione','video','strutture'].forEach(cat=>{
     const items=fil.filter(m=>m.cat===cat);if(!items.length)return;
     const label={audio:'🎙 Audio',luci:'💡 Luci',ledwall:'🖥 LED wall',traduzione:'🎧 Traduzione simultanea',video:'📽 Video / Proiezione',strutture:'🏗 Strutture'}[cat]||cat;
     h+='<div style="font-size:11px;font-weight:600;color:var(--tx2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:7px">'+label+'</div><div class="card" style="margin-bottom:13px">';
     items.forEach(m=>{
+      const key=m.id||m.ser||m.nome;
+      const qtaTotale=m.qty||1;
+      const qtaInUso=inUsoMap[key]?.qty||0;
+      const qtaDisp=Math.max(0,qtaTotale-qtaInUso);
+      const lavoriInUso=inUsoMap[key]?.lavori||[];
+      const pct=qtaTotale>0?qtaDisp/qtaTotale:1;
+
+      // Badge disponibilità
       let badgeHtml='';
-      if(m.stato==='ok'){
-        badgeHtml='<span class="bdg bg">Disponibile</span>';
-      } else if(m.stato==='maint'){
+      if(m.stato==='maint'){
         badgeHtml='<span class="bdg br">Manutenzione</span>';
-      } else {
+      } else if(qtaDisp===0){
+        // Tutto in uso
+        badgeHtml='<button onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')" style="background:rgba(239,68,68,.15);color:var(--rd);border:1px solid var(--rd);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">🔴 Esaurito ›</button>';
+      } else if(pct<=0.3||qtaDisp<=2){
+        // Quasi esaurito
+        badgeHtml='<span class="bdg ba" style="cursor:pointer" onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')">⚠️ Quasi finito</span>';
+      } else if(qtaInUso>0){
+        // Parzialmente in uso
         badgeHtml='<button onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')" style="background:var(--amb);color:var(--am);border:1px solid var(--am);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📋 In uso ›</button>';
+      } else {
+        badgeHtml='<span class="bdg bg">Disponibile</span>';
       }
+
+      // Barra disponibilità visiva
+      const barColor=qtaDisp===0?'var(--rd)':pct<=0.3?'var(--am)':'var(--gn)';
+      const barW=qtaTotale>1?`<div style="width:40px;height:4px;background:var(--b);border-radius:2px;margin-top:2px"><div style="width:${Math.round(pct*100)}%;height:100%;background:${barColor};border-radius:2px"></div></div>`:'';
+
       h+='<div class="row">'+
         '<div onclick="mostraQR(\''+m.id+'\')" style="width:36px;height:36px;border-radius:var(--rs);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;cursor:pointer">📦</div>'+
         '<div style="flex:1;min-width:0;cursor:pointer" onclick="mostraQR(\''+m.id+'\')">'+
@@ -2560,7 +2613,10 @@ function renderMag(){
         '</div>'+
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'+
           '<div style="display:flex;align-items:center;gap:5px">'+
-            '<span style="font-size:12px;color:var(--tx2)">×'+(m.qty||1)+'</span>'+
+            '<div style="text-align:right">'+
+              '<span style="font-size:12px;color:'+(qtaDisp===0?'var(--rd)':qtaDisp<=2?'var(--am)':'var(--tx2)')+'">'+qtaDisp+'/'+qtaTotale+'</span>'+
+              barW+
+            '</div>'+
             '<button onclick="event.stopPropagation();mostraStorico(\''+m.id+'\')" style="width:20px;height:20px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center">📋</button>'+
           '</div>'+
           badgeHtml+
@@ -2585,61 +2641,69 @@ function trovaDovEUsato(id,ser){
 
 function mostraDovetUsato(artId, artNomeEnc){
   const artNome=decodeURIComponent(artNomeEnc);
-  // Trova il materiale in cache per avere anche ser e nome
   const mat=cacheMag.find(m=>m.id===artId);
   const artSer=mat?.ser||'';
-  const artNomeClean=artNome.toLowerCase();
+  const qtaTotale=mat?.qty||1;
 
-  // Cerca in tutti i lavori non ancora rientrati
-  const lavori=cacheDich.filter(d=>
-    !d.rientroData &&
+  // Trova tutti i lavori aperti che usano questo articolo
+  const lavoriConArt=cacheDich.filter(d=>
+    !d.rientroData&&
     (d.articoli||[]).some(a=>
-      a.id===artId ||
-      (artSer && a.ser===artSer) ||
-      (a.id||'').toLowerCase()===artId.toLowerCase() ||
-      (artSer && (a.ser||'').toLowerCase()===artSer.toLowerCase()) ||
-      (a.nome||'').toLowerCase()===artNomeClean
+      a.id===artId||(artSer&&a.ser===artSer)||
+      (a.nome||'').toLowerCase()===(artNome||'').toLowerCase()
     )
   );
 
-  if(!lavori.length){
-    // Mostra comunque il modal con info utile
-    let body='<div style="font-size:16px;font-weight:600;margin-bottom:4px">📋 '+artNome+'</div>'+
-      '<div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Seriale: '+(artSer||'—')+'</div>'+
-      '<div class="card" style="padding:14px;text-align:center">'+
-        '<div style="font-size:24px;margin-bottom:8px">🔍</div>'+
-        '<div style="font-size:14px;font-weight:500;margin-bottom:6px">Nessun lavoro attivo trovato</div>'+
-        '<div style="font-size:12px;color:var(--tx2)">L\'articolo risulta "In uso" ma non è presente in nessun lavoro preparato dall\'app.<br><br>Potrebbe essere stato segnato manualmente oppure il lavoro è già stato smarcato.</div>'+
-      '</div>'+
-      '<button class="btn btn-f" onclick="closeMod(\'mDoveUsato\')" style="margin-top:10px">Chiudi</button>';
-    $('mDoveUsatoBody').innerHTML=body;
-    openMod('mDoveUsato');
-    return;
-  }
-
-  let body='<div style="font-size:16px;font-weight:600;margin-bottom:4px">📋 '+artNome+'</div>'+
-    '<div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Presente nei seguenti lavori in corso:</div>';
-
-  lavori.forEach(d=>{
-    const data=d.data?fmtData(d.data,{weekday:'short',day:'2-digit',month:'short',year:'numeric'}):new Date(d.createdAt).toLocaleDateString('it-IT');
-    const art=(d.articoli||[]).find(a=>
+  let qtaInUso=0;
+  let righe='';
+  lavoriConArt.forEach(d=>{
+    const artInLavoro=(d.articoli||[]).find(a=>
       a.id===artId||(artSer&&a.ser===artSer)||
-      (a.nome||'').toLowerCase()===artNomeClean
+      (a.nome||'').toLowerCase()===(artNome||'').toLowerCase()
     );
-    const qty=art?.qty||1;
-    body+='<div class="card" style="margin-bottom:10px;padding:12px">'+
-      '<div style="font-size:15px;font-weight:600;margin-bottom:6px">'+d.nome+'</div>'+
-      '<div style="display:flex;flex-direction:column;gap:4px">'+
-        '<div style="font-size:12px;color:var(--tx2)">📅 '+data+'</div>'+
-        '<div style="font-size:12px;color:var(--tx2)">📍 '+(d.location||'—')+'</div>'+
-        '<div style="font-size:12px;color:var(--tx2)">👤 '+d.tecnico+'</div>'+
-        '<div style="font-size:12px;color:var(--am);font-weight:500;margin-top:4px">📦 Quantità in uso: '+qty+'</div>'+
-      '</div>'+
-    '</div>';
+    const qty=artInLavoro?.qty||1;
+    qtaInUso+=qty;
+    const dataUsc=d.data?fmtData(d.data,{day:'2-digit',month:'short',year:'numeric'}):'—';
+    const dataRient=d.dataFine?fmtData(d.dataFine,{day:'2-digit',month:'short'}):'—';
+    righe+=`<div style="padding:10px;background:var(--bg2);border-radius:var(--rs);margin-bottom:8px;border-left:3px solid var(--am)">
+      <div style="font-size:13px;font-weight:600">${d.nome||'—'}</div>
+      <div style="font-size:11px;color:var(--tx2);margin-top:3px">
+        📅 Uscita: ${dataUsc} · Rientro previsto: ${dataRient}
+      </div>
+      <div style="font-size:11px;color:var(--am);margin-top:2px">Quantità in uso: ${qty}</div>
+      <div style="font-size:11px;color:var(--tx3)">Tecnico: ${d.tecnico||'—'}</div>
+    </div>`;
   });
-  body+='<button class="btn btn-f" onclick="closeMod(\'mDoveUsato\')" style="margin-top:4px">Chiudi</button>';
-  $('mDoveUsatoBody').innerHTML=body;
-  openMod('mDoveUsato');
+
+  const qtaDisp=Math.max(0,qtaTotale-qtaInUso);
+  const modal=`<div class="mol" id="mDovetUsato" onclick="if(event.target===this)closeMod('mDovetUsato')" style="z-index:400">
+    <div class="msh">
+      <div class="mhd"></div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px">📦 ${artNome}</div>
+      <div style="display:flex;gap:12px;margin-bottom:14px">
+        <div style="flex:1;background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">
+          <div style="font-size:20px;font-weight:800;color:var(--gn)">${qtaDisp}</div>
+          <div style="font-size:11px;color:var(--tx2)">Disponibili</div>
+        </div>
+        <div style="flex:1;background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">
+          <div style="font-size:20px;font-weight:800;color:var(--am)">${qtaInUso}</div>
+          <div style="font-size:11px;color:var(--tx2)">In uso</div>
+        </div>
+        <div style="flex:1;background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">
+          <div style="font-size:20px;font-weight:800">${qtaTotale}</div>
+          <div style="font-size:11px;color:var(--tx2)">Totale</div>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">LAVORI IN CORSO (${lavoriConArt.length})</div>
+      ${righe||'<div class="empty">Nessun lavoro attivo</div>'}
+      <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mDovetUsato')">Chiudi</button>
+    </div>
+  </div>`;
+
+  // Rimuovi modal precedente se esiste
+  const prev=document.getElementById('mDovetUsato');
+  if(prev)prev.remove();
+  document.body.insertAdjacentHTML('beforeend',modal);
 }
 
 async function saveArt(){
@@ -2890,9 +2954,22 @@ function plAddToList(id,nomeHint){
   const m=cacheMag.find(x=>x.id===id||(x.ser||'').toLowerCase()===id.toLowerCase());
   if(!m&&!nomeHint){toast('"'+id+'" non trovato in magazzino','a');return;}
   const art=m||{id,nome:nomeHint||id,cat:'—',marca:'—',ser:id,qty:1};
-  const exist=plArticoli.find(x=>(x.id||x.ser)===( art.id||art.ser));
+  const exist=plArticoli.find(x=>(x.id||x.ser)===(art.id||art.ser));
   if(exist){exist.qtyPrep=(exist.qtyPrep||1)+1;toast('✓ '+art.nome+' (×'+exist.qtyPrep+')');}
-  else{plArticoli.push({...art,qtyPrep:1});if(navigator.vibrate)navigator.vibrate(60);toast('✓ '+art.nome);}
+  else{
+    const key=art.id||art.ser||art.nome;
+    const inUsoMap={};
+    cacheDich.filter(d=>!d.rientroData&&d.id!==plEditingId).forEach(d=>{
+      (d.articoli||[]).forEach(a=>{const k=a.id||a.ser||a.nome;if(!inUsoMap[k])inUsoMap[k]=0;inUsoMap[k]+=(a.qty||1);});
+    });
+    const qtaTot=art.qty||1;
+    const qtaDisp=Math.max(0,qtaTot-(inUsoMap[key]||0));
+    if(qtaDisp<=0) toast('⚠️ '+art.nome+' esaurito — tutto in uso!','r');
+    else if(qtaDisp<=2) toast('⚠️ Solo '+qtaDisp+' disponibili di '+art.nome,'a');
+    else toast('✓ '+art.nome);
+    plArticoli.push({...art,qtyPrep:1});
+    if(navigator.vibrate)navigator.vibrate(60);
+  }
   renderPlItems();
 }
 function plRemove(i){plArticoli.splice(i,1);renderPlItems();}
@@ -4241,7 +4318,139 @@ async function deleteTurno(){
   closeMod('mNewTurno');toast('✓ Turno eliminato');
 }
 
-// ── SESSIONE UNIVOCA ──
+function switchMagTab(tab){
+  const inv=$('magTabInventario');
+  const sta=$('magTabStatus');
+  const btnInv=$('tabInventario');
+  const btnSta=$('tabStatus');
+  if(tab==='inventario'){
+    inv.style.display='block';sta.style.display='none';
+    btnInv.classList.add('btn-p');btnInv.classList.remove('btn-f');
+    btnSta.classList.remove('btn-p');btnSta.classList.add('btn-f');
+    btnSta.style.cssText='flex:1;padding:10px;font-size:13px';
+  } else {
+    inv.style.display='none';sta.style.display='block';
+    btnSta.classList.add('btn-p');btnSta.classList.remove('btn-f');
+    btnSta.style.cssText='flex:1;padding:10px;font-size:13px;background:var(--ac);border-color:var(--ac);color:#fff';
+    btnInv.classList.remove('btn-p');btnInv.classList.add('btn-f');
+    renderStatusMag();
+  }
+}
+
+function mostraStatusMag(){switchMagTab('status');}
+
+function renderStatusMag(){
+  const el=$('magStatusContent');if(!el)return;
+
+  // Calcola inUsoMap
+  const inUsoMap={};
+  cacheDich.filter(d=>!d.rientroData).forEach(d=>{
+    (d.articoli||[]).forEach(a=>{
+      const key=a.id||a.ser||a.nome;
+      if(!inUsoMap[key])inUsoMap[key]={qty:0,lavori:[]};
+      inUsoMap[key].qty+=(a.qty||1);
+      if(!inUsoMap[key].lavori.find(l=>l.id===d.id))
+        inUsoMap[key].lavori.push({id:d.id,nome:d.nome,data:d.data,dataFine:d.dataFine});
+    });
+  });
+
+  const disponibili=cacheMag.filter(m=>{
+    const key=m.id||m.ser||m.nome;
+    return Math.max(0,(m.qty||1)-(inUsoMap[key]?.qty||0))>0&&m.stato==='ok';
+  });
+  const inUso=cacheMag.filter(m=>{
+    const key=m.id||m.ser||m.nome;
+    return (inUsoMap[key]?.qty||0)>0;
+  });
+  const esauriti=cacheMag.filter(m=>{
+    const key=m.id||m.ser||m.nome;
+    return Math.max(0,(m.qty||1)-(inUsoMap[key]?.qty||0))===0&&m.stato==='ok';
+  });
+  const manutenzione=cacheMag.filter(m=>m.stato==='maint');
+
+  let h='';
+
+  // Riepilogo rapido
+  h+=`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px">
+    <div style="background:rgba(34,197,94,.1);border:1px solid var(--gn);border-radius:var(--r);padding:12px;text-align:center">
+      <div style="font-size:28px;font-weight:800;color:var(--gn)">${disponibili.length}</div>
+      <div style="font-size:11px;color:var(--gn)">✅ Disponibili</div>
+    </div>
+    <div style="background:rgba(245,158,11,.1);border:1px solid var(--am);border-radius:var(--r);padding:12px;text-align:center">
+      <div style="font-size:28px;font-weight:800;color:var(--am)">${inUso.length}</div>
+      <div style="font-size:11px;color:var(--am)">📋 In uso</div>
+    </div>
+    <div style="background:rgba(239,68,68,.1);border:1px solid var(--rd);border-radius:var(--r);padding:12px;text-align:center">
+      <div style="font-size:28px;font-weight:800;color:var(--rd)">${esauriti.length}</div>
+      <div style="font-size:11px;color:var(--rd)">🔴 Esauriti</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:12px;text-align:center">
+      <div style="font-size:28px;font-weight:800;color:var(--tx3)">${manutenzione.length}</div>
+      <div style="font-size:11px;color:var(--tx3)">🔧 Manutenzione</div>
+    </div>
+  </div>`;
+
+  // Sezione In uso
+  if(inUso.length){
+    h+='<div style="font-size:11px;font-weight:600;color:var(--am);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📋 IN USO ('+inUso.length+')</div>';
+    inUso.forEach(m=>{
+      const key=m.id||m.ser||m.nome;
+      const qtaTot=m.qty||1;
+      const qtaInUso=inUsoMap[key]?.qty||0;
+      const qtaDisp=Math.max(0,qtaTot-qtaInUso);
+      const lavori=inUsoMap[key]?.lavori||[];
+      h+='<div class="row" onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')" style="cursor:pointer">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:500">'+m.nome+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'—')+' · '+(m.cat||'—')+'</div>'+
+          '<div style="font-size:11px;color:var(--am);margin-top:2px">'+lavori.map(l=>l.nome).join(', ')+'</div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0">'+
+          '<div style="font-size:13px;font-weight:700;color:var(--am)">'+qtaInUso+'/'+qtaTot+'</div>'+
+          '<div style="font-size:10px;color:var(--gn)">'+qtaDisp+' liberi</div>'+
+        '</div>'+
+      '</div>';
+    });
+  }
+
+  // Sezione Esauriti
+  if(esauriti.length){
+    h+='<div style="font-size:11px;font-weight:600;color:var(--rd);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">🔴 ESAURITI ('+esauriti.length+')</div>';
+    esauriti.forEach(m=>{
+      const key=m.id||m.ser||m.nome;
+      const lavori=inUsoMap[key]?.lavori||[];
+      h+='<div class="row" onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')" style="cursor:pointer;border-left:3px solid var(--rd)">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:600;color:var(--rd)">'+m.nome+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'—')+'</div>'+
+          '<div style="font-size:11px;color:var(--tx3)">Tutti i '+( m.qty||1)+' pezzi in uso su: '+lavori.map(l=>l.nome).join(', ')+'</div>'+
+        '</div>'+
+        '<span style="font-size:18px;color:var(--rd);flex-shrink:0">›</span>'+
+      '</div>';
+    });
+  }
+
+  // Sezione Disponibili
+  if(disponibili.length){
+    h+='<div style="font-size:11px;font-weight:600;color:var(--gn);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">✅ DISPONIBILI ('+disponibili.length+')</div>';
+    disponibili.forEach(m=>{
+      const key=m.id||m.ser||m.nome;
+      const qtaTot=m.qty||1;
+      const qtaInUso=inUsoMap[key]?.qty||0;
+      const qtaDisp=qtaTot-qtaInUso;
+      h+='<div class="row">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:500">'+m.nome+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'—')+' · '+(m.cat||'—')+'</div>'+
+        '</div>'+
+        '<span style="font-size:13px;font-weight:700;color:var(--gn);flex-shrink:0">'+qtaDisp+'/'+qtaTot+'</span>'+
+      '</div>';
+    });
+  }
+
+  if(!h) h='<div class="empty">Nessun articolo in magazzino</div>';
+  el.innerHTML=h;
+}
 async function checkSessionValid(){
   if(!USER||!USER.sessionToken)return;
   try{
