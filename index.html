@@ -351,6 +351,7 @@ textarea{resize:vertical;min-height:80px}
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <button id="tabInventario" class="btn btn-p btn-f" onclick="switchMagTab('inventario')" style="flex:1;padding:10px;font-size:13px">📦 Inventario</button>
         <button id="tabStatus" class="btn btn-f" onclick="switchMagTab('status')" style="flex:1;padding:10px;font-size:13px">📊 Status</button>
+        <button id="tabStats" class="btn btn-f" onclick="switchMagTab('stats')" style="flex:1;padding:10px;font-size:13px">📈 Stats</button>
       </div>
       <!-- Tab Inventario -->
       <div id="magTabInventario">
@@ -388,6 +389,18 @@ textarea{resize:vertical;min-height:80px}
       <!-- Tab Status -->
       <div id="magTabStatus" style="display:none">
         <div id="magStatusContent"><div class="empty">Caricamento...</div></div>
+      </div>
+      <!-- Tab Statistiche -->
+      <div id="magTabStats" style="display:none">
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <select id="statsPeriodo" onchange="renderStatsMAg()" style="flex:1;font-size:12px;padding:8px 10px">
+            <option value="1">Ultimo mese</option>
+            <option value="3">Ultimi 3 mesi</option>
+            <option value="6">Ultimi 6 mesi</option>
+            <option value="12" selected>Ultimo anno</option>
+          </select>
+        </div>
+        <div id="magStatsContent"><div class="empty">Caricamento...</div></div>
       </div>
     </div>
 
@@ -1005,7 +1018,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.35</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.36</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -3842,8 +3855,8 @@ function startDichListener(){
     renderDich();
     // Aggiorna disponibilità magazzino quando cambiano i lavori
     renderMag();
-    // Aggiorna status tab se aperto
     if($('magTabStatus')&&$('magTabStatus').style.display!=='none') renderStatusMag();
+    if($('magTabStats')&&$('magTabStats').style.display!=='none') renderStatsMag();
   });
 }
 
@@ -4470,22 +4483,147 @@ async function deleteTurno(){
 }
 
 function switchMagTab(tab){
-  const inv=$('magTabInventario');
-  const sta=$('magTabStatus');
-  const btnInv=$('tabInventario');
-  const btnSta=$('tabStatus');
-  if(tab==='inventario'){
-    inv.style.display='block';sta.style.display='none';
-    btnInv.classList.add('btn-p');btnInv.classList.remove('btn-f');
-    btnSta.classList.remove('btn-p');btnSta.classList.add('btn-f');
-    btnSta.style.cssText='flex:1;padding:10px;font-size:13px';
-  } else {
-    inv.style.display='none';sta.style.display='block';
-    btnSta.classList.add('btn-p');btnSta.classList.remove('btn-f');
-    btnSta.style.cssText='flex:1;padding:10px;font-size:13px;background:var(--ac);border-color:var(--ac);color:#fff';
-    btnInv.classList.remove('btn-p');btnInv.classList.add('btn-f');
-    renderStatusMag();
+  const tabs=['inventario','status','stats'];
+  const btns={inventario:'tabInventario',status:'tabStatus',stats:'tabStats'};
+  const divs={inventario:'magTabInventario',status:'magTabStatus',stats:'magTabStats'};
+  tabs.forEach(t=>{
+    const d=$(divs[t]);const b=$(btns[t]);
+    if(d)d.style.display=t===tab?'block':'none';
+    if(b){
+      if(t===tab){b.classList.add('btn-p');b.classList.remove('btn-f');b.style.cssText='flex:1;padding:10px;font-size:13px';}
+      else{b.classList.remove('btn-p');b.classList.add('btn-f');b.style.cssText='flex:1;padding:10px;font-size:13px';}
+    }
+  });
+  if(tab==='status') renderStatusMag();
+  if(tab==='stats') renderStatsMag();
+}
+
+function renderStatsMag(){
+  const el=$('magStatsContent');if(!el)return;
+  const mesi=parseInt($('statsPeriodo')?.value||12);
+  const dataInizio=new Date();
+  dataInizio.setMonth(dataInizio.getMonth()-mesi);
+  const isoInizio=dataInizio.toISOString();
+
+  // Filtra lavori nel periodo
+  const lavoriPeriodo=cacheDich.filter(d=>{
+    const data=d.createdAt||d.data;
+    return data&&data>=isoInizio;
+  });
+
+  if(!lavoriPeriodo.length){
+    el.innerHTML='<div class="empty">Nessun lavoro nel periodo selezionato</div>';
+    return;
   }
+
+  // Conta utilizzi per articolo
+  const utilizziMap={};
+  lavoriPeriodo.forEach(d=>{
+    (d.articoli||[]).forEach(a=>{
+      const key=a.id||a.nome||'—';
+      const nome=a.nome||'—';
+      const cat=a.cat||'—';
+      if(!utilizziMap[key])utilizziMap[key]={nome,cat,uscite:0,qtaTotale:0};
+      utilizziMap[key].uscite++;
+      utilizziMap[key].qtaTotale+=(a.qty||1);
+    });
+  });
+
+  // Ordina per numero di uscite
+  const sorted=Object.values(utilizziMap).sort((a,b)=>b.uscite-a.uscite);
+
+  // Calcola tasso utilizzo per ogni articolo del magazzino
+  const tassoMap={};
+  cacheMag.forEach(m=>{
+    const key=m.id||m.nome;
+    const dati=utilizziMap[m.id]||utilizziMap[m.nome]||{uscite:0,qtaTotale:0};
+    tassoMap[key]={...m,uscite:dati.uscite,qtaTotale:dati.qtaTotale,
+      tasso:Math.min(100,Math.round((dati.uscite/lavoriPeriodo.length)*100))
+    };
+  });
+
+  // Raggruppa per categoria
+  const perCat={};
+  Object.values(tassoMap).forEach(m=>{
+    const c=m.cat||'—';
+    if(!perCat[c])perCat[c]={tot:0,inUso:0};
+    perCat[c].tot++;
+    if(m.uscite>0)perCat[c].inUso++;
+  });
+
+  let h='';
+
+  // Header periodo
+  h+=`<div style="background:var(--bg2);border-radius:var(--r);padding:12px;margin-bottom:14px;text-align:center">
+    <div style="font-size:11px;color:var(--tx2);margin-bottom:4px">Analisi su</div>
+    <div style="font-size:22px;font-weight:800;color:var(--ac2)">${lavoriPeriodo.length}</div>
+    <div style="font-size:12px;color:var(--tx2)">lavori negli ultimi ${mesi} mesi</div>
+  </div>`;
+
+  // Top articoli più usati
+  const top10=sorted.slice(0,10);
+  const maxUscite=top10[0]?.uscite||1;
+  h+='<div style="font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🏆 Articoli più utilizzati</div>';
+  h+='<div class="card" style="margin-bottom:16px">';
+  top10.forEach((a,i)=>{
+    const pct=Math.round((a.uscite/maxUscite)*100);
+    const color=i===0?'var(--ac2)':i<3?'var(--gn)':'var(--tx2)';
+    h+=`<div style="padding:10px 12px;${i>0?'border-top:1px solid var(--b)':''}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <div style="font-size:13px;font-weight:${i<3?700:500};color:${color}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'  '} ${a.nome}</div>
+        <div style="font-size:12px;font-weight:700;color:${color}">${a.uscite}×</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;height:4px;background:var(--b);border-radius:2px">
+          <div style="width:${pct}%;height:100%;background:${color};border-radius:2px;transition:width .3s"></div>
+        </div>
+        <div style="font-size:10px;color:var(--tx3);flex-shrink:0">${a.cat}</div>
+      </div>
+    </div>`;
+  });
+  h+='</div>';
+
+  // Articoli mai usati nel periodo
+  const maiUsati=Object.values(tassoMap).filter(m=>m.uscite===0&&m.stato==='ok');
+  if(maiUsati.length){
+    h+='<div style="font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">😴 Mai utilizzati ('+maiUsati.length+')</div>';
+    h+='<div class="card" style="margin-bottom:16px">';
+    maiUsati.slice(0,10).forEach((m,i)=>{
+      h+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;${i>0?'border-top:1px solid var(--b)':''}">
+        <div>
+          <div style="font-size:13px;color:var(--tx3)">${m.nome}</div>
+          <div style="font-size:11px;color:var(--tx3)">${m.cat}</div>
+        </div>
+        <span class="bdg" style="background:var(--bg3);color:var(--tx3);font-size:10px">0 uscite</span>
+      </div>`;
+    });
+    if(maiUsati.length>10) h+=`<div style="padding:8px 12px;font-size:12px;color:var(--tx3);text-align:center;border-top:1px solid var(--b)">+ altri ${maiUsati.length-10}</div>`;
+    h+='</div>';
+  }
+
+  // Tasso utilizzo per categoria
+  h+='<div style="font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📂 Utilizzo per categoria</div>';
+  h+='<div class="card" style="margin-bottom:16px">';
+  const catLabel={audio:'🎙 Audio',luci:'💡 Luci',ledwall:'🖥 LED wall',traduzione:'🎧 Traduzione',video:'📽 Video',strutture:'🏗 Strutture'};
+  Object.entries(perCat).sort((a,b)=>b[1].inUso-a[1].inUso).forEach(([cat,dati],i)=>{
+    const pct=Math.round((dati.inUso/dati.tot)*100);
+    const color=pct>=70?'var(--gn)':pct>=40?'var(--am)':'var(--rd)';
+    h+=`<div style="padding:10px 12px;${i>0?'border-top:1px solid var(--b)':''}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <div style="font-size:13px">${catLabel[cat]||cat}</div>
+        <div style="font-size:12px;font-weight:700;color:${color}">${pct}%</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;height:6px;background:var(--b);border-radius:3px">
+          <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width .3s"></div>
+        </div>
+        <div style="font-size:10px;color:var(--tx3);flex-shrink:0">${dati.inUso}/${dati.tot}</div>
+      </div>
+    </div>`;
+  });
+  h+='</div>';
+
+  el.innerHTML=h;
 }
 
 function mostraStatusMag(){switchMagTab('status');}
