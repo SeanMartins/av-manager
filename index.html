@@ -927,7 +927,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.27</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.28</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2541,6 +2541,14 @@ function startMagListener(){
     cacheMag=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderMag();
   });
+  // Event delegation per bottoni magazzino (evita INP)
+  document.addEventListener('click', e=>{
+    const btn=e.target.closest('.mag-dove-btn');
+    if(btn){
+      e.stopPropagation();
+      mostraDovetUsato(btn.dataset.id, btn.dataset.nome);
+    }
+  });
 }
 
 let _magRenderPending=false;
@@ -2607,17 +2615,16 @@ function _renderMagInner(){
 
       // Badge disponibilità
       let badgeHtml='';
+      const artIdEnc=m.id;
+      const artNomeEnc2=encodeURIComponent(m.nome);
       if(m.stato==='maint'){
         badgeHtml='<span class="bdg br">Manutenzione</span>';
       } else if(qtaDisp===0){
-        // Tutto in uso
-        badgeHtml='<button onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')" style="background:rgba(239,68,68,.15);color:var(--rd);border:1px solid var(--rd);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">🔴 Esaurito ›</button>';
+        badgeHtml='<button class="mag-dove-btn" data-id="'+artIdEnc+'" data-nome="'+artNomeEnc2+'" style="background:rgba(239,68,68,.15);color:var(--rd);border:1px solid var(--rd);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">🔴 Esaurito ›</button>';
       } else if(pct<=0.3||qtaDisp<=2){
-        // Quasi esaurito
-        badgeHtml='<span class="bdg ba" style="cursor:pointer" onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')">⚠️ Quasi finito</span>';
+        badgeHtml='<button class="mag-dove-btn bdg ba" data-id="'+artIdEnc+'" data-nome="'+artNomeEnc2+'" style="cursor:pointer;border:none">⚠️ Quasi finito</button>';
       } else if(qtaInUso>0){
-        // Parzialmente in uso
-        badgeHtml='<button onclick="mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')" style="background:var(--amb);color:var(--am);border:1px solid var(--am);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📋 In uso ›</button>';
+        badgeHtml='<button class="mag-dove-btn" data-id="'+artIdEnc+'" data-nome="'+artNomeEnc2+'" style="background:var(--amb);color:var(--am);border:1px solid var(--am);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📋 In uso ›</button>';
       } else {
         badgeHtml='<span class="bdg bg">Disponibile</span>';
       }
@@ -2639,7 +2646,7 @@ function _renderMagInner(){
               '<span style="font-size:12px;color:'+(qtaDisp===0?'var(--rd)':qtaDisp<=2?'var(--am)':'var(--tx2)')+'">'+qtaDisp+'/'+qtaTotale+'</span>'+
               barW+
             '</div>'+
-            '<button onclick="event.stopPropagation();mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Dove è in uso">🔍</button>'+
+            '<button class="mag-dove-btn" data-id="'+m.id+'" data-nome="'+encodeURIComponent(m.nome)+'" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Dove è in uso">🔍</button>'+
             '<button onclick="event.stopPropagation();mostraStorico(\''+m.id+'\')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Storico">📋</button>'+
           '</div>'+
           badgeHtml+
