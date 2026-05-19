@@ -1097,7 +1097,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.41</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.42</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5138,14 +5138,14 @@ function nlcPopola(selLocVal='', selTecVal=''){
     if(selLocVal&&!inLista&&custom){custom.style.display='block';custom.value=selLocVal;}
     else if(custom){custom.style.display='none';custom.value='';}
   }
-  // Tecnici — sempre da Firebase per sicurezza
+  // Tecnici — query senza filtri per evitare indici mancanti
   const selTec=$('nlcTecnico');
   if(!selTec)return;
   selTec.innerHTML='<option value="">-- Caricamento... --</option>';
-  DB.collection('team').where('approvato','==',true).get().then(snap=>{
+  DB.collection('team').get().then(snap=>{
     selTec.innerHTML='<option value="">-- Nessun tecnico --</option>';
     snap.docs
-      .filter(d=>d.data().ruolo!=='Collaboratore esterno')
+      .filter(d=>d.data().approvato&&d.data().ruolo!=='Collaboratore esterno')
       .sort((a,b)=>(a.data().nome||'').localeCompare(b.data().nome||''))
       .forEach(d=>{
         const m=d.data();
@@ -5156,8 +5156,8 @@ function nlcPopola(selLocVal='', selTecVal=''){
         selTec.appendChild(o);
       });
   }).catch(e=>{
-    selTec.innerHTML='<option value="">-- Errore caricamento --</option>';
-    console.warn('Team load error:',e);
+    selTec.innerHTML='<option value="">-- Errore --</option>';
+    console.warn('Team:',e);
   });
 }
 
