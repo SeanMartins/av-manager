@@ -1005,7 +1005,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.34</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.35</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -3840,6 +3840,10 @@ function startDichListener(){
   DB.collection('lavori').orderBy('createdAt','desc').onSnapshot(snap=>{
     cacheDich=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderDich();
+    // Aggiorna disponibilità magazzino quando cambiano i lavori
+    renderMag();
+    // Aggiorna status tab se aperto
+    if($('magTabStatus')&&$('magTabStatus').style.display!=='none') renderStatusMag();
   });
 }
 
