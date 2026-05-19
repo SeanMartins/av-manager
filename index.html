@@ -927,7 +927,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.21</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.22</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2556,7 +2556,7 @@ function renderMag(){
       if(!inUsoMap[key])inUsoMap[key]={qty:0,lavori:[]};
       inUsoMap[key].qty+=(a.qty||1);
       if(!inUsoMap[key].lavori.find(l=>l.id===d.id))
-        inUsoMap[key].lavori.push({id:d.id,nome:d.nome,data:d.data});
+        inUsoMap[key].lavori.push({id:d.id,nome:d.nome,data:d.data,dataFine:d.dataFine,location:d.location,tecnico:d.tecnico});
     });
   });
 
@@ -4350,7 +4350,7 @@ function renderStatusMag(){
       if(!inUsoMap[key])inUsoMap[key]={qty:0,lavori:[]};
       inUsoMap[key].qty+=(a.qty||1);
       if(!inUsoMap[key].lavori.find(l=>l.id===d.id))
-        inUsoMap[key].lavori.push({id:d.id,nome:d.nome,data:d.data,dataFine:d.dataFine});
+        inUsoMap[key].lavori.push({id:d.id,nome:d.nome,data:d.data,dataFine:d.dataFine,location:d.location,tecnico:d.tecnico});
     });
   });
 
@@ -4403,7 +4403,15 @@ function renderStatusMag(){
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:13px;font-weight:500">'+m.nome+'</div>'+
           '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'—')+' · '+(m.cat||'—')+'</div>'+
-          '<div style="font-size:11px;color:var(--am);margin-top:2px">'+lavori.map(l=>l.nome).join(', ')+'</div>'+
+          lavori.map(l=>{
+            const dataUsc=l.data?fmtData(l.data,{day:'2-digit',month:'short'}):'—';
+            const dataRient=l.dataFine?fmtData(l.dataFine,{day:'2-digit',month:'short'}):'—';
+            return '<div style="font-size:11px;color:var(--am);margin-top:2px">'+
+              '📋 '+l.nome+
+              ' · 📅 '+dataUsc+' → '+dataRient+
+              (l.location?' · 📍 '+l.location.replace(/[🏢🔧✈️📍🤒]/u,'').trim():'')+
+            '</div>';
+          }).join('')+
         '</div>'+
         '<div style="text-align:right;flex-shrink:0">'+
           '<div style="font-size:13px;font-weight:700;color:var(--am)">'+qtaInUso+'/'+qtaTot+'</div>'+
