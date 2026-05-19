@@ -1097,7 +1097,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.46</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.47</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5139,33 +5139,39 @@ function nlcPopola(selLocVal='', selTecVal=''){
     if(selLocVal&&!inLista&&custom){custom.style.display='block';custom.value=selLocVal;}
     else if(custom){custom.style.display='none';custom.value='';}
   }
-  // Tecnici — aspetta che cacheTeam sia pronto
+  // Tecnici — legge direttamente Firestore (bypass cache timing)
   const selTec=$('nlcTecnico');
   if(!selTec)return;
-  const popolaTecnici=()=>{
-    selTec.innerHTML='<option value="">-- Nessun tecnico --</option>';
-    (cacheTeam||[])
-      .filter(m=>m.ruolo!=='Collaboratore esterno')
-      .sort((a,b)=>(a.nome||'').localeCompare(b.nome||''))
-      .forEach(m=>{
+  selTec.innerHTML='<option value="">-- Nessun tecnico --</option>';
+  // Prima prova cacheTeam
+  const fromCache=(cacheTeam||[]).filter(m=>m.ruolo!=='Collaboratore esterno');
+  if(fromCache.length){
+    fromCache.sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).forEach(m=>{
+      const o=document.createElement('option');
+      o.value=m.id;o.textContent=m.nome+' '+m.cognome+' · '+m.ruolo;
+      if(m.id===selTecVal)o.selected=true;
+      selTec.appendChild(o);
+    });
+  } else {
+    // Leggi direttamente senza orderBy
+    selTec.innerHTML='<option value="">⏳ Caricamento...</option>';
+    firebase.firestore().collection('team').get().then(snap=>{
+      selTec.innerHTML='<option value="">-- Nessun tecnico --</option>';
+      const docs=snap.docs
+        .map(d=>({id:d.id,...d.data()}))
+        .filter(m=>m.ruolo!=='Collaboratore esterno')
+        .sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+      docs.forEach(m=>{
         const o=document.createElement('option');
-        o.value=m.id;
-        o.textContent=m.nome+' '+m.cognome+' · '+m.ruolo;
+        o.value=m.id;o.textContent=m.nome+' '+m.cognome+' · '+m.ruolo;
         if(m.id===selTecVal)o.selected=true;
         selTec.appendChild(o);
       });
-  };
-  if(cacheTeam&&cacheTeam.length>0){
-    popolaTecnici();
-  } else {
-    // Aspetta fino a 3 secondi che cacheTeam venga popolato
-    selTec.innerHTML='<option value="">-- Caricamento... --</option>';
-    let tentativi=0;
-    const attendi=setInterval(()=>{
-      tentativi++;
-      if(cacheTeam&&cacheTeam.length>0){clearInterval(attendi);popolaTecnici();}
-      else if(tentativi>15){clearInterval(attendi);selTec.innerHTML='<option value="">-- Nessun membro trovato --</option>';}
-    },200);
+      if(!docs.length)selTec.innerHTML='<option value="">-- Nessun membro --</option>';
+    }).catch(err=>{
+      console.error('Team read error:',err);
+      selTec.innerHTML='<option value="">-- Errore: '+err.code+' --</option>';
+    });
   }
 }
 
