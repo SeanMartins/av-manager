@@ -205,13 +205,7 @@ textarea{resize:vertical;min-height:80px}
           <span class="chip" onclick="pickChip(this,'role')">Collaboratore esterno</span>
         </div>
       </div>
-      <!-- Password solo per Responsabile -->
-      <div class="ig" id="pwdWrap" style="display:none">
-        <label class="il">Password Responsabile</label>
-        <input type="password" id="rPwd" placeholder="Scegli una password sicura">
-        <div style="font-size:11px;color:var(--tx3);margin-top:4px">Richiesta ad ogni accesso come Responsabile</div>
-      </div>
-      <!-- PIN per tutti -->
+      <!-- PIN per tutti incluso Responsabile -->
       <div class="ig">
         <label class="il">🔑 PIN personale (6 cifre)</label>
         <input type="password" id="rPin" placeholder="Es: 123456" maxlength="6" inputmode="numeric" pattern="[0-9]*">
@@ -228,20 +222,10 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-p btn-f" id="regBtn" onclick="doReg()" style="padding:13px;font-size:15px;font-weight:600">Inizia →</button>
     </div>
     <div id="formLogin" style="display:none">
-      <div class="ig"><label class="il">La tua email</label><input type="email" id="loginEmail" placeholder="mario@azienda.it" oninput="checkLoginPwd()"></div>
-      <!-- PIN per tutti -->
+      <div class="ig"><label class="il">La tua email</label><input type="email" id="loginEmail" placeholder="mario@azienda.it"></div>
       <div class="ig">
         <label class="il">🔑 PIN personale</label>
         <input type="password" id="loginPin" placeholder="Il tuo PIN a 6 cifre" maxlength="6" inputmode="numeric" pattern="[0-9]*">
-      </div>
-      <!-- Toggle Responsabile -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;background:var(--bg2);border-radius:var(--rs);padding:11px 12px;cursor:pointer" onclick="toggleLoginResp()">
-        <div id="loginRespBox" class="cbox"></div>
-        <span style="font-size:13px;color:var(--tx2)">Accedo come <strong style="color:var(--tx)">Responsabile</strong></span>
-      </div>
-      <div class="ig" id="loginPwdWrap" style="display:none">
-        <label class="il">Password Responsabile</label>
-        <input type="password" id="loginPwd" placeholder="Inserisci la tua password">
       </div>
       <button class="btn btn-p btn-f" id="loginBtn" onclick="doLogin()" style="padding:13px;font-size:15px;font-weight:600">Accedi →</button>
       <div style="font-size:12px;color:var(--tx2);text-align:center;margin-top:10px">Inserisci l'email con cui ti sei registrato</div>
@@ -1097,7 +1081,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.47</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.48</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1499,11 +1483,7 @@ function showTab(t){
   const r=t==='reg';
   $('formReg').style.display=r?'block':'none';
   $('formLogin').style.display=r?'none':'block';
-  // Reset toggle responsabile
-  if(!r){
-    const b=$('loginRespBox');if(b)b.classList.remove('on');
-    const w=$('loginPwdWrap');if(w)w.style.display='none';
-  }
+  if(!r){}
   $('tabReg').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:'+(r?'600':'500')+';background:'+(r?'var(--ac)':'transparent')+';color:'+(r?'#fff':'var(--tx2)');
   $('tabLogin').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:'+(!r?'600':'500')+';background:'+(!r?'var(--ac)':'transparent')+';color:'+(!r?'#fff':'var(--tx2)');
 }
@@ -1512,8 +1492,6 @@ function pickChip(el,group){
   el.classList.add('on');
   if(group==='role'){
     selRole=el.textContent.trim();
-    const pwdWrap=$('pwdWrap');
-    if(pwdWrap) pwdWrap.style.display=selRole==='Responsabile'?'block':'none';
   }
   if(group==='luogo'){
     selLuogo=el.textContent.trim();
@@ -1554,34 +1532,19 @@ async function doReg(){
   const nome=val('rNome'),cognome=val('rCognome'),email=val('rEmail'),tel=val('rTel');
   if(!nome||!cognome||!email){toast('Compila nome, cognome ed email','r');return;}
   if(!privOk){toast('Accetta la privacy policy','r');return;}
-  // Valida PIN per tutti
   const pin=val('rPin');const pinConf=val('rPinConf');
   if(!pin||pin.length<4){toast('Inserisci un PIN di almeno 4 cifre','r');return;}
   if(!/^\d+$/.test(pin)){toast('Il PIN deve contenere solo numeri','r');return;}
   if(pin!==pinConf){toast('I PIN non coincidono','r');return;}
-  // Valida password Responsabile
-  if(selRole==='Responsabile'){
-    const pwd=val('rPwd');
-    if(!pwd||pwd.length<6){toast('Inserisci una password di almeno 6 caratteri','r');return;}
-  }
   const btn=$('regBtn');btn.textContent='Salvataggio...';btn.disabled=true;
   try{
     const snap=await DB.collection('team').where('email','==',email.toLowerCase()).get();
     if(!snap.empty){toast('Email già registrata — usa Accedi','a');btn.textContent='Inizia →';btn.disabled=false;return;}
     const uid='u'+Date.now();
-    // Hash PIN
     const pinBuf=new TextEncoder().encode(pin+'mmg_pin_'+uid);
     const pinHashBuf=await crypto.subtle.digest('SHA-256',pinBuf);
     const pinHash=Array.from(new Uint8Array(pinHashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-    // Hash password Responsabile
-    let pwdHash='';
-    if(selRole==='Responsabile'){
-      const pwd=val('rPwd');
-      const msgBuf=new TextEncoder().encode(pwd+'mmg_salt_'+uid);
-      const hashBuf=await crypto.subtle.digest('SHA-256',msgBuf);
-      pwdHash=Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-    }
-    const m={id:uid,nome,cognome,email:email.toLowerCase(),tel:tel||'',ruolo:selRole,pwdHash,pinHash,
+    const m={id:uid,nome,cognome,email:email.toLowerCase(),tel:tel||'',ruolo:selRole,pinHash,
       approvato:false,createdAt:new Date().toISOString()
     };
     await DB.collection('team').doc(uid).set(m);
@@ -1610,26 +1573,6 @@ function mostraAttesaApprovazione(nome){
       </div>
     </div>`;
 }
-function toggleLoginResp(){
-  const box=$('loginRespBox');
-  const wrap=$('loginPwdWrap');
-  if(!box||!wrap)return;
-  const isOn=box.classList.toggle('on');
-  wrap.style.display=isOn?'block':'none';
-}
-
-// Mostra campo password se l'email corrisponde a un Responsabile
-async function checkLoginPwd(){
-  const email=val('loginEmail');
-  if(!email||email.length<5)return;
-  // Cerca in cache prima
-  const m=cacheTeam.find(x=>x.email===email.toLowerCase());
-  if(m&&m.ruolo==='Responsabile'){
-    $('loginRespBox').classList.add('on');
-    $('loginPwdWrap').style.display='block';
-  }
-}
-
 async function doLogin(){
   const email=val('loginEmail');
   if(!email){toast('Inserisci la tua email','r');return;}
@@ -1640,34 +1583,16 @@ async function doLogin(){
     const snap=await DB.collection('team').where('email','==',email.toLowerCase()).get();
     if(snap.empty){toast('Email non trovata','r');btn.textContent='Accedi →';btn.disabled=false;return;}
     const userData={id:snap.docs[0].id,...snap.docs[0].data()};
-
-    // Verifica approvazione
     if(!userData.approvato){
       toast('Account in attesa di approvazione dal Responsabile','a');
       btn.textContent='Accedi →';btn.disabled=false;return;
     }
-
-    // Verifica PIN
     if(userData.pinHash){
       const pinBuf=new TextEncoder().encode(pin+'mmg_pin_'+userData.id);
       const pinHashBuf=await crypto.subtle.digest('SHA-256',pinBuf);
       const pinHash=Array.from(new Uint8Array(pinHashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
       if(pinHash!==userData.pinHash){toast('PIN errato','r');btn.textContent='Accedi →';btn.disabled=false;return;}
     }
-
-    // Verifica password Responsabile
-    const isRespToggle=$('loginRespBox')?.classList.contains('on');
-    if(userData.ruolo==='Responsabile'||isRespToggle){
-      if(userData.ruolo!=='Responsabile'){toast('Questo account non è un Responsabile','r');btn.textContent='Accedi →';btn.disabled=false;return;}
-      const pwd=val('loginPwd');
-      if(!pwd){toast('Inserisci la password','r');btn.textContent='Accedi →';btn.disabled=false;return;}
-      const msgBuf=new TextEncoder().encode(pwd+'mmg_salt_'+userData.id);
-      const hashBuf=await crypto.subtle.digest('SHA-256',msgBuf);
-      const hash=Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-      if(hash!==userData.pwdHash){toast('Password errata','r');btn.textContent='Accedi →';btn.disabled=false;return;}
-    }
-
-    // Sessione univoca
     const sessionToken=Date.now().toString(36)+Math.random().toString(36).slice(2);
     await DB.collection('team').doc(userData.id).update({
       sessionToken,sessionAt:new Date().toISOString(),
