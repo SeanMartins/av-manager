@@ -1097,7 +1097,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.45</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.46</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1790,8 +1790,9 @@ function startApp(){
 // ── LISTENERS ──
 function startListeners(){
   // Team
-  DB.collection('team').orderBy('createdAt').onSnapshot(snap=>{
+  DB.collection('team').onSnapshot(snap=>{
     cacheTeam=snap.docs.map(d=>({id:d.id,...d.data()}));
+    cacheTeam.sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
     $('nTeam').textContent=cacheTeam.length;
     renderPresenze();renderTeam();
     // Aggiorna chat se aperta
