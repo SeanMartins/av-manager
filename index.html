@@ -1005,7 +1005,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.33</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.34</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2718,15 +2718,14 @@ function _renderMagInner(){
       const lavoriInUso=getLavoriInUso(m);
       const pct=qtaTotale>0?qtaDisp/qtaTotale:1;
 
-      const magIdx=fil.indexOf(m);
       if(m.stato==='maint'){
         badgeHtml='<span class="bdg br">Manutenzione</span>';
       } else if(qtaDisp===0){
-        badgeHtml='<button onclick="magDove(\''+m.id+'\')" style="background:rgba(239,68,68,.15);color:var(--rd);border:1px solid var(--rd);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">🔴 Esaurito ›</button>';
+        badgeHtml='<button data-dove="'+m.id+'" style="background:rgba(239,68,68,.15);color:var(--rd);border:1px solid var(--rd);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">🔴 Esaurito ›</button>';
       } else if(pct<=0.3||qtaDisp<=2){
-        badgeHtml='<span class="bdg ba" onclick="magDove(\''+m.id+'\')" style="cursor:pointer">⚠️ Quasi finito</span>';
+        badgeHtml='<span data-dove="'+m.id+'" class="bdg ba" style="cursor:pointer">⚠️ Quasi finito</span>';
       } else if(qtaInUso>0){
-        badgeHtml='<button onclick="magDove(\''+m.id+'\')" style="background:var(--amb);color:var(--am);border:1px solid var(--am);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📋 In uso ›</button>';
+        badgeHtml='<button data-dove="'+m.id+'" style="background:var(--amb);color:var(--am);border:1px solid var(--am);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📋 In uso ›</button>';
       } else {
         badgeHtml='<span class="bdg bg">Disponibile</span>';
       }
@@ -2748,8 +2747,7 @@ function _renderMagInner(){
               '<span style="font-size:12px;color:'+(qtaDisp===0?'var(--rd)':qtaDisp<=2?'var(--am)':'var(--tx2)')+'">'+qtaDisp+'/'+qtaTotale+'</span>'+
               barW+
             '</div>'+
-            '<button onclick="magDove(\''+m.id+'\')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Dove è in uso">🔍</button>'+
-            '<button onclick="event.stopPropagation();mostraStorico(\''+m.id+'\')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Storico">📋</button>'+
+            '<button data-storico="'+m.id+'" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Storico">📋</button>'+
           '</div>'+
           badgeHtml+
         '</div></div>';
@@ -2757,7 +2755,17 @@ function _renderMagInner(){
     h+='</div>';
   });
   if(!fil.length)h='<div class="empty">Nessun articolo trovato</div>';
-  const ml=$('magList');if(ml)ml.innerHTML=h;
+  const ml=$('magList');
+  if(ml){
+    ml.innerHTML=h;
+    // Listener unico sul container — gestisce tutti i bottoni anche dopo re-render
+    ml.onclick=e=>{
+      const dove=e.target.closest('[data-dove]');
+      const stor=e.target.closest('[data-storico]');
+      if(dove){e.stopPropagation();mostraDovetUsato(dove.dataset.dove, encodeURIComponent(window._magMap[dove.dataset.dove]||dove.dataset.dove));}
+      else if(stor){e.stopPropagation();mostraStorico(stor.dataset.storico);}
+    };
+  }
 }
 
 // Cerca se un articolo è presente in un lavoro non ancora rientrato
