@@ -687,16 +687,16 @@ textarea{resize:vertical;min-height:80px}
 </div>
 
 <!-- SIDEBAR RESPONSABILE/ADMIN -->
-<div id="sidebarOverlay" onclick="chiudiSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300"></div>
-<div id="sidebar" style="position:fixed;top:0;right:-280px;width:272px;height:100dvh;background:var(--bg1);border-left:1px solid var(--b);z-index:301;transition:right .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top)+16px) 0 calc(env(safe-area-inset-bottom)+16px)">
-  <div style="padding:0 20px 16px;border-bottom:1px solid var(--b);margin-bottom:8px">
+<div id="sidebarOverlay" onclick="chiudiSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;-webkit-tap-highlight-color:transparent"></div>
+<div id="sidebar" style="position:fixed;top:0;right:-290px;width:280px;height:100%;height:100dvh;background:var(--bg1);border-left:1px solid var(--b);z-index:301;transition:right .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden">
+  <div style="padding:calc(env(safe-area-inset-top,16px) + 16px) 20px 14px;border-bottom:1px solid var(--b)">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div style="font-size:15px;font-weight:700">🔐 Gestione</div>
-      <button onclick="chiudiSidebar()" style="background:none;border:none;color:var(--tx2);font-size:20px;cursor:pointer;padding:4px">✕</button>
+      <button onclick="chiudiSidebar()" style="background:none;border:none;color:var(--tx2);font-size:22px;cursor:pointer;padding:4px;line-height:1;-webkit-tap-highlight-color:transparent">✕</button>
     </div>
-    <div style="font-size:12px;color:var(--tx2);margin-top:4px" id="sidebarUser">—</div>
+    <div style="font-size:12px;color:var(--tx2);margin-top:3px" id="sidebarUser">—</div>
   </div>
-  <div style="flex:1;overflow-y:auto;padding:0 12px">
+  <div style="flex:1;overflow-y:auto;padding:8px 12px;padding-bottom:calc(env(safe-area-inset-bottom,16px) + 16px)">
     <!-- Gestione Utenti -->
     <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:8px 8px 4px">Utenti</div>
     <button class="sidebar-btn" onclick="chiudiSidebar();apriGestioneUtenti()">
@@ -1005,7 +1005,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.32</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.33</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1617,7 +1617,7 @@ function apriSidebar(){
 }
 function chiudiSidebar(){
   const s=$('sidebar'),o=$('sidebarOverlay');
-  if(s)s.style.right='-280px';
+  if(s)s.style.right='-290px';
   if(o)o.style.display='none';
 }
 
@@ -2657,17 +2657,17 @@ function renderMag(){
   if('requestIdleCallback' in window) requestIdleCallback(fn,{timeout:300});
   else setTimeout(fn,16);
 }
-// Helper globale per bottoni magazzino (evita problemi escape)
-let _magFilCache=[];
-function magDove(idx){
-  const m=_magFilCache[idx];
-  if(m) mostraDovetUsato(m.id, encodeURIComponent(m.nome));
+// Helper globale per bottoni magazzino
+window._magMap={};
+function magDove(id){
+  mostraDovetUsato(id, encodeURIComponent(window._magMap[id]||id));
 }
 
 function _renderMagInner(){
   const q=($('magSearch')?.value||'').toLowerCase();
   const fil=q?cacheMag.filter(m=>m.nome.toLowerCase().includes(q)||(m.marca||'').toLowerCase().includes(q)):cacheMag;
-  _magFilCache=fil;
+  // Popola mappa globale ID→nome
+  fil.forEach(m=>{window._magMap[m.id]=m.nome;});
   $('nArt').textContent=cacheMag.length;
 
   // Calcola quantità in uso per ogni articolo dai lavori aperti
@@ -2722,11 +2722,11 @@ function _renderMagInner(){
       if(m.stato==='maint'){
         badgeHtml='<span class="bdg br">Manutenzione</span>';
       } else if(qtaDisp===0){
-        badgeHtml='<button onclick="magDove('+magIdx+')" style="background:rgba(239,68,68,.15);color:var(--rd);border:1px solid var(--rd);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">🔴 Esaurito ›</button>';
+        badgeHtml='<button onclick="magDove(\''+m.id+'\')" style="background:rgba(239,68,68,.15);color:var(--rd);border:1px solid var(--rd);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">🔴 Esaurito ›</button>';
       } else if(pct<=0.3||qtaDisp<=2){
-        badgeHtml='<span class="bdg ba" onclick="magDove('+magIdx+')" style="cursor:pointer">⚠️ Quasi finito</span>';
+        badgeHtml='<span class="bdg ba" onclick="magDove(\''+m.id+'\')" style="cursor:pointer">⚠️ Quasi finito</span>';
       } else if(qtaInUso>0){
-        badgeHtml='<button onclick="magDove('+magIdx+')" style="background:var(--amb);color:var(--am);border:1px solid var(--am);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📋 In uso ›</button>';
+        badgeHtml='<button onclick="magDove(\''+m.id+'\')" style="background:var(--amb);color:var(--am);border:1px solid var(--am);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📋 In uso ›</button>';
       } else {
         badgeHtml='<span class="bdg bg">Disponibile</span>';
       }
@@ -2748,7 +2748,7 @@ function _renderMagInner(){
               '<span style="font-size:12px;color:'+(qtaDisp===0?'var(--rd)':qtaDisp<=2?'var(--am)':'var(--tx2)')+'">'+qtaDisp+'/'+qtaTotale+'</span>'+
               barW+
             '</div>'+
-            '<button onclick="magDove('+magIdx+')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Dove è in uso">🔍</button>'+
+            '<button onclick="magDove(\''+m.id+'\')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Dove è in uso">🔍</button>'+
             '<button onclick="event.stopPropagation();mostraStorico(\''+m.id+'\')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Storico">📋</button>'+
           '</div>'+
           badgeHtml+
