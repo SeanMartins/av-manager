@@ -927,7 +927,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.23</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.24</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2549,36 +2549,34 @@ function renderMag(){
   $('nArt').textContent=cacheMag.length;
 
   // Calcola quantità in uso per ogni articolo dai lavori aperti
-  // Usa nome normalizzato come chiave universale (più affidabile di id/ser)
+  // Chiave = ID articolo magazzino (univoco) — evita confusione tra articoli con stesso nome
   const inUsoMap={};
   cacheDich.filter(d=>!d.rientroData).forEach(d=>{
     (d.articoli||[]).forEach(a=>{
-      // Chiave multipla — prova prima id, poi nome normalizzato
-      const keys=[];
-      if(a.id) keys.push(a.id);
-      if(a.ser) keys.push(a.ser);
-      if(a.nome) keys.push(a.nome.toLowerCase().trim());
-      keys.forEach(key=>{
-        if(!inUsoMap[key])inUsoMap[key]={qty:0,lavori:[]};
-        inUsoMap[key].qty+=(a.qty||1);
-        if(!inUsoMap[key].lavori.find(l=>l.id===d.id))
-          inUsoMap[key].lavori.push({id:d.id,nome:d.nome,data:d.data,dataFine:d.dataFine,location:d.location,tecnico:d.tecnico});
-      });
+      // Usa ID come chiave primaria se disponibile
+      const key=a.id||('nome:'+( a.nome||'').toLowerCase().trim());
+      if(!inUsoMap[key])inUsoMap[key]={qty:0,lavori:[]};
+      inUsoMap[key].qty+=(a.qty||1);
+      if(!inUsoMap[key].lavori.find(l=>l.id===d.id))
+        inUsoMap[key].lavori.push({id:d.id,nome:d.nome,data:d.data,dataFine:d.dataFine,location:d.location,tecnico:d.tecnico});
     });
   });
 
-  // Funzione helper per trovare qty in uso per un articolo del magazzino
+  // Helper: trova qty in uso per articolo magazzino
   const getInUso=m=>{
-    const keys=[m.id,m.ser,m.nome?.toLowerCase().trim()].filter(Boolean);
-    let maxQty=0;
-    keys.forEach(k=>{if(inUsoMap[k]&&inUsoMap[k].qty>maxQty)maxQty=inUsoMap[k].qty;});
-    return maxQty;
+    // Prima cerca per ID (univoco)
+    if(inUsoMap[m.id]) return inUsoMap[m.id].qty;
+    // Fallback per seriale
+    if(m.ser&&inUsoMap[m.ser]) return inUsoMap[m.ser].qty;
+    // Fallback per nome
+    const nkey='nome:'+(m.nome||'').toLowerCase().trim();
+    return inUsoMap[nkey]?.qty||0;
   };
   const getLavoriInUso=m=>{
-    const keys=[m.id,m.ser,m.nome?.toLowerCase().trim()].filter(Boolean);
-    const all=[];
-    keys.forEach(k=>{if(inUsoMap[k])inUsoMap[k].lavori.forEach(l=>{if(!all.find(x=>x.id===l.id))all.push(l);});});
-    return all;
+    if(inUsoMap[m.id]) return inUsoMap[m.id].lavori;
+    if(m.ser&&inUsoMap[m.ser]) return inUsoMap[m.ser].lavori;
+    const nkey='nome:'+(m.nome||'').toLowerCase().trim();
+    return inUsoMap[nkey]?.lavori||[];
   };
 
   $('nDisp').textContent=cacheMag.filter(m=>{
@@ -2632,7 +2630,8 @@ function renderMag(){
               '<span style="font-size:12px;color:'+(qtaDisp===0?'var(--rd)':qtaDisp<=2?'var(--am)':'var(--tx2)')+'">'+qtaDisp+'/'+qtaTotale+'</span>'+
               barW+
             '</div>'+
-            '<button onclick="event.stopPropagation();mostraStorico(\''+m.id+'\')" style="width:20px;height:20px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center">📋</button>'+
+            '<button onclick="event.stopPropagation();mostraDovetUsato(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Dove è in uso">🔍</button>'+
+            '<button onclick="event.stopPropagation();mostraStorico(\''+m.id+'\')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Storico">📋</button>'+
           '</div>'+
           badgeHtml+
         '</div></div>';
@@ -2663,15 +2662,15 @@ function mostraDovetUsato(artId, artNomeEnc){
   const lavoriConArt=cacheDich.filter(d=>
     !d.rientroData&&
     (d.articoli||[]).some(a=>
-      (artId&&a.id===artId)||(artSer&&a.ser===artSer)||
-      (a.nome||'').toLowerCase().trim()===artNomeNorm
+      (artId&&a.id===artId)||
+      (artSer&&a.ser===artSer&&!a.id)
     )
   );
   let qtaInUso=0,righe='';
   lavoriConArt.forEach(d=>{
     const artInLavoro=(d.articoli||[]).find(a=>
-      (artId&&a.id===artId)||(artSer&&a.ser===artSer)||
-      (a.nome||'').toLowerCase().trim()===artNomeNorm
+      (artId&&a.id===artId)||
+      (artSer&&a.ser===artSer&&!a.id)
     );
     const qty=artInLavoro?.qty||1;
     qtaInUso+=qty;
