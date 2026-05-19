@@ -927,7 +927,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.24</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.25</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2731,6 +2731,20 @@ async function saveArt(){
   $('aQty').value='1';
 }
 
+async function resetStatoArt(artId){
+  if(!confirm('Reset articolo a Disponibile?\nQuesto non rimuove i lavori preparati — serve solo a correggere lo stato manualmente.'))return;
+  const now=new Date().toISOString();
+  const chi=USER?USER.nome+' '+USER.cognome:'—';
+  const logEntry={stato:'ok',statoLabel:'Reset → Disponibile',chi,at:now};
+  const ultimaMod=chi+' → Reset · '+new Date(now).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
+  await DB.collection('magazzino').doc(artId).update({
+    stato:'ok',ultimaMod,
+    storico:firebase.firestore.FieldValue.arrayUnion(logEntry)
+  });
+  toast('🔄 Articolo resettato a Disponibile');
+  renderMag();
+}
+
 async function aggiornaStatoArt(artId, nuovoStato){
   const m=cacheMag.find(x=>x.id===artId);if(!m)return;
   const now=new Date().toISOString();
@@ -2772,8 +2786,8 @@ async function mostraStorico(artId){
       '</div>';
     }).join('');
   }
-  // Aggiungi bottone cambio stato (solo per responsabile)
-  if(isResponsabile()){
+  // Aggiungi bottone cambio stato (solo per responsabile/admin)
+  if(isResponsabile()||isAdmin()){
     const statoAttuale=m.stato||'ok';
     const opzioni=[
       {v:'ok',l:'✅ Disponibile'},
@@ -2781,10 +2795,12 @@ async function mostraStorico(artId){
       {v:'maint',l:'🔧 Manutenzione'}
     ].filter(o=>o.v!==statoAttuale);
     let btnH='<div style="margin-top:12px;font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">Cambia stato:</div>';
-    btnH+='<div style="display:flex;gap:8px">';
+    btnH+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
     opzioni.forEach(o=>{
       btnH+='<button class="btn btn-f" style="font-size:12px" onclick="aggiornaStatoArt(\''+artId+'\',\''+o.v+'\');closeMod(\'mStorico\')">'+o.l+'</button>';
     });
+    // Bottone Reset — riporta a disponibile e resetta lo stato
+    btnH+='<button class="btn btn-f" style="font-size:12px;border-color:var(--rd);color:var(--rd)" onclick="resetStatoArt(\''+artId+'\');closeMod(\'mStorico\')">🔄 Reset</button>';
     btnH+='</div>';
     el.innerHTML+=btnH;
   }
