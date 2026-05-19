@@ -794,9 +794,10 @@ textarea{resize:vertical;min-height:80px}
     <div style="font-size:16px;font-weight:700;margin-bottom:14px" id="mNLCTitolo">📅 Nuovo lavoro</div>
     <div class="ig"><label class="il">Nome evento / cliente</label><input type="text" id="nlcNome" placeholder="Es: Convegno Firenze"></div>
     <div class="ig"><label class="il">Location</label>
-      <select id="nlcLoc">
+      <select id="nlcLoc" onchange="nlcLocChange(this)">
         <option value="">-- Seleziona --</option>
       </select>
+      <input type="text" id="nlcLocCustom" placeholder="Oppure scrivi la location..." style="margin-top:6px;display:none">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="ig"><label class="il">📅 Data uscita</label><input type="date" id="nlcData"></div>
@@ -804,7 +805,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <div class="ig"><label class="il">👤 Tecnico assegnato</label>
       <select id="nlcTecnico">
-        <option value="">-- Seleziona --</option>
+        <option value="">-- Nessun tecnico --</option>
       </select>
     </div>
     <div class="ig"><label class="il">Note</label><input type="text" id="nlcNote" placeholder="Note aggiuntive..."></div>
@@ -1096,7 +1097,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.39</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.40</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5111,6 +5112,66 @@ function calApriGiorno(g){
   $('calGiornoDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
+function nlcLocChange(sel){
+  const custom=$('nlcLocCustom');
+  if(!custom)return;
+  custom.style.display=sel.value==='__custom__'?'block':'none';
+  if(sel.value==='__custom__')custom.focus();
+}
+
+function nlcPopola(selLocVal='', selTecVal=''){
+  // Location
+  const selLoc=$('nlcLoc');
+  if(selLoc){
+    selLoc.innerHTML='<option value="">-- Seleziona --</option>';
+    cacheLoc.forEach(l=>{
+      const o=document.createElement('option');
+      o.value=l.nome;o.textContent=l.nome;
+      if(l.nome===selLocVal)o.selected=true;
+      selLoc.appendChild(o);
+    });
+    // Opzione scrivi manuale
+    const oCustom=document.createElement('option');
+    oCustom.value='__custom__';oCustom.textContent='✏️ Scrivi location...';
+    selLoc.appendChild(oCustom);
+    // Se il valore non è in lista mostralo nel campo custom
+    const inLista=cacheLoc.find(l=>l.nome===selLocVal);
+    const custom=$('nlcLocCustom');
+    if(selLocVal&&!inLista&&custom){
+      custom.style.display='block';
+      custom.value=selLocVal;
+    } else if(custom){
+      custom.style.display='none';custom.value='';
+    }
+  }
+  // Tecnici
+  const selTec=$('nlcTecnico');
+  if(selTec){
+    selTec.innerHTML='<option value="">-- Nessun tecnico --</option>';
+    const membri=cacheTeam.filter(m=>m.approvato&&m.ruolo!=='Collaboratore esterno');
+    if(!membri.length){
+      // Prova a ricaricare dal DB
+      DB.collection('team').where('approvato','==',true).get().then(snap=>{
+        snap.docs.forEach(d=>{
+          const m=d.data();
+          if(m.ruolo==='Collaboratore esterno')return;
+          const o=document.createElement('option');
+          o.value=d.id;o.textContent=m.nome+' '+m.cognome+' ('+m.ruolo+')';
+          if(d.id===selTecVal)o.selected=true;
+          selTec.appendChild(o);
+        });
+      });
+    } else {
+      membri.forEach(m=>{
+        const o=document.createElement('option');
+        o.value=m.id;o.textContent=m.nome+' '+m.cognome+' ('+m.ruolo+')';
+        if(m.id===selTecVal)o.selected=true;
+        selTec.appendChild(o);
+      });
+    }
+  }
+}
+
 function apriNuovoLavoroCal(dataDefault=''){
   calEditingId=null;
   nlcPdfFiles=[];
@@ -5121,51 +5182,22 @@ function apriNuovoLavoroCal(dataDefault=''){
   $('nlcDataFine').value=dataDefault||toLocalISO(new Date());
   $('nlcNote').value='';
   $('nlcDeleteBtn').style.display='none';
-  // Popola location
-  const selLoc=$('nlcLoc');
-  selLoc.innerHTML='<option value="">-- Seleziona --</option>';
-  cacheLoc.forEach(l=>{
-    const o=document.createElement('option');
-    o.value=l.nome;o.textContent=l.nome;selLoc.appendChild(o);
-  });
-  // Popola tecnici
-  const selTec=$('nlcTecnico');
-  selTec.innerHTML='<option value="">-- Seleziona tecnico --</option>';
-  cacheTeam.filter(m=>m.approvato&&m.ruolo!=='Collaboratore esterno').forEach(m=>{
-    const o=document.createElement('option');
-    o.value=m.id;o.textContent=m.nome+' '+m.cognome+' ('+m.ruolo+')';
-    selTec.appendChild(o);
-  });
+  nlcPopola();
   openMod('mNuovoLavoroCal');
 }
 
 function modificaLavoroCal(id){
   const lav=cacheLavoriCal.find(l=>l.id===id);if(!lav)return;
   calEditingId=id;
+  nlcPdfFiles=[];
+  renderNlcPdfList();
   $('mNLCTitolo').textContent='✏️ Modifica lavoro';
   $('nlcNome').value=lav.nome||'';
   $('nlcData').value=lav.data||'';
   $('nlcDataFine').value=lav.dataFine||'';
   $('nlcNote').value=lav.note||'';
   $('nlcDeleteBtn').style.display='block';
-  // Popola location
-  const selLoc=$('nlcLoc');
-  selLoc.innerHTML='<option value="">-- Seleziona --</option>';
-  cacheLoc.forEach(l=>{
-    const o=document.createElement('option');
-    o.value=l.nome;o.textContent=l.nome;
-    if(l.nome===lav.location)o.selected=true;
-    selLoc.appendChild(o);
-  });
-  // Popola tecnici
-  const selTec=$('nlcTecnico');
-  selTec.innerHTML='<option value="">-- Seleziona tecnico --</option>';
-  cacheTeam.filter(m=>m.approvato&&m.ruolo!=='Collaboratore esterno').forEach(m=>{
-    const o=document.createElement('option');
-    o.value=m.id;o.textContent=m.nome+' '+m.cognome+' ('+m.ruolo+')';
-    if(m.id===lav.tecnicoUid)o.selected=true;
-    selTec.appendChild(o);
-  });
+  nlcPopola(lav.location||'', lav.tecnicoUid||'');
   openMod('mNuovoLavoroCal');
 }
 
@@ -5217,7 +5249,9 @@ async function salvaLavoroCal(){
   const nome=val('nlcNome');if(!nome){toast('Inserisci il nome del lavoro','r');return;}
   const data=val('nlcData');if(!data){toast('Inserisci la data','r');return;}
   const dataFine=val('nlcDataFine')||data;
-  const location=val('nlcLoc');
+  const locSel=val('nlcLoc');
+  const locCustom=val('nlcLocCustom');
+  const location=locSel==='__custom__'?(locCustom||''):locSel;
   const tecnicoUid=val('nlcTecnico');
   const note=val('nlcNote');
   const tecnico=tecnicoUid?cacheTeam.find(m=>m.id===tecnicoUid):null;
