@@ -254,7 +254,7 @@ textarea{resize:vertical;min-height:80px}
     <img src="logo.png" alt="MMG" style="height:26px;width:auto;flex-shrink:0">
     <div style="font-size:13px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;flex:1;padding:0 8px" id="ptitle">Presenze</div>
     <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-      <button id="sidebarToggle" onclick="apriSidebar()" style="display:none;background:none;border:1px solid var(--b);border-radius:var(--rs);padding:6px;cursor:pointer;color:var(--tx2);display:none;align-items:center;justify-content:center">
+      <button id="sidebarToggle" onclick="apriSidebar()" style="display:none;background:none;border:1px solid var(--b);border-radius:var(--rs);padding:6px;cursor:pointer;color:var(--tx2);align-items:center;justify-content:center">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="avbtn" id="avbtn" onclick="openMod('mProfile')">?</div>
@@ -1005,7 +1005,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.30</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.31</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2710,18 +2710,17 @@ function _renderMagInner(){
       const lavoriInUso=getLavoriInUso(m);
       const pct=qtaTotale>0?qtaDisp/qtaTotale:1;
 
-      // Badge disponibilità
-      let badgeHtml='';
       const artIdEnc=m.id;
       const artNomeEnc2=encodeURIComponent(m.nome);
+      const doveClick=`mostraDovetUsato('${m.id}','${encodeURIComponent(m.nome)}')`;
       if(m.stato==='maint'){
         badgeHtml='<span class="bdg br">Manutenzione</span>';
       } else if(qtaDisp===0){
-        badgeHtml='<button class="mag-dove-btn" data-id="'+artIdEnc+'" data-nome="'+artNomeEnc2+'" style="background:rgba(239,68,68,.15);color:var(--rd);border:1px solid var(--rd);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">🔴 Esaurito ›</button>';
+        badgeHtml=`<button onclick="${doveClick}" class="mag-dove-btn" data-id="${artIdEnc}" data-nome="${artNomeEnc2}" style="background:rgba(239,68,68,.15);color:var(--rd);border:1px solid var(--rd);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">🔴 Esaurito ›</button>`;
       } else if(pct<=0.3||qtaDisp<=2){
-        badgeHtml='<button class="mag-dove-btn bdg ba" data-id="'+artIdEnc+'" data-nome="'+artNomeEnc2+'" style="cursor:pointer;border:none">⚠️ Quasi finito</button>';
+        badgeHtml=`<button onclick="${doveClick}" class="mag-dove-btn bdg ba" data-id="${artIdEnc}" data-nome="${artNomeEnc2}" style="cursor:pointer;border:1px solid var(--am)">⚠️ Quasi finito</button>`;
       } else if(qtaInUso>0){
-        badgeHtml='<button class="mag-dove-btn" data-id="'+artIdEnc+'" data-nome="'+artNomeEnc2+'" style="background:var(--amb);color:var(--am);border:1px solid var(--am);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📋 In uso ›</button>';
+        badgeHtml=`<button onclick="${doveClick}" class="mag-dove-btn" data-id="${artIdEnc}" data-nome="${artNomeEnc2}" style="background:var(--amb);color:var(--am);border:1px solid var(--am);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📋 In uso ›</button>`;
       } else {
         badgeHtml='<span class="bdg bg">Disponibile</span>';
       }
@@ -2743,7 +2742,7 @@ function _renderMagInner(){
               '<span style="font-size:12px;color:'+(qtaDisp===0?'var(--rd)':qtaDisp<=2?'var(--am)':'var(--tx2)')+'">'+qtaDisp+'/'+qtaTotale+'</span>'+
               barW+
             '</div>'+
-            '<button class="mag-dove-btn" data-id="'+m.id+'" data-nome="'+encodeURIComponent(m.nome)+'" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Dove è in uso">🔍</button>'+
+            `<button onclick="mostraDovetUsato('${m.id}','${encodeURIComponent(m.nome)}')" class="mag-dove-btn" data-id="${m.id}" data-nome="${encodeURIComponent(m.nome)}" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Dove è in uso">🔍</button>`+
             '<button onclick="event.stopPropagation();mostraStorico(\''+m.id+'\')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Storico">📋</button>'+
           '</div>'+
           badgeHtml+
