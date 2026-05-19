@@ -349,9 +349,9 @@ textarea{resize:vertical;min-height:80px}
       </div>
       <!-- Tab Inventario / Status -->
       <div style="display:flex;gap:8px;margin-bottom:14px">
-        <button id="tabInventario" class="btn btn-p btn-f" onclick="switchMagTab('inventario')" style="flex:1;padding:10px;font-size:13px">📦 Inventario</button>
-        <button id="tabStatus" class="btn btn-f" onclick="switchMagTab('status')" style="flex:1;padding:10px;font-size:13px">📊 Status</button>
-        <button id="tabStats" class="btn btn-f" onclick="switchMagTab('stats')" style="flex:1;padding:10px;font-size:13px">📈 Stats</button>
+        <button id="tabInventario" class="btn btn-p btn-f" onclick="switchMagTab('inventario')" style="flex:1;padding:10px;font-size:11px">📦 Inventario</button>
+        <button id="tabStatus" class="btn btn-f" onclick="switchMagTab('status')" style="flex:1;padding:10px;font-size:11px">🏭 Stato Mag.</button>
+        <button id="tabStats" class="btn btn-f" onclick="switchMagTab('stats')" style="flex:1;padding:10px;font-size:11px">📈 Stats</button>
       </div>
       <!-- Tab Inventario -->
       <div id="magTabInventario">
@@ -521,6 +521,34 @@ textarea{resize:vertical;min-height:80px}
         <div id="covResult" class="tool-result"></div>
         <!-- Canvas visualizzazione -->
         <canvas id="covCanvas" style="width:100%;max-height:180px;border-radius:var(--rs);background:var(--bg2);margin-top:12px;display:block"></canvas>
+      </div>
+    </div>
+
+    <!-- CALENDARIO LAVORI -->
+    <div class="page" id="p-calendario">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <button class="btn" style="padding:8px 12px" onclick="calSpostaM(-1)">‹</button>
+        <div style="text-align:center">
+          <div style="font-size:16px;font-weight:700" id="calTitolo">—</div>
+          <div style="font-size:11px;color:var(--tx2)" id="calSottotitolo">—</div>
+        </div>
+        <button class="btn" style="padding:8px 12px" onclick="calSpostaM(1)">›</button>
+      </div>
+      <!-- Legenda -->
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px"><div style="width:10px;height:10px;border-radius:2px;background:#6c63ff;flex-shrink:0"></div>Preparato</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px"><div style="width:10px;height:10px;border-radius:2px;background:#22c55e;flex-shrink:0"></div>In corso</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px"><div style="width:10px;height:10px;border-radius:2px;background:#64748b;flex-shrink:0"></div>Rientrato</div>
+      </div>
+      <!-- Griglia calendario -->
+      <div id="calGriglia"></div>
+      <!-- Lista lavori del giorno -->
+      <div id="calGiornoDetail" style="display:none;margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:14px;font-weight:600" id="calGiornoTitolo">—</div>
+          <button onclick="$('calGiornoDetail').style.display='none'" style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:18px">✕</button>
+        </div>
+        <div id="calGiornoList"></div>
       </div>
     </div>
 
@@ -1009,6 +1037,7 @@ textarea{resize:vertical;min-height:80px}
     <div id="btnGestUtenti" style="display:none;margin-top:8px">
       <button class="btn btn-f btn-p" style="width:100%" onclick="apriGestioneUtenti()">👥 Gestione utenti</button>
     </div>
+    <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('calendario')">📅 Calendario lavori</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('tools')">🔧 Tools tecnici AV</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('dichiarazione')">📁 Archivio documenti</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');apriArchivioPresenze()">📆 Archivio presenze</button>
@@ -1018,7 +1047,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.36</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.37</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1407,9 +1436,10 @@ function goPage(n){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(b=>b.classList.remove('on'));
   $('p-'+n)&&$('p-'+n).classList.add('on');$('n-'+n)&&$('n-'+n).classList.add('on');
-  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda',chat:'✉️ Messaggi',tools:'🔧 Tools Tecnici AV'};
+  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda',chat:'✉️ Messaggi',tools:'🔧 Tools Tecnici AV',calendario:'📅 Calendario Lavori'};
   $('ptitle').textContent=t[n]||n;
   if(n==='agenda'){clearAgendaDot();renderAgenda();}
+  if(n==='calendario'){renderCalendario();}
   if(n==='chat'){clearChatDot();chiudiChat();renderChatTeam();}
   
 }
@@ -4855,6 +4885,115 @@ async function revocaSessione(uid){
 }
 let splStream=null, splAnimFrame=null, splAnalyser=null, splPeak=-Infinity;
 
+// ── CALENDARIO LAVORI ──
+let calAnno=new Date().getFullYear(), calMese=new Date().getMonth();
+
+function calSpostaM(dir){
+  calMese+=dir;
+  if(calMese>11){calMese=0;calAnno++;}
+  if(calMese<0){calMese=11;calAnno--;}
+  renderCalendario();
+}
+
+function renderCalendario(){
+  const MESI=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const GG_H=['L','M','M','G','V','S','D'];
+  const pad=n=>String(n).padStart(2,'0');
+  const titEl=$('calTitolo'),subEl=$('calSottotitolo');
+  if(titEl)titEl.textContent=MESI[calMese]+' '+calAnno;
+  const lavoriMese=cacheDich.filter(d=>{
+    const data=d.data;if(!data)return false;
+    const[y,m]=data.split('-').map(Number);
+    return y===calAnno&&m-1===calMese;
+  });
+  if(subEl)subEl.textContent=lavoriMese.length+' lavori';
+  const byDay={};
+  cacheDich.forEach(d=>{
+    const data=d.data;if(!data)return;
+    const[y,m,g]=data.split('-').map(Number);
+    if(y===calAnno&&m-1===calMese){
+      if(!byDay[g])byDay[g]=[];
+      byDay[g].push(d);
+    }
+    if(d.dataFine){
+      const[fy,fm,fg]=d.dataFine.split('-').map(Number);
+      if(fy===calAnno&&fm-1===calMese){
+        for(let gg=(y===calAnno&&m-1===calMese?g+1:1);gg<=fg;gg++){
+          if(!byDay[gg])byDay[gg]=[];
+          if(!byDay[gg].find(x=>x.id===d.id))byDay[gg].push({...d,_continua:true});
+        }
+      }
+    }
+  });
+  const primoGiorno=new Date(calAnno,calMese,1).getDay();
+  const offsetLun=primoGiorno===0?6:primoGiorno-1;
+  const giorniMese=new Date(calAnno,calMese+1,0).getDate();
+  const oggi=toLocalISO(new Date());
+  let h='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">';
+  GG_H.forEach(g=>h+=`<div style="text-align:center;font-size:10px;font-weight:600;color:var(--tx3);padding:4px 0">${g}</div>`);
+  h+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">';
+  for(let i=0;i<offsetLun;i++)h+='<div style="min-height:50px"></div>';
+  for(let g=1;g<=giorniMese;g++){
+    const dataStr=calAnno+'-'+pad(calMese+1)+'-'+pad(g);
+    const isOggi=dataStr===oggi;
+    const isWeekend=new Date(calAnno,calMese,g).getDay()===0||new Date(calAnno,calMese,g).getDay()===6;
+    const lavoriG=byDay[g]||[];
+    const dots=lavoriG.filter(d=>!d._continua).slice(0,3).map(d=>{
+      const c=d.rientroData?'#64748b':d.data===dataStr?'#6c63ff':'#22c55e';
+      return`<div style="width:6px;height:6px;border-radius:50%;background:${c}"></div>`;
+    }).join('');
+    const nNew=lavoriG.filter(d=>!d._continua).length;
+    h+=`<div onclick="calApriGiorno(${g})" style="min-height:50px;border-radius:6px;background:${isOggi?'var(--acb)':isWeekend?'rgba(255,255,255,.03)':'var(--bg1)'};border:1px solid ${isOggi?'var(--ac)':'var(--b)'};padding:4px 5px;cursor:${lavoriG.length?'pointer':'default'}">
+      <div style="font-size:11px;font-weight:${isOggi?700:400};color:${isOggi?'var(--ac2)':isWeekend?'var(--tx3)':'var(--tx)'}">${g}</div>
+      ${dots?`<div style="display:flex;gap:2px;flex-wrap:wrap;margin-top:4px">${dots}</div>`:''}
+      ${nNew>3?`<div style="font-size:9px;color:var(--tx3);margin-top:2px">+${nNew-3}</div>`:''}
+    </div>`;
+  }
+  h+='</div>';
+  const el=$('calGriglia');if(el)el.innerHTML=h;
+  $('calGiornoDetail').style.display='none';
+}
+
+function calApriGiorno(g){
+  const pad=n=>String(n).padStart(2,'0');
+  const dataStr=calAnno+'-'+pad(calMese+1)+'-'+pad(g);
+  const MESI_S=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  const GG_S=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const d=new Date(calAnno,calMese,g);
+  const lavoriG=cacheDich.filter(lav=>{
+    if(!lav.data)return false;
+    if(lav.data===dataStr)return true;
+    if(lav.dataFine&&lav.data<=dataStr&&lav.dataFine>=dataStr)return true;
+    return false;
+  });
+  if(!lavoriG.length)return;
+  const titEl=$('calGiornoTitolo');
+  if(titEl)titEl.textContent=GG_S[d.getDay()]+' '+g+' '+MESI_S[calMese];
+  let h='';
+  lavoriG.forEach(lav=>{
+    const isIn=lav.data===dataStr;
+    const isRient=!!lav.rientroData;
+    const color=isRient?'#64748b':isIn?'#6c63ff':'#22c55e';
+    const stato=isRient?'✅ Rientrato':isIn?'📋 Preparato':'🔄 In corso';
+    const nPezzi=(lav.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
+    const dataUsc=fmtData(lav.data,{day:'2-digit',month:'short'});
+    const dataRient=lav.dataFine?fmtData(lav.dataFine,{day:'2-digit',month:'short'}):'—';
+    h+=`<div style="padding:12px;background:var(--bg2);border-radius:var(--rs);margin-bottom:8px;border-left:3px solid ${color}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600">${lav.nome||'—'}</div>
+          <div style="font-size:11px;color:var(--tx2);margin-top:3px">${lav.location?'📍 '+lav.location+' · ':''}👤 ${lav.tecnico||'—'}</div>
+          <div style="font-size:11px;color:var(--tx2);margin-top:2px">📅 ${dataUsc} → ${dataRient} · 📦 ${nPezzi} pz</div>
+        </div>
+        <span style="font-size:10px;background:${color}22;color:${color};border:1px solid ${color};border-radius:10px;padding:2px 7px;flex-shrink:0;white-space:nowrap">${stato}</span>
+      </div>
+    </div>`;
+  });
+  $('calGiornoList').innerHTML=h;
+  $('calGiornoDetail').style.display='block';
+}
+
+// ── TOOLS TECNICI AV ──
 function showTool(name){
   // Deseleziona tutti
   ['delay','spl','throw','coverage'].forEach(t=>{
