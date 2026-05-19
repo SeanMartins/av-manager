@@ -15,13 +15,22 @@ export default async function handler(req) {
     return new Response('Method not allowed', { status: 405 });
   }
 
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  
+  // Debug: mostra i primi 10 caratteri della chiave
+  if (!apiKey) {
+    return new Response(JSON.stringify({ 
+      error: { message: 'ANTHROPIC_API_KEY non configurata su Vercel' } 
+    }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
+  }
+
   try {
     const body = await req.json();
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'x-api-key': apiKey.trim(),
         'anthropic-version': '2023-06-01',
         'anthropic-beta': 'pdfs-2024-09-25'
       },
@@ -30,10 +39,7 @@ export default async function handler(req) {
     const data = await response.json();
     return new Response(JSON.stringify(data), {
       status: response.status,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
   } catch (e) {
     return new Response(JSON.stringify({ error: { message: e.message } }), {
