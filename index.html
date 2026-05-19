@@ -1097,7 +1097,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.40</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.41</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5130,46 +5130,35 @@ function nlcPopola(selLocVal='', selTecVal=''){
       if(l.nome===selLocVal)o.selected=true;
       selLoc.appendChild(o);
     });
-    // Opzione scrivi manuale
     const oCustom=document.createElement('option');
     oCustom.value='__custom__';oCustom.textContent='✏️ Scrivi location...';
     selLoc.appendChild(oCustom);
-    // Se il valore non è in lista mostralo nel campo custom
     const inLista=cacheLoc.find(l=>l.nome===selLocVal);
     const custom=$('nlcLocCustom');
-    if(selLocVal&&!inLista&&custom){
-      custom.style.display='block';
-      custom.value=selLocVal;
-    } else if(custom){
-      custom.style.display='none';custom.value='';
-    }
+    if(selLocVal&&!inLista&&custom){custom.style.display='block';custom.value=selLocVal;}
+    else if(custom){custom.style.display='none';custom.value='';}
   }
-  // Tecnici
+  // Tecnici — sempre da Firebase per sicurezza
   const selTec=$('nlcTecnico');
-  if(selTec){
+  if(!selTec)return;
+  selTec.innerHTML='<option value="">-- Caricamento... --</option>';
+  DB.collection('team').where('approvato','==',true).get().then(snap=>{
     selTec.innerHTML='<option value="">-- Nessun tecnico --</option>';
-    const membri=cacheTeam.filter(m=>m.approvato&&m.ruolo!=='Collaboratore esterno');
-    if(!membri.length){
-      // Prova a ricaricare dal DB
-      DB.collection('team').where('approvato','==',true).get().then(snap=>{
-        snap.docs.forEach(d=>{
-          const m=d.data();
-          if(m.ruolo==='Collaboratore esterno')return;
-          const o=document.createElement('option');
-          o.value=d.id;o.textContent=m.nome+' '+m.cognome+' ('+m.ruolo+')';
-          if(d.id===selTecVal)o.selected=true;
-          selTec.appendChild(o);
-        });
-      });
-    } else {
-      membri.forEach(m=>{
+    snap.docs
+      .filter(d=>d.data().ruolo!=='Collaboratore esterno')
+      .sort((a,b)=>(a.data().nome||'').localeCompare(b.data().nome||''))
+      .forEach(d=>{
+        const m=d.data();
         const o=document.createElement('option');
-        o.value=m.id;o.textContent=m.nome+' '+m.cognome+' ('+m.ruolo+')';
-        if(m.id===selTecVal)o.selected=true;
+        o.value=d.id;
+        o.textContent=m.nome+' '+m.cognome+' · '+m.ruolo;
+        if(d.id===selTecVal)o.selected=true;
         selTec.appendChild(o);
       });
-    }
-  }
+  }).catch(e=>{
+    selTec.innerHTML='<option value="">-- Errore caricamento --</option>';
+    console.warn('Team load error:',e);
+  });
 }
 
 function apriNuovoLavoroCal(dataDefault=''){
