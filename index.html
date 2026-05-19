@@ -927,7 +927,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.22</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.23</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2549,26 +2549,42 @@ function renderMag(){
   $('nArt').textContent=cacheMag.length;
 
   // Calcola quantità in uso per ogni articolo dai lavori aperti
+  // Usa nome normalizzato come chiave universale (più affidabile di id/ser)
   const inUsoMap={};
   cacheDich.filter(d=>!d.rientroData).forEach(d=>{
     (d.articoli||[]).forEach(a=>{
-      const key=a.id||a.ser||a.nome;
-      if(!inUsoMap[key])inUsoMap[key]={qty:0,lavori:[]};
-      inUsoMap[key].qty+=(a.qty||1);
-      if(!inUsoMap[key].lavori.find(l=>l.id===d.id))
-        inUsoMap[key].lavori.push({id:d.id,nome:d.nome,data:d.data,dataFine:d.dataFine,location:d.location,tecnico:d.tecnico});
+      // Chiave multipla — prova prima id, poi nome normalizzato
+      const keys=[];
+      if(a.id) keys.push(a.id);
+      if(a.ser) keys.push(a.ser);
+      if(a.nome) keys.push(a.nome.toLowerCase().trim());
+      keys.forEach(key=>{
+        if(!inUsoMap[key])inUsoMap[key]={qty:0,lavori:[]};
+        inUsoMap[key].qty+=(a.qty||1);
+        if(!inUsoMap[key].lavori.find(l=>l.id===d.id))
+          inUsoMap[key].lavori.push({id:d.id,nome:d.nome,data:d.data,dataFine:d.dataFine,location:d.location,tecnico:d.tecnico});
+      });
     });
   });
 
+  // Funzione helper per trovare qty in uso per un articolo del magazzino
+  const getInUso=m=>{
+    const keys=[m.id,m.ser,m.nome?.toLowerCase().trim()].filter(Boolean);
+    let maxQty=0;
+    keys.forEach(k=>{if(inUsoMap[k]&&inUsoMap[k].qty>maxQty)maxQty=inUsoMap[k].qty;});
+    return maxQty;
+  };
+  const getLavoriInUso=m=>{
+    const keys=[m.id,m.ser,m.nome?.toLowerCase().trim()].filter(Boolean);
+    const all=[];
+    keys.forEach(k=>{if(inUsoMap[k])inUsoMap[k].lavori.forEach(l=>{if(!all.find(x=>x.id===l.id))all.push(l);});});
+    return all;
+  };
+
   $('nDisp').textContent=cacheMag.filter(m=>{
-    const key=m.id||m.ser||m.nome;
-    const inUso=(inUsoMap[key]?.qty||0);
-    return (m.qty||1)-inUso>0&&m.stato==='ok';
+    return Math.max(0,(m.qty||1)-getInUso(m))>0&&m.stato==='ok';
   }).length;
-  $('nInUso').textContent=cacheMag.filter(m=>{
-    const key=m.id||m.ser||m.nome;
-    return (inUsoMap[key]?.qty||0)>0;
-  }).length;
+  $('nInUso').textContent=cacheMag.filter(m=>getInUso(m)>0).length;
 
   let h='';
   ['audio','luci','ledwall','traduzione','video','strutture'].forEach(cat=>{
@@ -2576,11 +2592,10 @@ function renderMag(){
     const label={audio:'🎙 Audio',luci:'💡 Luci',ledwall:'🖥 LED wall',traduzione:'🎧 Traduzione simultanea',video:'📽 Video / Proiezione',strutture:'🏗 Strutture'}[cat]||cat;
     h+='<div style="font-size:11px;font-weight:600;color:var(--tx2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:7px">'+label+'</div><div class="card" style="margin-bottom:13px">';
     items.forEach(m=>{
-      const key=m.id||m.ser||m.nome;
       const qtaTotale=m.qty||1;
-      const qtaInUso=inUsoMap[key]?.qty||0;
+      const qtaInUso=getInUso(m);
       const qtaDisp=Math.max(0,qtaTotale-qtaInUso);
-      const lavoriInUso=inUsoMap[key]?.lavori||[];
+      const lavoriInUso=getLavoriInUso(m);
       const pct=qtaTotale>0?qtaDisp/qtaTotale:1;
 
       // Badge disponibilità
@@ -2644,63 +2659,54 @@ function mostraDovetUsato(artId, artNomeEnc){
   const mat=cacheMag.find(m=>m.id===artId);
   const artSer=mat?.ser||'';
   const qtaTotale=mat?.qty||1;
-
-  // Trova tutti i lavori aperti che usano questo articolo
+  const artNomeNorm=(artNome||'').toLowerCase().trim();
   const lavoriConArt=cacheDich.filter(d=>
     !d.rientroData&&
     (d.articoli||[]).some(a=>
-      a.id===artId||(artSer&&a.ser===artSer)||
-      (a.nome||'').toLowerCase()===(artNome||'').toLowerCase()
+      (artId&&a.id===artId)||(artSer&&a.ser===artSer)||
+      (a.nome||'').toLowerCase().trim()===artNomeNorm
     )
   );
-
-  let qtaInUso=0;
-  let righe='';
+  let qtaInUso=0,righe='';
   lavoriConArt.forEach(d=>{
     const artInLavoro=(d.articoli||[]).find(a=>
-      a.id===artId||(artSer&&a.ser===artSer)||
-      (a.nome||'').toLowerCase()===(artNome||'').toLowerCase()
+      (artId&&a.id===artId)||(artSer&&a.ser===artSer)||
+      (a.nome||'').toLowerCase().trim()===artNomeNorm
     );
     const qty=artInLavoro?.qty||1;
     qtaInUso+=qty;
-    const dataUsc=d.data?fmtData(d.data,{day:'2-digit',month:'short',year:'numeric'}):'—';
-    const dataRient=d.dataFine?fmtData(d.dataFine,{day:'2-digit',month:'short'}):'—';
-    righe+=`<div style="padding:10px;background:var(--bg2);border-radius:var(--rs);margin-bottom:8px;border-left:3px solid var(--am)">
-      <div style="font-size:13px;font-weight:600">${d.nome||'—'}</div>
-      <div style="font-size:11px;color:var(--tx2);margin-top:3px">
-        📅 Uscita: ${dataUsc} · Rientro previsto: ${dataRient}
-      </div>
-      <div style="font-size:11px;color:var(--am);margin-top:2px">Quantità in uso: ${qty}</div>
-      <div style="font-size:11px;color:var(--tx3)">Tecnico: ${d.tecnico||'—'}</div>
-    </div>`;
+    const dataUsc=d.data?fmtData(d.data,{weekday:'short',day:'2-digit',month:'short',year:'numeric'}):'—';
+    const dataRient=d.dataFine?fmtData(d.dataFine,{weekday:'short',day:'2-digit',month:'short'}):'—';
+    const loc=(d.location||'').replace(/[^\w\s\-\.]/g,'').trim();
+    righe+='<div style="padding:12px;background:var(--bg2);border-radius:var(--rs);margin-bottom:8px;border-left:3px solid var(--am)">'+
+      '<div style="font-size:14px;font-weight:700;margin-bottom:6px">'+(d.nome||'—')+'</div>'+
+      '<div style="display:flex;flex-direction:column;gap:4px">'+
+        '<div style="font-size:12px;color:var(--tx2)">📅 Uscita: <strong style="color:var(--tx)">'+dataUsc+'</strong></div>'+
+        '<div style="font-size:12px;color:var(--tx2)">🔄 Rientro: <strong style="color:var(--tx)">'+dataRient+'</strong></div>'+
+        (loc?'<div style="font-size:12px;color:var(--tx2)">📍 Location: <strong style="color:var(--tx)">'+loc+'</strong></div>':'')+
+        '<div style="font-size:12px;color:var(--tx2)">👤 Tecnico: '+(d.tecnico||'—')+'</div>'+
+        '<div style="font-size:12px;color:var(--am);font-weight:600;margin-top:2px">📦 In uso: '+qty+' pz</div>'+
+      '</div></div>';
   });
-
   const qtaDisp=Math.max(0,qtaTotale-qtaInUso);
-  const modal=`<div class="mol" id="mDovetUsato" onclick="if(event.target===this)closeMod('mDovetUsato')" style="z-index:400">
-    <div class="msh">
-      <div class="mhd"></div>
-      <div style="font-size:16px;font-weight:700;margin-bottom:4px">📦 ${artNome}</div>
-      <div style="display:flex;gap:12px;margin-bottom:14px">
-        <div style="flex:1;background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">
-          <div style="font-size:20px;font-weight:800;color:var(--gn)">${qtaDisp}</div>
-          <div style="font-size:11px;color:var(--tx2)">Disponibili</div>
-        </div>
-        <div style="flex:1;background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">
-          <div style="font-size:20px;font-weight:800;color:var(--am)">${qtaInUso}</div>
-          <div style="font-size:11px;color:var(--tx2)">In uso</div>
-        </div>
-        <div style="flex:1;background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">
-          <div style="font-size:20px;font-weight:800">${qtaTotale}</div>
-          <div style="font-size:11px;color:var(--tx2)">Totale</div>
-        </div>
-      </div>
-      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">LAVORI IN CORSO (${lavoriConArt.length})</div>
-      ${righe||'<div class="empty">Nessun lavoro attivo</div>'}
-      <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mDovetUsato')">Chiudi</button>
-    </div>
-  </div>`;
-
-  // Rimuovi modal precedente se esiste
+  const modal='<div class="mol" id="mDovetUsato" onclick="if(event.target===this)closeMod(\'mDovetUsato\')" style="z-index:400">'+
+    '<div class="msh"><div class="mhd"></div>'+
+    '<div style="font-size:16px;font-weight:700;margin-bottom:4px">📦 '+artNome+'</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:14px">'+
+      '<div style="flex:1;background:rgba(34,197,94,.1);border:1px solid var(--gn);border-radius:var(--rs);padding:10px;text-align:center">'+
+        '<div style="font-size:22px;font-weight:800;color:var(--gn)">'+qtaDisp+'</div>'+
+        '<div style="font-size:11px;color:var(--gn)">Disponibili</div></div>'+
+      '<div style="flex:1;background:rgba(245,158,11,.1);border:1px solid var(--am);border-radius:var(--rs);padding:10px;text-align:center">'+
+        '<div style="font-size:22px;font-weight:800;color:var(--am)">'+qtaInUso+'</div>'+
+        '<div style="font-size:11px;color:var(--am)">In uso</div></div>'+
+      '<div style="flex:1;background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">'+
+        '<div style="font-size:22px;font-weight:800">'+qtaTotale+'</div>'+
+        '<div style="font-size:11px;color:var(--tx2)">Totale</div></div>'+
+    '</div>'+
+    '<div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Lavori in corso ('+lavoriConArt.length+')</div>'+
+    (righe||'<div class="empty">Nessun lavoro attivo trovato</div>')+
+    '<button class="btn btn-f" style="margin-top:8px" onclick="closeMod(\'mDovetUsato\')">Chiudi</button>'+
+    '</div></div>';
   const prev=document.getElementById('mDovetUsato');
   if(prev)prev.remove();
   document.body.insertAdjacentHTML('beforeend',modal);
