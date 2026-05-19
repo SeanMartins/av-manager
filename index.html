@@ -15,6 +15,7 @@
 <title>MMG — Multimedia Meeting Group</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -807,8 +808,19 @@ textarea{resize:vertical;min-height:80px}
       </select>
     </div>
     <div class="ig"><label class="il">Note</label><input type="text" id="nlcNote" placeholder="Note aggiuntive..."></div>
+    <!-- Upload PDF -->
+    <div class="ig">
+      <label class="il">📎 Documenti lavoro (PDF)</label>
+      <div id="nlcPdfArea" class="upz" onclick="$('nlcPdfInput').click()">
+        <div style="font-size:24px;margin-bottom:6px">📄</div>
+        <div style="font-size:13px;color:var(--tx2)">Tocca per caricare PDF</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">Rider tecnico, planimetria, note evento...</div>
+        <input type="file" id="nlcPdfInput" accept=".pdf,application/pdf" multiple style="display:none" onchange="nlcPdfSelezionato(this)">
+      </div>
+      <div id="nlcPdfList" style="margin-top:8px"></div>
+    </div>
     <div style="background:var(--bg2);border-radius:var(--rs);padding:10px;margin-bottom:12px">
-      <div style="font-size:12px;color:var(--tx2);margin-bottom:6px">📆 Aggiunge automaticamente il turno sull'agenda del tecnico assegnato</div>
+      <div style="font-size:12px;color:var(--tx2)">📆 Aggiunge automaticamente il turno sull'agenda del tecnico assegnato</div>
     </div>
     <div style="display:flex;gap:8px">
       <button id="nlcDeleteBtn" class="btn" style="display:none;color:var(--rd)" onclick="eliminaLavoroCal()">🗑 Elimina</button>
@@ -1084,7 +1096,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.38</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.39</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5077,6 +5089,10 @@ function calApriGiorno(g){
               ${nPezzi>0?' · 📦 '+nPezzi+' pz':''}
             </div>
             ${lav.note?`<div style="font-size:11px;color:var(--tx3);margin-top:2px">📝 ${lav.note}</div>`:''}
+            ${(lav.documenti&&lav.documenti.length)?`
+              <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px">
+                ${lav.documenti.map(d=>`<a href="${d.url}" target="_blank" style="font-size:10px;background:var(--bg3);color:var(--ac2);border:1px solid var(--ac);border-radius:8px;padding:2px 8px;text-decoration:none;display:inline-flex;align-items:center;gap:3px">📄 ${d.nome}</a>`).join('')}
+              </div>`:''}
           </div>
           <span style="font-size:10px;background:${color}22;color:${color};border:1px solid ${color};border-radius:10px;padding:2px 7px;flex-shrink:0;white-space:nowrap">${statoLabel}</span>
         </div>
@@ -5097,6 +5113,8 @@ function calApriGiorno(g){
 
 function apriNuovoLavoroCal(dataDefault=''){
   calEditingId=null;
+  nlcPdfFiles=[];
+  renderNlcPdfList();
   $('mNLCTitolo').textContent='📅 Nuovo lavoro';
   $('nlcNome').value='';
   $('nlcData').value=dataDefault||toLocalISO(new Date());
@@ -5151,6 +5169,50 @@ function modificaLavoroCal(id){
   openMod('mNuovoLavoroCal');
 }
 
+let nlcPdfFiles=[];
+
+function nlcPdfSelezionato(input){
+  const files=Array.from(input.files);
+  files.forEach(f=>{
+    if(f.type==='application/pdf'||f.name.endsWith('.pdf')){
+      if(!nlcPdfFiles.find(x=>x.name===f.name))
+        nlcPdfFiles.push(f);
+    }
+  });
+  renderNlcPdfList();
+}
+
+function renderNlcPdfList(){
+  const el=$('nlcPdfList');if(!el)return;
+  if(!nlcPdfFiles.length){el.innerHTML='';return;}
+  el.innerHTML=nlcPdfFiles.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg2);border-radius:var(--rs);margin-bottom:6px">
+      <span style="font-size:20px">📄</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+        <div style="font-size:10px;color:var(--tx3)">${(f.size/1024).toFixed(0)} KB</div>
+      </div>
+      <button onclick="nlcPdfFiles.splice(${i},1);renderNlcPdfList()" style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:16px">✕</button>
+    </div>`
+  ).join('');
+}
+
+async function uploadPdfLavoro(lavId, files){
+  if(!files.length)return[];
+  const STOR=firebase.storage();
+  const urls=[];
+  for(const file of files){
+    try{
+      const path=`lavori_docs/${lavId}/${Date.now()}_${file.name}`;
+      const ref=STOR.ref(path);
+      await ref.put(file);
+      const url=await ref.getDownloadURL();
+      urls.push({nome:file.name,url,path,size:file.size,at:new Date().toISOString()});
+    }catch(e){console.warn('Upload PDF:',e);}
+  }
+  return urls;
+}
+
 async function salvaLavoroCal(){
   const nome=val('nlcNome');if(!nome){toast('Inserisci il nome del lavoro','r');return;}
   const data=val('nlcData');if(!data){toast('Inserisci la data','r');return;}
@@ -5161,40 +5223,47 @@ async function salvaLavoroCal(){
   const tecnico=tecnicoUid?cacheTeam.find(m=>m.id===tecnicoUid):null;
   const tecnicoNome=tecnico?tecnico.nome+' '+tecnico.cognome:'—';
 
-  const lavData={
-    nome,data,dataFine,location,note,
-    tecnicoUid,tecnicoNome,
-    stato:'pianificato',
-    createdBy:USER.id,
-    createdAt:new Date().toISOString(),
-    updatedAt:new Date().toISOString()
-  };
+  const btn=document.querySelector('#mNuovoLavoroCal .btn-p');
+  if(btn){btn.textContent='Salvataggio...';btn.disabled=true;}
 
   try{
+    const lavData={
+      nome,data,dataFine,location,note,
+      tecnicoUid,tecnicoNome,
+      stato:'pianificato',
+      createdBy:USER.id,
+      createdAt:new Date().toISOString(),
+      updatedAt:new Date().toISOString()
+    };
+
     let lavId;
     if(calEditingId){
       await DB.collection('lavori_cal').doc(calEditingId).update({...lavData});
       lavId=calEditingId;
-      toast('✓ Lavoro aggiornato');
     } else {
       const ref=await DB.collection('lavori_cal').add(lavData);
       lavId=ref.id;
-      toast('✓ Lavoro aggiunto al calendario');
     }
 
-    // Aggiunge turno in agenda per il tecnico assegnato
+    // Upload PDF se presenti
+    if(nlcPdfFiles.length){
+      toast('⏳ Caricamento PDF...','a');
+      const docs=await uploadPdfLavoro(lavId, nlcPdfFiles);
+      if(docs.length){
+        const existing=(cacheLavoriCal.find(l=>l.id===lavId)?.documenti)||[];
+        await DB.collection('lavori_cal').doc(lavId).update({
+          documenti:[...existing,...docs]
+        });
+      }
+    }
+
+    // Aggiunge turno in agenda
     if(tecnicoUid){
-      // Rimuovi vecchi turni collegati a questo lavoro
       const vecchiTurni=await DB.collection('agenda').where('lavoriCalId','==',lavId).get();
       await Promise.all(vecchiTurni.docs.map(d=>d.ref.delete()));
-
-      // Crea nuovo turno
       await DB.collection('agenda').add({
-        uid:tecnicoUid,
-        nome:tecnicoNome,
-        tipo:'lavoro',
-        data:data,
-        dataFine:dataFine,
+        uid:tecnicoUid,nome:tecnicoNome,
+        tipo:'lavoro',data,dataFine,
         oraIn:'',oraFin:'',
         location:location||'',
         note:'Lavoro: '+nome+(note?' — '+note:''),
@@ -5203,12 +5272,17 @@ async function salvaLavoroCal(){
         assegnatoIl:new Date().toISOString(),
         assegnatoDa:USER.nome+' '+USER.cognome
       });
-      toast('📅 Turno aggiunto in agenda a '+tecnicoNome);
     }
 
+    nlcPdfFiles=[];
+    toast(calEditingId?'✓ Lavoro aggiornato':'✓ Lavoro aggiunto al calendario');
     closeMod('mNuovoLavoroCal');
     setTimeout(()=>renderCalendario(),300);
-  }catch(e){toast('Errore: '+e.message,'r');}
+  }catch(e){
+    toast('Errore: '+e.message,'r');
+  }finally{
+    if(btn){btn.textContent='Salva';btn.disabled=false;}
+  }
 }
 
 async function eliminaLavoroCal(){
