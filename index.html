@@ -54,6 +54,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 .ni.on .ic,.ni.on .lb{color:var(--ac2)}
 .ni.on .ic svg{stroke:var(--ac2)}
 .notif-badge{position:absolute;top:4px;right:6px;min-width:16px;height:16px;background:var(--rd);border-radius:8px;border:2px solid var(--bg1);font-size:10px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
+.sidebar-btn{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;background:none;border:none;border-radius:var(--rs);color:var(--tx);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--font);text-align:left;transition:background .15s}
+.sidebar-btn:hover,.sidebar-btn:active{background:var(--bg2)}
+.sidebar-btn svg{flex-shrink:0;color:var(--tx2)}
 @media(min-width:600px){
   .ni{padding:10px 8px 8px}
   .ni .ic{font-size:20px}
@@ -250,7 +253,12 @@ textarea{resize:vertical;min-height:80px}
   <div id="topbar">
     <img src="logo.png" alt="MMG" style="height:26px;width:auto;flex-shrink:0">
     <div style="font-size:13px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;flex:1;padding:0 8px" id="ptitle">Presenze</div>
-    <div class="avbtn" id="avbtn" onclick="openMod('mProfile')">?</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <button id="sidebarToggle" onclick="apriSidebar()" style="display:none;background:none;border:1px solid var(--b);border-radius:var(--rs);padding:6px;cursor:pointer;color:var(--tx2);display:none;align-items:center;justify-content:center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="avbtn" id="avbtn" onclick="openMod('mProfile')">?</div>
+    </div>
   </div>
   <div id="content">
 
@@ -678,6 +686,60 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- SIDEBAR RESPONSABILE/ADMIN -->
+<div id="sidebarOverlay" onclick="chiudiSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300"></div>
+<div id="sidebar" style="position:fixed;top:0;right:-280px;width:272px;height:100dvh;background:var(--bg1);border-left:1px solid var(--b);z-index:301;transition:right .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top)+16px) 0 calc(env(safe-area-inset-bottom)+16px)">
+  <div style="padding:0 20px 16px;border-bottom:1px solid var(--b);margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:15px;font-weight:700">🔐 Gestione</div>
+      <button onclick="chiudiSidebar()" style="background:none;border:none;color:var(--tx2);font-size:20px;cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--tx2);margin-top:4px" id="sidebarUser">—</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:0 12px">
+    <!-- Gestione Utenti -->
+    <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:8px 8px 4px">Utenti</div>
+    <button class="sidebar-btn" onclick="chiudiSidebar();apriGestioneUtenti()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Gestione utenti
+    </button>
+    <!-- Presenze -->
+    <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Presenze</div>
+    <button class="sidebar-btn" onclick="chiudiSidebar();openMod('mGestTimb')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Modifica timbrature
+    </button>
+    <button class="sidebar-btn" onclick="chiudiSidebar();goPage('presenze');openMod('mExport')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Esporta presenze Excel
+    </button>
+    <button id="sidebarBtnConf" class="sidebar-btn" onclick="chiudiSidebar();openExportConfermato()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      Esporta ore confermate
+    </button>
+    <!-- Magazzino -->
+    <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Magazzino</div>
+    <button class="sidebar-btn" onclick="chiudiSidebar();renderMatNuovi();openMod('mMatNuovi')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Materiali nuovi
+    </button>
+    <button class="sidebar-btn" onclick="chiudiSidebar();renderMatVenduti();openMod('mMatVenduti')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Materiali venduti
+    </button>
+    <button class="sidebar-btn" onclick="chiudiSidebar();renderMatInstall();openMod('mMatInstall')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      Materiali installati
+    </button>
+    <!-- Agenda -->
+    <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Agenda</div>
+    <button class="sidebar-btn" onclick="chiudiSidebar();goPage('agenda')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Gestione turni
+    </button>
+  </div>
+</div>
+
 <!-- ARCHIVIO PRESENZE -->
 <div class="mol" id="mArchivioPresenze" onclick="if(event.target===this)closeMod('mArchivioPresenze')">
   <div class="msh">
@@ -943,7 +1005,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.29</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.30</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1545,6 +1607,20 @@ async function cambiaPin(){
   toast('✅ PIN aggiornato!');
 }
 
+// ── SIDEBAR ──
+function apriSidebar(){
+  const s=$('sidebar'),o=$('sidebarOverlay');
+  if(!s||!o)return;
+  $('sidebarUser').textContent=(USER?.nome||'')+' '+(USER?.cognome||'')+' · '+(USER?.ruolo||'');
+  s.style.right='0';
+  o.style.display='block';
+}
+function chiudiSidebar(){
+  const s=$('sidebar'),o=$('sidebarOverlay');
+  if(s)s.style.right='-280px';
+  if(o)o.style.display='none';
+}
+
 function doLogout(){
   localStorage.removeItem('av_user');
   localStorage.removeItem('av_punch');
@@ -1575,6 +1651,7 @@ function startApp(){
   }
   if(isResponsabile()||isAdmin()){
     const gu=$('btnGestUtenti');if(gu)gu.style.display='block';
+    const st=$('sidebarToggle');if(st){st.style.display='flex';}
     // Ascolta messaggi dal Service Worker (click su notifica)
   if('serviceWorker' in navigator){
     navigator.serviceWorker.addEventListener('message', event=>{
@@ -2559,13 +2636,15 @@ function startMagListener(){
   });
 }
 
-// Event delegation per bottoni magazzino — aggiunto una volta sola
+// Event delegation mag-dove-btn — globale, sicuro
 document.addEventListener('click', e=>{
   const btn=e.target.closest('.mag-dove-btn');
   if(btn){
     e.stopPropagation();
     e.preventDefault();
-    mostraDovetUsato(btn.dataset.id, btn.dataset.nome);
+    const id=btn.getAttribute('data-id');
+    const nome=btn.getAttribute('data-nome');
+    if(id&&nome) mostraDovetUsato(id, nome);
   }
 });
 
