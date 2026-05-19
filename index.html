@@ -927,7 +927,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.25</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.26</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2544,6 +2544,10 @@ function startMagListener(){
 }
 
 function renderMag(){
+  // Defer per non bloccare UI (fix INP)
+  setTimeout(_renderMagInner, 0);
+}
+function _renderMagInner(){
   const q=($('magSearch')?.value||'').toLowerCase();
   const fil=q?cacheMag.filter(m=>m.nome.toLowerCase().includes(q)||(m.marca||'').toLowerCase().includes(q)):cacheMag;
   $('nArt').textContent=cacheMag.length;
@@ -2742,7 +2746,7 @@ async function resetStatoArt(artId){
     storico:firebase.firestore.FieldValue.arrayUnion(logEntry)
   });
   toast('🔄 Articolo resettato a Disponibile');
-  renderMag();
+  setTimeout(()=>renderMag(),100);
 }
 
 async function aggiornaStatoArt(artId, nuovoStato){
