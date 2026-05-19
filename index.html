@@ -927,7 +927,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.26</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.27</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2543,9 +2543,14 @@ function startMagListener(){
   });
 }
 
+let _magRenderPending=false;
 function renderMag(){
-  // Defer per non bloccare UI (fix INP)
-  setTimeout(_renderMagInner, 0);
+  if(_magRenderPending)return;
+  _magRenderPending=true;
+  // Usa requestIdleCallback per non bloccare UI (fix INP)
+  const fn=()=>{_magRenderPending=false;_renderMagInner();};
+  if('requestIdleCallback' in window) requestIdleCallback(fn,{timeout:300});
+  else setTimeout(fn,16);
 }
 function _renderMagInner(){
   const q=($('magSearch')?.value||'').toLowerCase();
