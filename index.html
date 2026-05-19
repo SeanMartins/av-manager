@@ -1097,7 +1097,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.42</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.43</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5138,27 +5138,32 @@ function nlcPopola(selLocVal='', selTecVal=''){
     if(selLocVal&&!inLista&&custom){custom.style.display='block';custom.value=selLocVal;}
     else if(custom){custom.style.display='none';custom.value='';}
   }
-  // Tecnici — query senza filtri per evitare indici mancanti
+  // Tecnici — usa cacheTeam già popolato
   const selTec=$('nlcTecnico');
   if(!selTec)return;
-  selTec.innerHTML='<option value="">-- Caricamento... --</option>';
-  DB.collection('team').get().then(snap=>{
-    selTec.innerHTML='<option value="">-- Nessun tecnico --</option>';
-    snap.docs
-      .filter(d=>d.data().approvato&&d.data().ruolo!=='Collaboratore esterno')
-      .sort((a,b)=>(a.data().nome||'').localeCompare(b.data().nome||''))
-      .forEach(d=>{
-        const m=d.data();
+  selTec.innerHTML='<option value="">-- Nessun tecnico --</option>';
+  const membri=(cacheTeam||[]).filter(m=>m.approvato!==false&&m.ruolo!=='Collaboratore esterno');
+  if(membri.length){
+    membri.sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).forEach(m=>{
+      const o=document.createElement('option');
+      o.value=m.id;
+      o.textContent=m.nome+' '+m.cognome+' · '+m.ruolo;
+      if(m.id===selTecVal)o.selected=true;
+      selTec.appendChild(o);
+    });
+  } else {
+    // Fallback Firebase senza filtri
+    DB.collection('team').get().then(snap=>{
+      snap.docs.forEach(d=>{
+        const m={id:d.id,...d.data()};
+        if(m.ruolo==='Collaboratore esterno')return;
         const o=document.createElement('option');
-        o.value=d.id;
-        o.textContent=m.nome+' '+m.cognome+' · '+m.ruolo;
-        if(d.id===selTecVal)o.selected=true;
+        o.value=m.id;o.textContent=m.nome+' '+m.cognome+' · '+m.ruolo;
+        if(m.id===selTecVal)o.selected=true;
         selTec.appendChild(o);
       });
-  }).catch(e=>{
-    selTec.innerHTML='<option value="">-- Errore --</option>';
-    console.warn('Team:',e);
-  });
+    }).catch(()=>{});
+  }
 }
 
 function apriNuovoLavoroCal(dataDefault=''){
