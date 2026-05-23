@@ -1,4 +1,4 @@
-export const config = { runtime: 'edge' };
+export const config = { runtime: 'edge', maxDuration: 60 };
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') {
@@ -12,20 +12,23 @@ export default async function handler(req) {
   }
 
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+    return new Response(JSON.stringify({ error: { message: 'Method not allowed' } }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+    });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  
-  // Debug: mostra i primi 10 caratteri della chiave
   if (!apiKey) {
-    return new Response(JSON.stringify({ 
-      error: { message: 'ANTHROPIC_API_KEY non configurata su Vercel' } 
-    }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
+    return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY non configurata su Vercel' } }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+    });
   }
 
   try {
     const body = await req.json();
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -36,11 +39,23 @@ export default async function handler(req) {
       },
       body: JSON.stringify(body)
     });
-    const data = await response.json();
-    return new Response(JSON.stringify(data), {
-      status: response.status,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-    });
+
+    const text = await response.text();
+    
+    try {
+      const data = JSON.parse(text);
+      return new Response(JSON.stringify(data), {
+        status: response.status,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    } catch(parseErr) {
+      return new Response(JSON.stringify({ 
+        error: { message: 'Risposta non valida: ' + text.substring(0, 300) } 
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
   } catch (e) {
     return new Response(JSON.stringify({ error: { message: e.message } }), {
       status: 500,
