@@ -1202,7 +1202,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.05</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.06</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5856,7 +5856,7 @@ async function avviaAnalisiAI(){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-5',
         max_tokens:2000,
         messages:[{role:'user',content:msgContent}]
       })
