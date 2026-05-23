@@ -336,9 +336,10 @@ textarea{resize:vertical;min-height:80px}
       </div>
       <!-- Tab Inventario / Status -->
       <div style="display:flex;gap:8px;margin-bottom:14px">
-        <button id="tabInventario" class="btn btn-p btn-f" onclick="switchMagTab('inventario')" style="flex:1;padding:10px;font-size:11px">📦 Inventario</button>
-        <button id="tabStatus" class="btn btn-f" onclick="switchMagTab('status')" style="flex:1;padding:10px;font-size:11px">🏭 Stato Mag.</button>
-        <button id="tabStats" class="btn btn-f" onclick="switchMagTab('stats')" style="flex:1;padding:10px;font-size:11px">📈 Stats</button>
+        <button id="tabInventario" class="btn btn-p btn-f" onclick="switchMagTab('inventario')" style="flex:1;padding:8px;font-size:10px">📦 Inventario</button>
+        <button id="tabStatus" class="btn btn-f" onclick="switchMagTab('status')" style="flex:1;padding:8px;font-size:10px">🏭 Stato</button>
+        <button id="tabStats" class="btn btn-f" onclick="switchMagTab('stats')" style="flex:1;padding:8px;font-size:10px">📈 Stats</button>
+        <button id="tabLavori" class="btn btn-f" onclick="switchMagTab('lavori')" style="flex:1;padding:8px;font-size:10px">📋 Lavori</button>
       </div>
       <!-- Tab Inventario -->
       <div id="magTabInventario">
@@ -349,6 +350,9 @@ textarea{resize:vertical;min-height:80px}
           </button>
           <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:14px;border-color:var(--am);color:var(--am)" onclick="openSmarca()">
             <span style="font-size:22px">✅</span><span style="font-size:13px">Smarca rientro</span>
+          </button>
+          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:14px;border-color:#6c63ff;color:#6c63ff;grid-column:1/-1" onclick="apriPlanning()">
+            <span style="font-size:22px">🗓</span><span style="font-size:13px">Planning materiali</span>
           </button>
         </div>
         <!-- Sezione Responsabile -->
@@ -388,6 +392,10 @@ textarea{resize:vertical;min-height:80px}
           </select>
         </div>
         <div id="magStatsContent"><div class="empty">Caricamento...</div></div>
+      </div>
+      <!-- Tab Lavori da preparare -->
+      <div id="magTabLavori" style="display:none">
+        <div id="magLavoriContent"><div class="empty">Caricamento...</div></div>
       </div>
     </div>
 
@@ -883,6 +891,25 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- PLANNING MATERIALI -->
+<div class="mol" id="mPlanning" onclick="if(event.target===this)closeMod('mPlanning')">
+  <div class="msh" style="max-height:90dvh;overflow-y:auto">
+    <div class="mhd"></div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px">🗓 Planning Materiali</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Analisi disponibilità materiali per tutti i lavori pianificati</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <select id="planningMesi" style="flex:1;font-size:12px;padding:8px">
+        <option value="1">Prossimo mese</option>
+        <option value="3" selected>Prossimi 3 mesi</option>
+        <option value="6">Prossimi 6 mesi</option>
+      </select>
+      <button class="btn btn-p" style="padding:8px 14px;font-size:12px" onclick="calcolaPlanning()">🔍 Analizza</button>
+    </div>
+    <div id="planningResult"><div class="empty">Clicca Analizza per iniziare</div></div>
+    <button class="btn btn-f" style="margin-top:12px" onclick="closeMod('mPlanning')">Chiudi</button>
+  </div>
+</div>
+
 <!-- ARCHIVIO PRESENZE -->
 <div class="mol" id="mArchivioPresenze" onclick="if(event.target===this)closeMod('mArchivioPresenze')">
   <div class="msh">
@@ -1149,7 +1176,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.15.50</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.01</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -3932,6 +3959,7 @@ function startDichListener(){
     renderMag();
     if($('magTabStatus')&&$('magTabStatus').style.display!=='none') renderStatusMag();
     if($('magTabStats')&&$('magTabStats').style.display!=='none') renderStatsMag();
+    if($('magTabLavori')&&$('magTabLavori').style.display!=='none') renderMagLavori();
   });
 }
 
@@ -4363,10 +4391,17 @@ function renderAgendaDip(){
       const confBadge=t.confermato
         ?'<span style="font-size:10px;background:rgba(34,197,94,.15);color:var(--gn);padding:2px 8px;border-radius:8px;margin-top:4px;display:inline-block">✅ Confermato</span>'
         :'<button onclick="event.stopPropagation();confermaSingoloTurno(\''+t.id+'\')" style="font-size:10px;background:rgba(245,158,11,.15);color:var(--am);border:1px solid var(--am);padding:2px 8px;border-radius:8px;margin-top:4px;cursor:pointer;font-family:var(--font)">⏳ Tocca per confermare</button>';
+      // Cerca PDF dal lavoro_cal collegato
+      const lavCal=t.lavoriCalId?cacheLavoriCal.find(l=>l.id===t.lavoriCalId):null;
+      const docs=lavCal?.documenti||[];
+      const docsHtml=docs.length?'<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">'+
+        docs.map(d=>'<a href="'+d.url+'" target="_blank" style="font-size:10px;background:rgba(255,255,255,.1);color:'+c.text+';border:1px solid '+c.border+';border-radius:8px;padding:2px 8px;text-decoration:none;display:inline-flex;align-items:center;gap:3px">📄 '+d.nome+'</a>').join('')+
+        '</div>':'';
       h+='<div class="ag-turno" style="background:'+c.bg+';border-left:3px solid '+c.border+'">'+
         '<div class="ag-turno-title" style="color:'+c.text+'">'+TURNO_ICONS[t.tipo]+' '+(t.location||t.tipo)+'</div>'+
         (t.oraIn?'<div class="ag-turno-sub" style="color:'+c.text+'">⏰ '+t.oraIn+(t.oraFin?' → '+t.oraFin:'')+'</div>':'')+
         (t.note?'<div class="ag-turno-sub" style="color:'+c.text+';opacity:.7">📝 '+t.note+'</div>':'')+
+        docsHtml+
         confBadge+
       '</div>';
     });
@@ -4558,19 +4593,20 @@ async function deleteTurno(){
 }
 
 function switchMagTab(tab){
-  const tabs=['inventario','status','stats'];
-  const btns={inventario:'tabInventario',status:'tabStatus',stats:'tabStats'};
-  const divs={inventario:'magTabInventario',status:'magTabStatus',stats:'magTabStats'};
+  const tabs=['inventario','status','stats','lavori'];
+  const btns={inventario:'tabInventario',status:'tabStatus',stats:'tabStats',lavori:'tabLavori'};
+  const divs={inventario:'magTabInventario',status:'magTabStatus',stats:'magTabStats',lavori:'magTabLavori'};
   tabs.forEach(t=>{
     const d=$(divs[t]);const b=$(btns[t]);
     if(d)d.style.display=t===tab?'block':'none';
     if(b){
-      if(t===tab){b.classList.add('btn-p');b.classList.remove('btn-f');b.style.cssText='flex:1;padding:10px;font-size:13px';}
-      else{b.classList.remove('btn-p');b.classList.add('btn-f');b.style.cssText='flex:1;padding:10px;font-size:13px';}
+      if(t===tab){b.classList.add('btn-p');b.classList.remove('btn-f');}
+      else{b.classList.remove('btn-p');b.classList.add('btn-f');}
     }
   });
   if(tab==='status') renderStatusMag();
   if(tab==='stats') renderStatsMag();
+  if(tab==='lavori') renderMagLavori();
 }
 
 function renderStatsMag(){
@@ -4702,6 +4738,79 @@ function renderStatsMag(){
 }
 
 function mostraStatusMag(){switchMagTab('status');}
+
+function renderMagLavori(){
+  const el=$('magLavoriContent');if(!el)return;
+  // Combina lavori pianificati (lavori_cal) e lavori preparati (dich)
+  const oggi=toLocalISO(new Date());
+  const lavoriPianificati=cacheLavoriCal
+    .filter(l=>l.data>=oggi)
+    .sort((a,b)=>a.data.localeCompare(b.data));
+  const lavoriArchivio=[...cacheLavoriCal]
+    .filter(l=>l.data<oggi)
+    .sort((a,b)=>b.data.localeCompare(a.data));
+
+  let h='';
+
+  // Lavori futuri da preparare
+  if(lavoriPianificati.length){
+    h+='<div style="font-size:11px;font-weight:600;color:var(--am);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📋 Da preparare ('+lavoriPianificati.length+')</div>';
+    lavoriPianificati.forEach(lav=>{
+      const dataUsc=fmtData(lav.data,{weekday:'short',day:'2-digit',month:'short'});
+      const dataRient=lav.dataFine?fmtData(lav.dataFine,{day:'2-digit',month:'short'}):'—';
+      const docs=lav.documenti||[];
+      const isPianificato=lav.stato==='pianificato'||!lav.stato;
+      const statoColor=isPianificato?'var(--am)':'#6c63ff';
+      const statoLabel=isPianificato?'⏳ Da preparare':'📋 In preparazione';
+      h+=`<div class="card" style="margin-bottom:10px;border-left:3px solid ${statoColor}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700">${lav.nome||'—'}</div>
+            <div style="font-size:11px;color:var(--tx2);margin-top:2px">
+              ${lav.location?'📍 '+lav.location+' · ':''}👤 ${lav.tecnicoNome||'—'}
+            </div>
+            <div style="font-size:11px;color:var(--tx2);margin-top:2px">
+              📅 ${dataUsc} → ${dataRient}
+            </div>
+          </div>
+          <span style="font-size:10px;color:${statoColor};border:1px solid ${statoColor};border-radius:8px;padding:2px 7px;flex-shrink:0;white-space:nowrap">${statoLabel}</span>
+        </div>
+        ${docs.length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">'+
+          docs.map(d=>'<a href="'+d.url+'" target="_blank" style="font-size:10px;background:var(--bg3);color:var(--ac2);border:1px solid var(--ac);border-radius:8px;padding:2px 8px;text-decoration:none">📄 '+d.nome+'</a>').join('')+
+          '</div>':''}
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-p" style="padding:7px 12px;font-size:12px" onclick="preparaLavoroDaCal('${lav.id}')">📋 Prepara</button>
+          ${(isResponsabile()||isAdmin())?'<button class="btn" style="padding:7px 12px;font-size:12px" onclick="modificaLavoroCal(\''+lav.id+'\')">✏️ Modifica</button>':''}
+        </div>
+      </div>`;
+    });
+  }
+
+  // Archivio lavori passati
+  if(lavoriArchivio.length){
+    h+='<div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">📁 Archivio ('+lavoriArchivio.length+')</div>';
+    lavoriArchivio.slice(0,20).forEach(lav=>{
+      const dataUsc=fmtData(lav.data,{day:'2-digit',month:'short',year:'numeric'});
+      const docs=lav.documenti||[];
+      const isRient=!!lav.rientroData;
+      h+=`<div class="row" style="border-left:3px solid ${isRient?'#64748b':'var(--gn)'}">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500">${lav.nome||'—'}</div>
+          <div style="font-size:11px;color:var(--tx2)">${dataUsc}${lav.location?' · 📍 '+lav.location:''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          ${docs.map(d=>'<a href="'+d.url+'" target="_blank" style="font-size:10px;color:var(--ac2);text-decoration:none">📄 '+d.nome+'</a>').join('')}
+          <span style="font-size:10px;color:${isRient?'#64748b':'var(--gn)'}">${isRient?'✅ Rientrato':'✓ Completato'}</span>
+        </div>
+      </div>`;
+    });
+  }
+
+  if(!lavoriPianificati.length&&!lavoriArchivio.length){
+    h='<div class="empty">Nessun lavoro pianificato.<br>Aggiungili dal 📅 Calendario.</div>';
+  }
+  el.innerHTML=h;
+}
 
 function renderStatusMag(){
   const el=$('magStatusContent');if(!el)return;
@@ -4929,6 +5038,171 @@ async function revocaSessione(uid){
   caricaUtentiPendenti();
 }
 let splStream=null, splAnimFrame=null, splAnalyser=null, splPeak=-Infinity;
+
+// ── PLANNING MATERIALI ──
+function apriPlanning(){
+  openMod('mPlanning');
+  calcolaPlanning();
+}
+
+function calcolaPlanning(){
+  const el=$('planningResult');if(!el)return;
+  const mesi=parseInt($('planningMesi')?.value||3);
+  const oggi=toLocalISO(new Date());
+  const fine=toLocalISO(new Date(Date.now()+mesi*30*24*3600*1000));
+
+  // Lavori nel periodo
+  const lavori=[...cacheLavoriCal,...cacheDich.filter(d=>!d.rientroData)]
+    .filter(l=>l.data&&l.data>=oggi&&l.data<=fine)
+    .sort((a,b)=>a.data.localeCompare(b.data));
+
+  if(!lavori.length){
+    el.innerHTML='<div class="empty">Nessun lavoro pianificato nei prossimi '+mesi+' mesi</div>';
+    return;
+  }
+
+  // Calcola fabbisogno totale per articolo con controllo date
+  const fabbisogno={};
+  lavori.forEach(lav=>{
+    const articoli=lav.articoli||[];
+    const dataUsc=lav.data||oggi;
+    const dataRient=lav.dataFine||dataUsc;
+    articoli.forEach(a=>{
+      const key=a.id||a.nome;
+      if(!fabbisogno[key])fabbisogno[key]={nome:a.nome,id:a.id||'',lavori:[],maxContemporaneo:0};
+      fabbisogno[key].lavori.push({
+        lavNome:lav.nome,qty:a.qty||1,
+        dataUsc,dataRient
+      });
+    });
+  });
+
+  // Per ogni articolo calcola quanti ne servono contemporaneamente (peak)
+  Object.values(fabbisogno).forEach(f=>{
+    // Trova il picco massimo di utilizzo contemporaneo
+    const date=new Set();
+    f.lavori.forEach(l=>{
+      const d=new Date(l.dataUsc);
+      const fin=new Date(l.dataRient);
+      for(let dt=new Date(d);dt<=fin;dt.setDate(dt.getDate()+1)){
+        date.add(toLocalISO(dt));
+      }
+    });
+    date.forEach(giorno=>{
+      const totGiorno=f.lavori
+        .filter(l=>l.dataUsc<=giorno&&l.dataRient>=giorno)
+        .reduce((s,l)=>s+(l.qty||1),0);
+      if(totGiorno>f.maxContemporaneo)f.maxContemporaneo=totGiorno;
+    });
+  });
+
+  // Confronta con magazzino
+  const ok=[],warning=[],mancanti=[];
+  Object.values(fabbisogno).forEach(f=>{
+    const art=cacheMag.find(m=>m.id===f.id||(m.nome||'').toLowerCase()===(f.nome||'').toLowerCase());
+    const qtaMag=art?.qty||0;
+    const diff=qtaMag-f.maxContemporaneo;
+    if(!art){
+      mancanti.push({...f,qtaMag:0,diff:f.maxContemporaneo});
+    } else if(diff<0){
+      mancanti.push({...f,qtaMag,diff:Math.abs(diff)});
+    } else if(diff<=2){
+      warning.push({...f,qtaMag,diff});
+    } else {
+      ok.push({...f,qtaMag,diff});
+    }
+  });
+
+  const pad=n=>String(n).padStart(2,'0');
+  const fmtD=iso=>{if(!iso)return'—';const[y,m,d]=iso.split('-').map(Number);return pad(d)+'/'+pad(m)+'/'+y;};
+
+  let h='';
+
+  // Riepilogo
+  h+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+    <div style="background:rgba(34,197,94,.1);border:1px solid var(--gn);border-radius:var(--rs);padding:10px;text-align:center">
+      <div style="font-size:20px;font-weight:800;color:var(--gn)">${ok.length}</div>
+      <div style="font-size:10px;color:var(--gn)">✅ OK</div>
+    </div>
+    <div style="background:rgba(245,158,11,.1);border:1px solid var(--am);border-radius:var(--rs);padding:10px;text-align:center">
+      <div style="font-size:20px;font-weight:800;color:var(--am)">${warning.length}</div>
+      <div style="font-size:10px;color:var(--am)">⚠️ Quasi</div>
+    </div>
+    <div style="background:rgba(239,68,68,.1);border:1px solid var(--rd);border-radius:var(--rs);padding:10px;text-align:center">
+      <div style="font-size:20px;font-weight:800;color:var(--rd)">${mancanti.length}</div>
+      <div style="font-size:10px;color:var(--rd)">❌ Mancanti</div>
+    </div>
+  </div>`;
+
+  // Lavori nel periodo
+  h+=`<div style="font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">📅 ${lavori.length} lavori analizzati</div>`;
+  h+='<div class="card" style="margin-bottom:14px">';
+  lavori.forEach((l,i)=>{
+    h+=`<div style="padding:8px 12px;${i>0?'border-top:1px solid var(--b)':''}">
+      <div style="font-size:13px;font-weight:500">${l.nome||'—'}</div>
+      <div style="font-size:11px;color:var(--tx2)">📅 ${fmtD(l.data)} → ${fmtD(l.dataFine||l.data)} · ${(l.articoli||[]).length} articoli</div>
+    </div>`;
+  });
+  h+='</div>';
+
+  // Materiali mancanti
+  if(mancanti.length){
+    h+=`<div style="font-size:11px;font-weight:600;color:var(--rd);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">❌ Materiali insufficienti (${mancanti.length})</div>`;
+    h+='<div class="card" style="margin-bottom:14px">';
+    mancanti.forEach((f,i)=>{
+      const lavoriList=f.lavori.map(l=>l.lavNome).join(', ');
+      h+=`<div style="padding:10px 12px;${i>0?'border-top:1px solid var(--b)':''}">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px;font-weight:600;color:var(--rd)">${f.nome}</div>
+          <div style="text-align:right">
+            <div style="font-size:12px;color:var(--rd);font-weight:700">Mancano ${f.diff} pz</div>
+            <div style="font-size:10px;color:var(--tx3)">Magazzino: ${f.qtaMag} · Servono: ${f.maxContemporaneo}</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:3px">Usato in: ${lavoriList}</div>
+        <div style="margin-top:5px">
+          <span style="font-size:10px;background:rgba(239,68,68,.15);color:var(--rd);border:1px solid var(--rd);border-radius:8px;padding:2px 8px">
+            🛒 Noleggiare o acquistare ${f.diff} pz
+          </span>
+        </div>
+      </div>`;
+    });
+    h+='</div>';
+  }
+
+  // Quasi esauriti
+  if(warning.length){
+    h+=`<div style="font-size:11px;font-weight:600;color:var(--am);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">⚠️ Quasi esauriti (${warning.length})</div>`;
+    h+='<div class="card" style="margin-bottom:14px">';
+    warning.forEach((f,i)=>{
+      h+=`<div style="padding:10px 12px;${i>0?'border-top:1px solid var(--b)':''}">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px;font-weight:500">${f.nome}</div>
+          <div style="text-align:right">
+            <div style="font-size:12px;color:var(--am);font-weight:600">Avanzano ${f.diff} pz</div>
+            <div style="font-size:10px;color:var(--tx3)">Magazzino: ${f.qtaMag} · Servono: ${f.maxContemporaneo}</div>
+          </div>
+        </div>
+      </div>`;
+    });
+    h+='</div>';
+  }
+
+  // OK
+  if(ok.length){
+    h+=`<div style="font-size:11px;font-weight:600;color:var(--gn);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">✅ Materiali sufficienti (${ok.length})</div>`;
+    h+='<div class="card">';
+    ok.forEach((f,i)=>{
+      h+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;${i>0?'border-top:1px solid var(--b)':''}">
+        <div style="font-size:13px">${f.nome}</div>
+        <span style="font-size:11px;color:var(--gn)">${f.qtaMag}/${f.maxContemporaneo} ✓</span>
+      </div>`;
+    });
+    h+='</div>';
+  }
+
+  el.innerHTML=h;
+}
 
 // ── CALENDARIO LAVORI ──
 let calAnno=new Date().getFullYear(), calMese=new Date().getMonth();
@@ -6955,5 +7229,7 @@ async function initFCM(){
   }catch(e){console.warn('FCM:',e.message);}
 }
 </script>
+<!-- COPYRIGHT -->
+<div style="text-align:center;font-size:10px;color:var(--tx3);padding:4px 0 calc(var(--sb,0px) + 62px);pointer-events:none;user-select:none;position:relative;z-index:0">© Martins Osemwengie · MMG Logistics</div>
 </body>
 </html>
