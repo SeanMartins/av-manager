@@ -1202,7 +1202,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.04</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.05</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5191,13 +5191,13 @@ function calcolaPlanning(){
   });
 
   // Confronta con magazzino
-  const ok=[],warning=[],mancanti=[];
+  const ok=[],warning=[],mancanti=[],nonInMag=[];
   Object.values(fabbisogno).forEach(f=>{
     const art=cacheMag.find(m=>m.id===f.id||(m.nome||'').toLowerCase()===(f.nome||'').toLowerCase());
     const qtaMag=art?.qty||0;
     const diff=qtaMag-f.maxContemporaneo;
     if(!art){
-      mancanti.push({...f,qtaMag:0,diff:f.maxContemporaneo});
+      nonInMag.push({...f,qtaMag:0,diff:f.maxContemporaneo});
     } else if(diff<0){
       mancanti.push({...f,qtaMag,diff:Math.abs(diff)});
     } else if(diff<=2){
@@ -5213,18 +5213,22 @@ function calcolaPlanning(){
   let h='';
 
   // Riepilogo
-  h+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-    <div style="background:rgba(34,197,94,.1);border:1px solid var(--gn);border-radius:var(--rs);padding:10px;text-align:center">
-      <div style="font-size:20px;font-weight:800;color:var(--gn)">${ok.length}</div>
+  h+=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px">
+    <div style="background:rgba(34,197,94,.1);border:1px solid var(--gn);border-radius:var(--rs);padding:8px;text-align:center">
+      <div style="font-size:18px;font-weight:800;color:var(--gn)">${ok.length}</div>
       <div style="font-size:10px;color:var(--gn)">✅ OK</div>
     </div>
-    <div style="background:rgba(245,158,11,.1);border:1px solid var(--am);border-radius:var(--rs);padding:10px;text-align:center">
-      <div style="font-size:20px;font-weight:800;color:var(--am)">${warning.length}</div>
+    <div style="background:rgba(245,158,11,.1);border:1px solid var(--am);border-radius:var(--rs);padding:8px;text-align:center">
+      <div style="font-size:18px;font-weight:800;color:var(--am)">${warning.length}</div>
       <div style="font-size:10px;color:var(--am)">⚠️ Quasi</div>
     </div>
-    <div style="background:rgba(239,68,68,.1);border:1px solid var(--rd);border-radius:var(--rs);padding:10px;text-align:center">
-      <div style="font-size:20px;font-weight:800;color:var(--rd)">${mancanti.length}</div>
-      <div style="font-size:10px;color:var(--rd)">❌ Mancanti</div>
+    <div style="background:rgba(239,68,68,.1);border:1px solid var(--rd);border-radius:var(--rs);padding:8px;text-align:center">
+      <div style="font-size:18px;font-weight:800;color:var(--rd)">${mancanti.length}</div>
+      <div style="font-size:10px;color:var(--rd)">❌ Insuff.</div>
+    </div>
+    <div style="background:rgba(156,163,175,.1);border:1px solid #6b7280;border-radius:var(--rs);padding:8px;text-align:center">
+      <div style="font-size:18px;font-weight:800;color:#9ca3af">${nonInMag.length}</div>
+      <div style="font-size:10px;color:#9ca3af">🔍 Non in mag.</div>
     </div>
   </div>`;
 
@@ -5276,6 +5280,30 @@ function calcolaPlanning(){
             <div style="font-size:12px;color:var(--am);font-weight:600">Avanzano ${f.diff} pz</div>
             <div style="font-size:10px;color:var(--tx3)">Magazzino: ${f.qtaMag} · Servono: ${f.maxContemporaneo}</div>
           </div>
+        </div>
+      </div>`;
+    });
+    h+='</div>';
+  }
+
+  // Non in magazzino
+  if(nonInMag.length){
+    h+=`<div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">🔍 Non presenti in magazzino (${nonInMag.length})</div>`;
+    h+='<div class="card" style="margin-bottom:14px;border:1px solid rgba(156,163,175,.3)">';
+    h+=`<div style="padding:10px 12px;background:rgba(156,163,175,.08);border-bottom:1px solid var(--b);font-size:12px;color:#9ca3af">
+      ⚠️ Questi materiali sono richiesti dai lavori ma <strong>non esistono nel tuo magazzino</strong>. Valuta se noleggiarli o acquistarli.
+    </div>`;
+    nonInMag.forEach((f,i)=>{
+      const lavoriList=f.lavori.map(l=>l.lavNome).join(', ');
+      h+=`<div style="padding:10px 12px;${i>0?'border-top:1px solid var(--b)':''}">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#9ca3af">📦 ${f.nome}</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:2px">Necessari: ${f.maxContemporaneo} pz · Usato in: ${lavoriList}</div>
+          </div>
+          <span style="font-size:10px;background:rgba(156,163,175,.15);color:#9ca3af;border:1px solid #6b7280;border-radius:8px;padding:2px 8px;flex-shrink:0;margin-left:8px;white-space:nowrap">
+            🛒 Non in magazzino
+          </span>
         </div>
       </div>`;
     });
