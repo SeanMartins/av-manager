@@ -898,6 +898,8 @@ textarea{resize:vertical;min-height:80px}
     <div class="mhd"></div>
     <div style="font-size:16px;font-weight:700;margin-bottom:4px">🗓 Planning Materiali</div>
     <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Analisi disponibilità materiali per tutti i lavori pianificati</div>
+
+    <!-- Periodo -->
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <select id="planningMesi" style="flex:1;font-size:12px;padding:8px">
         <option value="1">Prossimo mese</option>
@@ -906,6 +908,29 @@ textarea{resize:vertical;min-height:80px}
       </select>
       <button class="btn btn-p" style="padding:8px 14px;font-size:12px" onclick="calcolaPlanning()">🔍 Analizza</button>
     </div>
+
+    <!-- Upload lavori futuri -->
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">📎 Aggiungi lavori futuri (PDF/lista materiali)</div>
+      <div class="upz" onclick="$('planningPdfInput').click()" style="min-height:60px;padding:10px">
+        <div style="font-size:18px">📄</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">Carica PDF rider tecnico o lista materiali</div>
+        <input type="file" id="planningPdfInput" accept=".pdf,.txt,.csv" multiple style="display:none" onchange="planningAggiungiFile(this)">
+      </div>
+      <div id="planningFileList" style="margin-top:6px"></div>
+      <!-- Input manuale lavoro -->
+      <div style="margin-top:8px">
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">Oppure aggiungi lavoro manuale:</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input type="text" id="planningNomeLav" placeholder="Nome lavoro" style="flex:1;font-size:12px;padding:8px">
+          <input type="date" id="planningDataLav" style="flex:1;font-size:12px;padding:8px">
+        </div>
+        <textarea id="planningMaterialiLav" placeholder="Lista materiali (uno per riga, es: Cavo XLR 10m x5)" style="width:100%;font-size:11px;padding:8px;min-height:60px;resize:vertical;box-sizing:border-box"></textarea>
+        <button class="btn btn-f" style="margin-top:6px;font-size:12px;padding:7px 12px" onclick="planningAggiungiManuale()">+ Aggiungi lavoro</button>
+      </div>
+      <div id="planningLavoriExtra" style="margin-top:8px"></div>
+    </div>
+
     <div id="planningResult"><div class="empty">Clicca Analizza per iniziare</div></div>
     <button class="btn btn-f" style="margin-top:12px" onclick="closeMod('mPlanning')">Chiudi</button>
   </div>
@@ -1177,7 +1202,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.03</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.04</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5041,9 +5066,77 @@ async function revocaSessione(uid){
 let splStream=null, splAnimFrame=null, splAnalyser=null, splPeak=-Infinity;
 
 // ── PLANNING MATERIALI ──
+let planningPdfFiles=[];
+let planningLavoriManuali=[];
+
 function apriPlanning(){
+  planningPdfFiles=[];
+  planningLavoriManuali=[];
+  planningRenderFiles();
+  planningRenderLavoriExtra();
   openMod('mPlanning');
   calcolaPlanning();
+}
+
+function planningAggiungiFile(input){
+  Array.from(input.files).forEach(f=>{
+    if(!planningPdfFiles.find(x=>x.name===f.name))
+      planningPdfFiles.push(f);
+  });
+  input.value='';
+  planningRenderFiles();
+}
+
+function planningRenderFiles(){
+  const el=$('planningFileList');if(!el)return;
+  el.innerHTML=planningPdfFiles.map((f,i)=>
+    `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--bg2);border-radius:var(--rs);margin-bottom:4px;font-size:11px">
+      <span>📄</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</span>
+      <button onclick="planningPdfFiles.splice(${i},1);planningRenderFiles()" style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:14px">✕</button>
+    </div>`
+  ).join('');
+}
+
+function planningAggiungiManuale(){
+  const nome=val('planningNomeLav');
+  const data=val('planningDataLav');
+  const materialiTxt=val('planningMaterialiLav');
+  if(!nome){toast('Inserisci il nome del lavoro','r');return;}
+  // Parsa la lista materiali
+  const articoli=materialiTxt.split('\n').filter(l=>l.trim()).map(l=>{
+    // Formato: "Nome articolo x5" o "Nome articolo 5" o solo "Nome articolo"
+    const match=l.match(/^(.*?)\s*[x×]\s*(\d+)\s*$/i)||l.match(/^(.*?)\s+(\d+)\s*$/);
+    if(match){return{nome:match[1].trim(),qty:parseInt(match[2])||1};}
+    return{nome:l.trim(),qty:1};
+  }).filter(a=>a.nome);
+  planningLavoriManuali.push({
+    id:'manual_'+Date.now(),
+    nome,data:data||toLocalISO(new Date()),
+    dataFine:data||toLocalISO(new Date()),
+    articoli,
+    _manuale:true
+  });
+  $('planningNomeLav').value='';
+  $('planningDataLav').value='';
+  $('planningMaterialiLav').value='';
+  planningRenderLavoriExtra();
+  toast('✓ Lavoro aggiunto al planning');
+}
+
+function planningRenderLavoriExtra(){
+  const el=$('planningLavoriExtra');if(!el)return;
+  if(!planningLavoriManuali.length){el.innerHTML='';return;}
+  el.innerHTML='<div style="font-size:11px;font-weight:600;color:var(--ac2);margin-bottom:6px">Lavori manuali aggiunti ('+planningLavoriManuali.length+'):</div>'+
+    planningLavoriManuali.map((l,i)=>
+      `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--acb);border:1px solid var(--ac);border-radius:var(--rs);margin-bottom:4px;font-size:11px">
+        <div>
+          <span style="font-weight:600">${l.nome}</span>
+          <span style="color:var(--tx2);margin-left:6px">${l.articoli.length} articoli · ${fmtData(l.data,{day:'2-digit',month:'short'})}</span>
+        </div>
+        <button onclick="planningLavoriManuali.splice(${i},1);planningRenderLavoriExtra()" style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:14px">✕</button>
+      </div>`
+    ).join('');
 }
 
 function calcolaPlanning(){
@@ -5052,8 +5145,8 @@ function calcolaPlanning(){
   const oggi=toLocalISO(new Date());
   const fine=toLocalISO(new Date(Date.now()+mesi*30*24*3600*1000));
 
-  // Lavori nel periodo
-  const lavori=[...cacheLavoriCal,...cacheDich.filter(d=>!d.rientroData)]
+  // Lavori nel periodo + lavori manuali aggiunti
+  const lavori=[...cacheLavoriCal,...cacheDich.filter(d=>!d.rientroData),...planningLavoriManuali]
     .filter(l=>l.data&&l.data>=oggi&&l.data<=fine)
     .sort((a,b)=>a.data.localeCompare(b.data));
 
