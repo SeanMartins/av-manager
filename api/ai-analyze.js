@@ -1,33 +1,28 @@
-export const config = { runtime: 'edge', maxDuration: 60 };
+// Serverless function - NO edge runtime (più tempo disponibile)
+export default async function handler(req, res) {
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-export default async function handler(req) {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
-    });
-  }
-
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: { message: 'Method not allowed' } }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-    });
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: { message: 'Method not allowed' } });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY non configurata su Vercel' } }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-    });
-  }
+  if (!apiKey) return res.status(500).json({ error: { message: 'ANTHROPIC_API_KEY non configurata' } });
 
   try {
-    const body = await req.json();
+    const body = req.body;
+
+    // Limita dimensione payload — comprime i PDF se troppo grandi
+    const bodyStr = JSON.stringify(body);
+    const sizeMB = Buffer.byteLength(bodyStr, 'utf8') / (1024 * 1024);
+    
+    if (sizeMB > 20) {
+      return res.status(413).json({ 
+        error: { message: `Payload troppo grande (${sizeMB.toFixed(1)}MB). Riduci il numero o la dimensione dei PDF.` } 
+      });
+    }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -37,29 +32,28 @@ export default async function handler(req) {
         'anthropic-version': '2023-06-01',
         'anthropic-beta': 'pdfs-2024-09-25'
       },
-      body: JSON.stringify(body)
+      body: bodyStr
     });
 
     const text = await response.text();
     
     try {
       const data = JSON.parse(text);
-      return new Response(JSON.stringify(data), {
-        status: response.status,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
-    } catch(parseErr) {
-      return new Response(JSON.stringify({ 
+      return res.status(response.status).json(data);
+    } catch(e) {
+      return res.status(500).json({ 
         error: { message: 'Risposta non valida: ' + text.substring(0, 300) } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
   } catch (e) {
-    return new Response(JSON.stringify({ error: { message: e.message } }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-    });
+    return res.status(500).json({ error: { message: e.message } });
   }
 }
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '25mb'
+    }
+  }
+};
