@@ -1176,7 +1176,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.01</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.02</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5499,17 +5499,25 @@ function renderNlcPdfList(){
   ).join('');
 }
 
-async function uploadPdfLavoro(lavId, files){
+async function uploadPdfLavoro(lavId, files, nomeLavoro=''){
   if(!files.length)return[];
   const STOR=firebase.storage();
   const urls=[];
-  for(const file of files){
+  // Pulisci il nome lavoro per usarlo nel filename
+  const nomeClean=(nomeLavoro||lavId).replace(/[^a-zA-Z0-9\s\-_àèéìòùÀÈÉÌÒÙ]/g,'').replace(/\s+/g,'_').substring(0,50);
+  for(let i=0;i<files.length;i++){
+    const file=files[i];
     try{
-      const path=`lavori_docs/${lavId}/${Date.now()}_${file.name}`;
+      // Nome file: NomeLavoro_01.pdf, NomeLavoro_02.pdf ecc
+      const ext=file.name.split('.').pop()||'pdf';
+      const nomeFile=files.length>1
+        ?`${nomeClean}_${String(i+1).padStart(2,'0')}.${ext}`
+        :`${nomeClean}.${ext}`;
+      const path=`lavori_docs/${lavId}/${nomeFile}`;
       const ref=STOR.ref(path);
       await ref.put(file);
       const url=await ref.getDownloadURL();
-      urls.push({nome:file.name,url,path,size:file.size,at:new Date().toISOString()});
+      urls.push({nome:nomeFile,url,path,size:file.size,at:new Date().toISOString()});
     }catch(e){console.warn('Upload PDF:',e);}
   }
   return urls;
@@ -5552,7 +5560,7 @@ async function salvaLavoroCal(){
     // Upload PDF se presenti
     if(nlcPdfFiles.length){
       toast('⏳ Caricamento PDF...','a');
-      const docs=await uploadPdfLavoro(lavId, nlcPdfFiles);
+      const docs=await uploadPdfLavoro(lavId, nlcPdfFiles, nome);
       if(docs.length){
         const existing=(cacheLavoriCal.find(l=>l.id===lavId)?.documenti)||[];
         await DB.collection('lavori_cal').doc(lavId).update({
