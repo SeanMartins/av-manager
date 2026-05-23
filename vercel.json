@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/ai-analyze.js": {
-      "maxDuration": 60
+      "maxDuration": 120
     }
   }
 }
