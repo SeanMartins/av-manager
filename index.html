@@ -1244,7 +1244,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.16</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.17</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -4253,14 +4253,10 @@ function dichCardHtml(d){
       '<button onclick="dichOpenDoc(\''+d.id+'\')" class="btn btn-p btn-f" style="font-size:13px;padding:10px;margin-top:8px">'+
         '📄 Apri PDF '+(isRient?'rientro':'preparazione')+
       '</button>'+
-      // Bottoni modifica e sostituzione
-      ((!isRient&&puoGestire)?
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'+
+      (!isRient&&puoGestire?
+        '<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px">'+
           '<button onclick="dichModifica(\''+d.id+'\')" class="btn btn-f" style="font-size:12px;padding:9px">'+
             '✏️ Modifica'+
-          '</button>'+
-          '<button onclick="dichSostituisci(\''+d.id+'\')" class="btn btn-f" style="font-size:12px;padding:9px;border-color:var(--rd);color:var(--rd)">'+
-            '🔄 Sostituisci'+
           '</button>'+
         '</div>'
       :'')+
@@ -6020,9 +6016,12 @@ async function salvaLavoroCal(){
     }
 
     // Aggiunge turno in agenda
+    // Rimuovi vecchi turni collegati
+    const vecchiTurni=await DB.collection('agenda').where('lavoriCalId','==',lavId).get();
+    await Promise.all(vecchiTurni.docs.map(d=>d.ref.delete()));
+
     if(tecnicoUid){
-      const vecchiTurni=await DB.collection('agenda').where('lavoriCalId','==',lavId).get();
-      await Promise.all(vecchiTurni.docs.map(d=>d.ref.delete()));
+      // Tecnico assegnato — crea turno per lui
       await DB.collection('agenda').add({
         uid:tecnicoUid,nome:tecnicoNome,
         tipo:'lavoro',data,dataFine,
@@ -6034,6 +6033,29 @@ async function salvaLavoroCal(){
         assegnatoIl:new Date().toISOString(),
         assegnatoDa:USER.nome+' '+USER.cognome
       });
+    } else {
+      // Nessun tecnico — notifica tutti i dipendenti (esclusi Collaboratori esterni)
+      const dipendenti=cacheTeam.filter(m=>
+        m.id!==USER.id&&
+        m.approvato&&
+        m.ruolo!=='Collaboratore esterno'
+      );
+      // Crea notifica generica nella collezione notifiche_resp per tutti
+      await Promise.all(dipendenti.map(m=>
+        DB.collection('agenda').add({
+          uid:m.id,nome:m.nome+' '+m.cognome,
+          tipo:'lavoro',data,dataFine,
+          oraIn:'',oraFin:'',
+          location:location||'',
+          note:'⚠️ Lavoro senza tecnico assegnato: '+nome+(note?' — '+note:''),
+          lavoriCalId:lavId,
+          confermato:false,
+          assegnatoIl:new Date().toISOString(),
+          assegnatoDa:USER.nome+' '+USER.cognome,
+          _broadcast:true
+        })
+      ));
+      toast('📢 Notifica inviata a tutti i dipendenti','a');
     }
 
     nlcPdfFiles=[];
