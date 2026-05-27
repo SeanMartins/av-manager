@@ -1202,7 +1202,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.09</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.10</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5536,7 +5536,7 @@ function calApriGiorno(g){
   const titEl=$('calGiornoTitolo');
   if(titEl)titEl.textContent=GG_S[d.getDay()]+' '+g+' '+MESI_S[calMese];
 
-  const canEdit=isResponsabile()||isAdmin();
+  const canEdit=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
   let h='';
 
   if(!lavoriG.length){
@@ -5551,30 +5551,44 @@ function calApriGiorno(g){
       const dataUsc=fmtData(lav.data,{day:'2-digit',month:'short'});
       const dataRient=lav.dataFine?fmtData(lav.dataFine,{day:'2-digit',month:'short'}):'—';
       const isPianificato=lav._tipo==='pianificato';
-      const isMioLavoro=lav.tecnicoUid===USER?.id;
+      const isMioLavoro=lav.tecnicoUid===USER?.id||lav.uid===USER?.id;
+      const lavId=lav.id;
+
+      // Nota espandibile
+      const noteHtml=lav.note?
+        `<div style="margin:6px 0;padding:6px 10px;background:rgba(245,158,11,.1);border-left:3px solid #f59e0b;border-radius:0 4px 4px 0;cursor:pointer" onclick="toggleNota('cal_${lavId}')">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:10px;font-weight:600;color:#f59e0b;text-transform:uppercase;letter-spacing:.4px">📝 Nota</span>
+            <span id="nota_ico_cal_${lavId}" style="font-size:10px;color:#f59e0b">▼</span>
+          </div>
+          <div id="nota_txt_cal_${lavId}" style="font-size:11px;color:var(--tx);margin-top:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${lav.note}</div>
+        </div>`:
+        '';
+
+      const docsHtml=(lav.documenti&&lav.documenti.length)?
+        `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px">
+          ${lav.documenti.map(doc=>`<a href="${doc.url}" target="_blank" style="font-size:10px;background:var(--bg3);color:var(--ac2);border:1px solid var(--ac);border-radius:8px;padding:2px 8px;text-decoration:none;display:inline-flex;align-items:center;gap:3px">📄 ${doc.nome}</a>`).join('')}
+        </div>`:'';
 
       h+=`<div style="padding:12px;background:var(--bg2);border-radius:var(--rs);margin-bottom:8px;border-left:3px solid ${color}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700">${lav.nome||'—'}</div>
             <div style="font-size:11px;color:var(--tx2);margin-top:3px">
-              ${lav.location?'📍 '+(lav.location)+' · ':''}👤 ${lav.tecnico||lav.tecnicoNome||'—'}
+              ${lav.location?'📍 '+lav.location+' · ':''}👤 ${lav.tecnico||lav.tecnicoNome||'—'}
             </div>
             <div style="font-size:11px;color:var(--tx2);margin-top:2px">
-              📅 ${dataUsc} → ${dataRient}
-              ${nPezzi>0?' · 📦 '+nPezzi+' pz':''}
+              📅 ${dataUsc} → ${dataRient}${nPezzi>0?' · 📦 '+nPezzi+' pz':''}
             </div>
-            ${lav.note?`<div style="font-size:11px;color:var(--tx3);margin-top:2px">📝 ${lav.note}</div>`:''}
-            ${(lav.documenti&&lav.documenti.length)?`
-              <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px">
-                ${lav.documenti.map(d=>`<a href="${d.url}" target="_blank" style="font-size:10px;background:var(--bg3);color:var(--ac2);border:1px solid var(--ac);border-radius:8px;padding:2px 8px;text-decoration:none;display:inline-flex;align-items:center;gap:3px">📄 ${d.nome}</a>`).join('')}
-              </div>`:''}
           </div>
           <span style="font-size:10px;background:${color}22;color:${color};border:1px solid ${color};border-radius:10px;padding:2px 7px;flex-shrink:0;white-space:nowrap">${statoLabel}</span>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          ${isPianificato&&(canEdit||isMioLavoro)?`<button class="btn btn-p" style="padding:7px 12px;font-size:12px" onclick="preparaLavoroDaCal('${lav.id}')">📋 Prepara</button>`:''}
-          ${isPianificato&&canEdit?`<button class="btn" style="padding:7px 12px;font-size:12px" onclick="modificaLavoroCal('${lav.id}')">✏️ Modifica</button>`:''}
+        ${noteHtml}
+        ${docsHtml}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          ${isPianificato&&(canEdit||isMioLavoro)?`<button class="btn btn-p" style="padding:7px 12px;font-size:12px" onclick="preparaLavoroDaCal('${lavId}')">📋 Prepara</button>`:''}
+          ${isPianificato&&canEdit?`<button class="btn" style="padding:7px 12px;font-size:12px" onclick="modificaLavoroCal('${lavId}')">✏️ Modifica</button>`:''}
+          ${isPianificato&&canEdit?`<button class="btn" style="padding:7px 12px;font-size:12px;border-color:var(--rd);color:var(--rd)" onclick="calSostituisciLavoro('${lavId}')">🔄 Sostituisci</button>`:''}
           ${!isPianificato?`<button class="btn" style="padding:7px 12px;font-size:12px" onclick="goPage('dichiarazione')">📁 Archivio</button>`:''}
         </div>
       </div>`;
@@ -5585,6 +5599,19 @@ function calApriGiorno(g){
   $('calGiornoList').innerHTML=h;
   $('calGiornoDetail').style.display='block';
   $('calGiornoDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+async function calSostituisciLavoro(id){
+  const lav=cacheLavoriCal.find(l=>l.id===id);if(!lav)return;
+  if(!confirm('⚠️ Sostituire la scheda "'+lav.nome+'"?\n\nLa vecchia scheda verrà eliminata e sostituita con una nuova.'))return;
+  // Apri il form precompilato
+  modificaLavoroCal(id);
+  // Segna che dopo il salvataggio va eliminata la vecchia
+  setTimeout(()=>{
+    toast('🔄 Modifica e salva — la vecchia scheda sarà eliminata','a');
+  },500);
+  // Intercetta il salvataggio per eliminare la vecchia
+  window._calSostituisceId=id;
 }
 
 function nlcLocChange(sel){
@@ -5794,7 +5821,15 @@ async function salvaLavoroCal(){
     }
 
     nlcPdfFiles=[];
-    toast(calEditingId?'✓ Lavoro aggiornato':'✓ Lavoro aggiunto al calendario');
+
+    // Se stiamo sostituendo, elimina la vecchia scheda
+    if(window._calSostituisceId&&window._calSostituisceId!==lavId){
+      await DB.collection('lavori_cal').doc(window._calSostituisceId).delete();
+      toast('✅ Vecchia scheda eliminata e sostituita');
+      window._calSostituisceId=null;
+    } else {
+      toast(calEditingId?'✓ Lavoro aggiornato':'✓ Lavoro aggiunto al calendario');
+    }
     closeMod('mNuovoLavoroCal');
     setTimeout(()=>renderCalendario(),300);
   }catch(e){
