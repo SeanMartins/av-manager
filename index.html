@@ -1202,7 +1202,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.06</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.07</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -3075,10 +3075,10 @@ async function mostraStorico(artId){
 }
 
 // ── PREPARA LAVORO ──
-let plArticoli=[],plStream=null,plInterval=null,plEditingId=null;
+let plArticoli=[],plStream=null,plInterval=null,plEditingId=null,plSostituisceId=null;
 
 function apriPreparaLavoro(){
-  plArticoli=[];plEditingId=null;
+  plArticoli=[];plEditingId=null;plSostituisceId=null;
   // Reset form
   const fields=['plNome','plNote','plData','plDataFine'];
   fields.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -3452,10 +3452,17 @@ async function plGeneraPDF(){
       await DB.collection('lavori').doc(plEditingId).update(lavoroData);
     } else {
       lavoroData.createdAt=new Date().toISOString();
-      await DB.collection('lavori').add(lavoroData);
+      const ref=await DB.collection('lavori').add(lavoroData);
+      // Se stiamo sostituendo una vecchia scheda, eliminala dal database
+      if(plSostituisceId){
+        await DB.collection('lavori').doc(plSostituisceId).delete();
+        toast('✅ Vecchia scheda eliminata e sostituita con quella nuova');
+        plSostituisceId=null;
+      }
     }
   }catch(e){console.warn('Salvataggio Firebase:',e);}
   plEditingId=null;
+  plSostituisceId=null;
 }
 
 // ── SMARCA RIENTRO ──
@@ -4044,24 +4051,29 @@ function renderDich(){
 
 function dichCardHtml(d){
   const isRient=!!d.rientroData;
-  const fmtData=iso=>{
+  const fmtDataL=iso=>{
     if(!iso)return'—';
     return new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
   };
-  const dataUscita=fmtData(d.data||d.createdAt);
-  const dataRientro=isRient?fmtData(d.rientroData):'<span style="color:var(--tx3)">Non rientrato</span>';
+  const dataUscita=fmtDataL(d.data||d.createdAt);
+  const dataRientro=isRient?fmtDataL(d.rientroData):'<span style="color:var(--tx3)">Non rientrato</span>';
   const nPezzi=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
   const statoBg=isRient?(d.rientrato?'rgba(34,197,94,.1)':'rgba(239,68,68,.08)'):'rgba(108,99,255,.1)';
   const statoBd=isRient?(d.rientrato?'var(--gn)':'var(--rd)'):'var(--ac)';
   const statoC=isRient?(d.rientrato?'bg':'br'):'bp';
   const statoTxt=isRient?(d.rientrato?'✓ Rientrato':'⚠ Incompleto'):'📋 Preparato';
+  // Note del lavoro
+  const noteHtml=d.note?`<div style="margin:8px 0;padding:8px 10px;background:rgba(245,158,11,.08);border-left:3px solid var(--am);border-radius:0 var(--rs) var(--rs) 0">
+    <span style="font-size:10px;font-weight:600;color:var(--am);text-transform:uppercase;letter-spacing:.4px">📝 Nota</span>
+    <div style="font-size:12px;color:var(--tx);margin-top:2px">${d.note}</div>
+  </div>`:'';
   return '<div style="background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);margin-bottom:10px;overflow:hidden">'+
     '<div style="padding:11px 14px;background:'+statoBg+';border-bottom:2px solid '+statoBd+';display:flex;justify-content:space-between;align-items:center;gap:8px">'+
       '<div style="font-size:14px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.nome+'</div>'+
       '<span class="bdg '+statoC+'" style="flex-shrink:0">'+statoTxt+'</span>'+
     '</div>'+
     '<div style="padding:12px 14px">'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">'+
         '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">📍 Location</div>'+
           '<div style="font-size:12px;font-weight:500">'+(d.location||'—')+'</div></div>'+
         '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">📦 Materiale</div>'+
@@ -4073,6 +4085,8 @@ function dichCardHtml(d){
         '<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">👤 Tecnico</div>'+
           '<div style="font-size:12px;font-weight:500">'+(d.tecnico||'—')+(isRient&&d.rientroTecnico&&d.rientroTecnico!==d.tecnico?' · Rientro: '+d.rientroTecnico:'')+'</div></div>'+
       '</div>'+
+      // Note visibili subito dopo la data
+      noteHtml+
       // Note mancanti (solo per preparazioni non ancora rientrate)
       ((!isRient)?(
         '<button onclick="apriNoteMancanti(\''+d.id+'\',\''+encodeURIComponent(d.nome)+'\')" class="btn btn-f" style="font-size:13px;padding:10px;margin-top:8px;width:100%;border-color:'+(d.noteMancanti&&d.noteMancanti.some(n=>!n.completata)?'var(--am)':'var(--b)')+';color:'+(d.noteMancanti&&d.noteMancanti.some(n=>!n.completata)?'var(--am)':'var(--tx2)')+'">'+
@@ -4082,8 +4096,58 @@ function dichCardHtml(d){
       '<button onclick="dichOpenDoc(\''+d.id+'\')" class="btn btn-p btn-f" style="font-size:13px;padding:10px;margin-top:8px">'+
         '📄 Apri PDF '+(isRient?'rientro':'preparazione')+
       '</button>'+
+      // Bottoni modifica e sostituzione (solo admin/responsabile, solo lavori non rientrati)
+      ((!isRient&&(isResponsabile()||isAdmin()))?
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'+
+          '<button onclick="dichModifica(\''+d.id+'\')" class="btn btn-f" style="font-size:12px;padding:9px">'+
+            '✏️ Modifica'+
+          '</button>'+
+          '<button onclick="dichSostituisci(\''+d.id+'\')" class="btn btn-f" style="font-size:12px;padding:9px;border-color:var(--rd);color:var(--rd)">'+
+            '🔄 Sostituisci scheda'+
+          '</button>'+
+        '</div>'
+      :'')+
     '</div>'+
   '</div>';
+}
+
+function dichModifica(id){
+  // Apre il form prepara lavoro precompilato con i dati esistenti
+  const d=cacheDich.find(x=>x.id===id);if(!d)return;
+  plEditingId=id;
+  apriPreparaLavoro();
+  setTimeout(()=>{
+    plRenderExisting(cacheDich);
+    const nm=$('plNome');if(nm)nm.value=d.nome||'';
+    const da=$('plData');if(da)da.value=d.data||'';
+    const df=$('plDataFine');if(df)df.value=d.dataFine||'';
+    const lo=$('plLoc');
+    if(lo&&d.location){Array.from(lo.options).forEach(o=>{if(o.value===d.location)o.selected=true;});}
+    const nt=$('plNote');if(nt)nt.value=d.note||'';
+    plArticoli=[...(d.articoli||[]).map(a=>({...a,qtyPrep:a.qty||1}))];
+    renderPlItems();
+    toast('✏️ Modifica lavoro — salva per aggiornare');
+  },400);
+}
+
+async function dichSostituisci(id){
+  const d=cacheDich.find(x=>x.id===id);if(!d)return;
+  if(!confirm('⚠️ Sostituire la scheda "'+d.nome+'"?\n\nLa vecchia scheda verrà eliminata definitivamente dal database e sostituita con una nuova.'))return;
+  // Salva i dati da precompilare
+  plEditingId=null; // Reset — creerà una nuova scheda
+  plSostituisceId=id; // ID da eliminare dopo salvataggio
+  apriPreparaLavoro();
+  setTimeout(()=>{
+    const nm=$('plNome');if(nm)nm.value=d.nome||'';
+    const da=$('plData');if(da)da.value=d.data||'';
+    const df=$('plDataFine');if(df)df.value=d.dataFine||'';
+    const lo=$('plLoc');
+    if(lo&&d.location){Array.from(lo.options).forEach(o=>{if(o.value===d.location)o.selected=true;});}
+    const nt=$('plNote');if(nt)nt.value=d.note||'';
+    plArticoli=[...(d.articoli||[]).map(a=>({...a,qtyPrep:a.qty||1}))];
+    renderPlItems();
+    toast('🔄 Nuova scheda — modifica e salva per sostituire quella vecchia','a');
+  },400);
 }
 
 function dichOpenDoc(id){
