@@ -60,10 +60,10 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 body.desktop-mode #app{flex-direction:row}
 body.desktop-mode #nav{display:none!important}
 body.desktop-mode #topbar{display:none!important}
-body.desktop-mode #content{flex:1;overflow-y:auto}
+body.desktop-mode #content{flex:1;overflow-y:auto;height:100dvh}
 body.desktop-mode .page{padding:28px 36px 40px;max-width:none}
 body.desktop-mode .page::after{display:none}
-body.desktop-mode #desktopSidebar{display:flex!important}
+body.desktop-mode #desktopSidebarInner{display:flex!important}
 .sidebar-btn{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;background:none;border:none;border-radius:var(--rs);color:var(--tx);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--font);text-align:left;transition:background .15s}
 .sidebar-btn:hover,.sidebar-btn:active{background:var(--bg2)}
 .sidebar-btn svg{flex-shrink:0;color:var(--tx2)}
@@ -246,6 +246,26 @@ textarea{resize:vertical;min-height:80px}
 
 <!-- APP -->
 <div id="app">
+  <!-- DESKTOP SIDEBAR (dentro app per flex layout) -->
+  <div id="desktopSidebarInner" style="display:none;flex-direction:column;width:220px;min-width:220px;height:100dvh;background:var(--bg1);border-right:1px solid var(--b);flex-shrink:0;overflow-y:auto">
+    <div style="padding:20px 16px 14px;border-bottom:1px solid var(--b)">
+      <img src="logo.png" alt="MMG" style="height:24px;width:auto;margin-bottom:6px">
+      <div style="font-size:10px;color:var(--tx3)">Pannello di controllo</div>
+    </div>
+    <div style="padding:10px 16px;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:8px">
+      <div id="deskAvatar" class="avbtn" style="width:32px;height:32px;font-size:12px;cursor:default;flex-shrink:0">?</div>
+      <div style="flex:1;min-width:0">
+        <div id="deskNome" style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
+        <div id="deskRuolo" style="font-size:10px;color:var(--tx3)">—</div>
+      </div>
+    </div>
+    <div style="flex:1;padding:8px;overflow-y:auto">
+      <div id="deskNav"></div>
+    </div>
+    <div style="padding:10px 16px;border-top:1px solid var(--b);font-size:9px;color:var(--tx3);text-align:center">
+      © Martins Osemwengie · MMG Logistics
+    </div>
+  </div>
   <div id="topbar">
     <img src="logo.png" alt="MMG" style="height:26px;width:auto;flex-shrink:0">
     <div style="font-size:13px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;flex:1;padding:0 8px" id="ptitle">Presenze</div>
@@ -799,30 +819,6 @@ textarea{resize:vertical;min-height:80px}
 </div>
 
 <!-- DESKTOP SIDEBAR (Blocco 1) -->
-<div id="desktopSidebar" style="display:none;flex-direction:column;width:220px;min-width:220px;height:100dvh;background:var(--bg1);border-right:1px solid var(--b);flex-shrink:0;overflow-y:auto">
-  <!-- Logo + azienda -->
-  <div style="padding:20px 16px 14px;border-bottom:1px solid var(--b)">
-    <img src="logo.png" alt="MMG" style="height:28px;width:auto;margin-bottom:8px">
-    <div style="font-size:11px;color:var(--tx3)">Pannello di controllo</div>
-  </div>
-  <!-- Avatar utente -->
-  <div style="padding:12px 16px;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:10px">
-    <div id="deskAvatar" class="avbtn" style="width:36px;height:36px;font-size:13px;cursor:default">?</div>
-    <div style="flex:1;min-width:0">
-      <div id="deskNome" style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
-      <div id="deskRuolo" style="font-size:10px;color:var(--tx3)">—</div>
-    </div>
-  </div>
-  <!-- Nav links -->
-  <div style="flex:1;padding:8px">
-    <div id="deskNav"></div>
-  </div>
-  <!-- Footer -->
-  <div style="padding:12px 16px;border-top:1px solid var(--b);font-size:10px;color:var(--tx3);text-align:center">
-    © Martins Osemwengie<br>MMG Logistics
-  </div>
-</div>
-
 <!-- SIDEBAROVERLAY -->
 <div id="sidebarOverlay" onclick="chiudiSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;-webkit-tap-highlight-color:transparent"></div>
 <div id="sidebar" style="position:fixed;top:0;right:-290px;width:280px;height:100%;height:100dvh;background:var(--bg1);border-left:1px solid var(--b);z-index:301;transition:right .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden">
@@ -1243,7 +1239,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.13</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.14</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
