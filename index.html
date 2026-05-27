@@ -531,14 +531,16 @@ textarea{resize:vertical;min-height:80px}
         </div>
         <button class="btn" style="padding:8px 14px;font-size:16px" onclick="calSpostaM(1)">›</button>
       </div>
-      <!-- Legenda + bottone nuovo (solo Resp/Admin) -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#f59e0b"></div>Pianificato</div>
-          <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#6c63ff"></div>Preparato</div>
-          <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#22c55e"></div>In corso</div>
-          <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#64748b"></div>Rientrato</div>
-        </div>
+      <!-- Legenda -->
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#9ca3af"></div>Preventivo</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#f59e0b"></div>Confermato</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div>Da finire</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#6c63ff"></div>Preparato</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#22c55e"></div>In corso</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#64748b"></div>Rientrato</div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
         <button id="btnNuovoLavoro" class="btn btn-p" style="padding:7px 12px;font-size:12px;display:none" onclick="apriNuovoLavoroCal()">+ Lavoro</button>
       </div>
       <!-- Griglia calendario -->
@@ -869,7 +871,13 @@ textarea{resize:vertical;min-height:80px}
         <option value="">-- Nessun tecnico --</option>
       </select>
     </div>
-    <div class="ig"><label class="il">Note</label><input type="text" id="nlcNote" placeholder="Note aggiuntive..."></div>
+    <div class="ig"><label class="il">📌 Stato lavoro</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <button id="statoBtn_preventivo" onclick="setStatoCal('preventivo')" class="btn btn-f" style="padding:8px;font-size:12px">⚪ Preventivo</button>
+        <button id="statoBtn_confermato" onclick="setStatoCal('confermato')" class="btn btn-p" style="padding:8px;font-size:12px">🟡 Confermato</button>
+      </div>
+      <input type="hidden" id="nlcStato" value="confermato">
+    </div>
     <!-- Upload PDF -->
     <div class="ig">
       <label class="il">📎 Documenti lavoro (PDF)</label>
@@ -1202,7 +1210,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.11</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.12</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5209,7 +5217,25 @@ async function revocaSessione(uid){
 }
 let splStream=null, splAnimFrame=null, splAnalyser=null, splPeak=-Infinity;
 
-// ── PLANNING MATERIALI ──
+// ── COLORI STATO LAVORO ──
+function getStatoLavoro(lav){
+  const oggi=toLocalISO(new Date());
+  // Lavori dal calendario (lavori_cal)
+  if(lav._fonte==='cal'||lav.createdBy!==undefined&&lav.articoli===undefined){
+    const s=lav.stato||'confermato';
+    if(s==='preventivo')  return{color:'#9ca3af',pallino:'⚪',label:'⚪ Preventivo',bg:'rgba(156,163,175,.1)',bd:'#9ca3af'};
+    if(s==='confermato')  return{color:'#f59e0b',pallino:'🟡',label:'🟡 Confermato',bg:'rgba(245,158,11,.1)',bd:'#f59e0b'};
+    if(lav.rientroData)   return{color:'#64748b',pallino:'⚫',label:'⚫ Rientrato',bg:'rgba(100,116,139,.1)',bd:'#64748b'};
+    if(lav.data&&lav.data<oggi) return{color:'#22c55e',pallino:'🟢',label:'🟢 In corso',bg:'rgba(34,197,94,.1)',bd:'#22c55e'};
+    return{color:'#f59e0b',pallino:'🟡',label:'🟡 Confermato',bg:'rgba(245,158,11,.1)',bd:'#f59e0b'};
+  }
+  // Lavori preparati (dich)
+  if(lav.rientroData)     return{color:'#64748b',pallino:'⚫',label:'⚫ Rientrato',bg:'rgba(100,116,139,.1)',bd:'#64748b'};
+  if(lav.data&&lav.data<oggi) return{color:'#22c55e',pallino:'🟢',label:'🟢 In corso',bg:'rgba(34,197,94,.1)',bd:'#22c55e'};
+  if(lav.daFinire||(lav.note||'').trim()) return{color:'#f97316',pallino:'🟠',label:'🟠 Da finire',bg:'rgba(249,115,22,.1)',bd:'#f97316'};
+  if(lav.articoli&&lav.articoli.length>0) return{color:'#6c63ff',pallino:'🟣',label:'🟣 Preparato',bg:'rgba(108,99,255,.1)',bd:'#6c63ff'};
+  return{color:'#ef4444',pallino:'🔴',label:'🔴 Da preparare',bg:'rgba(239,68,68,.08)',bd:'#ef4444'};
+}
 let planningPdfFiles=[];
 let planningLavoriManuali=[];
 
@@ -5499,8 +5525,8 @@ function renderCalendario(){
 
   // Unisce lavori pianificati (cal) e lavori preparati (dich)
   const tuttiLavori=[
-    ...cacheLavoriCal.map(l=>({...l,_tipo:'pianificato'})),
-    ...cacheDich.map(l=>({...l,_tipo:l.rientroData?'rientrato':l.createdAt?'preparato':'preparato'}))
+    ...cacheLavoriCal.map(l=>({...l,_fonte:'cal'})),
+    ...cacheDich.map(l=>({...l,_fonte:'dich'}))
   ];
 
   const lavoriMese=tuttiLavori.filter(d=>{
@@ -5550,8 +5576,8 @@ function renderCalendario(){
     const lavoriG=byDay[g]||[];
     const colorMap={pianificato:'#f59e0b',preparato:'#6c63ff',rientrato:'#64748b'};
     const dots=lavoriG.slice(0,3).map(d=>{
-      const c=colorMap[d._tipo]||'#22c55e';
-      return`<div style="width:6px;height:6px;border-radius:50%;background:${c}"></div>`;
+      const s=getStatoLavoro(d);
+      return`<div style="width:6px;height:6px;border-radius:50%;background:${s.color}"></div>`;
     }).join('');
     const canAdd=(isResponsabile()||isAdmin())&&!isWeekend;
     h+=`<div onclick="calApriGiorno(${g})" ${canAdd?`ondblclick="calNuovoGiorno(${g})"`:''}
@@ -5582,8 +5608,8 @@ function calApriGiorno(g){
 
   // Cerca in lavori_cal e in lavori (dich)
   const tuttiLavori=[
-    ...cacheLavoriCal.map(l=>({...l,_tipo:'pianificato'})),
-    ...cacheDich.map(l=>({...l,_tipo:l.rientroData?'rientrato':'preparato'}))
+    ...cacheLavoriCal.map(l=>({...l,_fonte:'cal'})),
+    ...cacheDich.map(l=>({...l,_fonte:'dich'}))
   ];
   const lavoriG=tuttiLavori.filter(lav=>{
     if(!lav.data)return false;
@@ -5603,13 +5629,13 @@ function calApriGiorno(g){
     if(canEdit)h+=`<button class="btn btn-p btn-f" style="margin-top:10px" onclick="apriNuovoLavoroCal('${dataStr}')">+ Aggiungi lavoro</button>`;
   } else {
     lavoriG.forEach(lav=>{
-      const colorMap={pianificato:'#f59e0b',preparato:'#6c63ff',rientrato:'#64748b'};
-      const color=colorMap[lav._tipo]||'#22c55e';
-      const statoLabel={pianificato:'⏳ Pianificato',preparato:'📋 Preparato',rientrato:'✅ Rientrato'}[lav._tipo]||'🔄 In corso';
+      const s=getStatoLavoro(lav);
+      const color=s.color;
+      const statoLabel=s.label;
       const nPezzi=(lav.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
       const dataUsc=fmtData(lav.data,{day:'2-digit',month:'short'});
       const dataRient=lav.dataFine?fmtData(lav.dataFine,{day:'2-digit',month:'short'}):'—';
-      const isPianificato=lav._tipo==='pianificato';
+      const isPianificato=lav._fonte==='cal';
       const isMioLavoro=lav.tecnicoUid===USER?.id||lav.uid===USER?.id;
       const lavId=lav.id;
 
@@ -5650,6 +5676,14 @@ function calApriGiorno(g){
           ${isPianificato&&canEdit?`<button class="btn" style="padding:7px 12px;font-size:12px;border-color:var(--rd);color:var(--rd)" onclick="calSostituisciLavoro('${lavId}')">🔄 Sostituisci</button>`:''}
           ${!isPianificato?`<button class="btn" style="padding:7px 12px;font-size:12px" onclick="goPage('dichiarazione')">📁 Archivio</button>`:''}
         </div>
+        ${isPianificato&&canEdit?`
+        <div style="margin-top:8px">
+          <div style="font-size:10px;color:var(--tx3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">Cambia stato:</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <button onclick="calCambiaStato('${lavId}','preventivo')" style="font-size:10px;padding:3px 8px;border-radius:8px;border:1px solid #9ca3af;background:${lav.stato==='preventivo'?'rgba(156,163,175,.2)':'none'};color:#9ca3af;cursor:pointer">⚪ Preventivo</button>
+            <button onclick="calCambiaStato('${lavId}','confermato')" style="font-size:10px;padding:3px 8px;border-radius:8px;border:1px solid #f59e0b;background:${lav.stato==='confermato'||!lav.stato?'rgba(245,158,11,.2)':'none'};color:#f59e0b;cursor:pointer">🟡 Confermato</button>
+          </div>
+        </div>`:''}
       </div>`;
     });
     if(canEdit)h+=`<button class="btn btn-f btn-p" style="margin-top:4px;width:100%;font-size:12px" onclick="apriNuovoLavoroCal('${dataStr}')">+ Aggiungi lavoro</button>`;
@@ -5660,7 +5694,25 @@ function calApriGiorno(g){
   $('calGiornoDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-async function calSostituisciLavoro(id){
+async function setStatoCal(stato){
+  ['preventivo','confermato'].forEach(s=>{
+    const b=$('statoBtn_'+s);
+    if(!b)return;
+    if(s===stato){b.classList.add('btn-p');b.classList.remove('btn-f');}
+    else{b.classList.remove('btn-p');b.classList.add('btn-f');}
+  });
+  const inp=$('nlcStato');if(inp)inp.value=stato;
+}
+
+async function calCambiaStato(id, nuovoStato){
+  try{
+    await DB.collection('lavori_cal').doc(id).update({stato:nuovoStato,updatedAt:new Date().toISOString()});
+    const label={preventivo:'⚪ Preventivo',confermato:'🟡 Confermato'}[nuovoStato]||nuovoStato;
+    toast('✓ Stato aggiornato: '+label);
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+function calSostituisciLavoro(id){
   const lav=cacheLavoriCal.find(l=>l.id===id);if(!lav)return;
   if(!confirm('⚠️ Sostituire la scheda "'+lav.nome+'"?\n\nLa vecchia scheda verrà eliminata e sostituita con una nuova.'))return;
   // Apri il form precompilato
@@ -5745,6 +5797,7 @@ function apriNuovoLavoroCal(dataDefault=''){
   $('nlcDataFine').value=dataDefault||toLocalISO(new Date());
   $('nlcNote').value='';
   $('nlcDeleteBtn').style.display='none';
+  setStatoCal('confermato');
   nlcPopola();
   openMod('mNuovoLavoroCal');
 }
@@ -5760,6 +5813,7 @@ function modificaLavoroCal(id){
   $('nlcDataFine').value=lav.dataFine||'';
   $('nlcNote').value=lav.note||'';
   $('nlcDeleteBtn').style.display='block';
+  setStatoCal(lav.stato||'confermato');
   nlcPopola(lav.location||'', lav.tecnicoUid||'');
   openMod('mNuovoLavoroCal');
 }
@@ -5835,7 +5889,7 @@ async function salvaLavoroCal(){
     const lavData={
       nome,data,dataFine,location,note,
       tecnicoUid,tecnicoNome,
-      stato:'pianificato',
+      stato:val('nlcStato')||'confermato',
       createdBy:USER.id,
       createdAt:new Date().toISOString(),
       updatedAt:new Date().toISOString()
