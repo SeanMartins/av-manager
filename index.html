@@ -112,7 +112,7 @@ textarea{resize:vertical;min-height:80px}
 .avbtn{width:34px;height:34px;border-radius:50%;background:var(--acb);border:1px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--ac2);cursor:pointer}
 .mol{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.72);align-items:flex-end}
 /* Desktop — modal si centra nell'area contenuto */
-body.desktop-mode .mol{left:240px;align-items:center;justify-content:center}
+body.desktop-mode .mol{left:240px;align-items:center;justify-content:center;padding:20px}
 body.desktop-mode .msh{border-radius:var(--r)!important;max-height:85vh;margin:0;max-width:560px;width:100%!important}
 body.desktop-mode .mhd{display:none}
 .mol.on{display:flex}
@@ -1248,7 +1248,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.19</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.20</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5891,17 +5891,19 @@ function nlcPopola(selLocVal='', selTecVal=''){
 }
 
 function apriNuovoLavoroCal(dataDefault=''){
-  calEditingId=null;
-  nlcPdfFiles=[];
-  renderNlcPdfList();
-  $('mNLCTitolo').textContent='📅 Nuovo lavoro';
-  $('nlcNome').value='';
-  $('nlcData').value=dataDefault||toLocalISO(new Date());
-  $('nlcDataFine').value=dataDefault||toLocalISO(new Date());
-  $('nlcNote').value='';
-  $('nlcDeleteBtn').style.display='none';
-  setStatoCal('confermato');
-  nlcPopola();
+  try{
+    calEditingId=null;
+    nlcPdfFiles=[];
+    if(typeof renderNlcPdfList==='function')renderNlcPdfList();
+    const mTit=$('mNLCTitolo');if(mTit)mTit.textContent='📅 Nuovo lavoro';
+    const nm=$('nlcNome');if(nm)nm.value='';
+    const da=$('nlcData');if(da)da.value=dataDefault||toLocalISO(new Date());
+    const df=$('nlcDataFine');if(df)df.value=dataDefault||toLocalISO(new Date());
+    const nt=$('nlcNote');if(nt)nt.value='';
+    const db=$('nlcDeleteBtn');if(db)db.style.display='none';
+    setStatoCal('confermato');
+    nlcPopola();
+  }catch(e){console.warn('apriNuovoLavoroCal:',e);}
   openMod('mNuovoLavoroCal');
 }
 
