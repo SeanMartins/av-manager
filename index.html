@@ -1202,7 +1202,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.10</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.11</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1226,7 +1226,17 @@ textarea{resize:vertical;min-height:80px}
           <div class="ig"><label class="il">📅 Data inizio / uscita</label><input type="date" id="plData"></div>
           <div class="ig"><label class="il">🔙 Data fine / rientro</label><input type="date" id="plDataFine"></div>
         </div>
-        <div class="ig"><label class="il">Note</label><textarea id="plNote" placeholder="Note per il tecnico..." style="min-height:60px"></textarea></div>
+        <div class="ig"><label class="il">Note</label><textarea id="plNote" placeholder="Note per il tecnico..." style="min-height:60px" oninput="aggiornaBadgeLavoro()"></textarea></div>
+        <!-- Badge stato lavoro -->
+        <div style="display:flex;gap:8px;margin-bottom:4px">
+          <button id="btnFinito" onclick="setBadgeLavoro(false)" class="btn btn-f" style="flex:1;padding:10px;font-size:13px;border-color:var(--gn);color:var(--gn)">
+            🟢 Finito
+          </button>
+          <button id="btnDaFinire" onclick="setBadgeLavoro(true)" class="btn btn-f" style="flex:1;padding:10px;font-size:13px">
+            🟠 Da finire
+          </button>
+        </div>
+        <input type="hidden" id="plDaFinire" value="false">
         <div style="display:flex;gap:8px">
           <button class="btn btn-f" onclick="stopCam();closeMod('mPreparaLavoro')">Annulla</button>
           <button class="btn btn-p btn-f" onclick="plGoScan()">📷 Avvia scansione →</button>
@@ -3079,6 +3089,7 @@ let plArticoli=[],plStream=null,plInterval=null,plEditingId=null,plSostituisceId
 
 function apriPreparaLavoro(){
   plArticoli=[];plEditingId=null;plSostituisceId=null;
+  setBadgeLavoro(false);
   // Reset form
   const fields=['plNome','plNote','plData','plDataFine'];
   fields.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -3150,7 +3161,8 @@ function plCaricaEsistente(id){
   document.getElementById('plLoc').value=d.location||'';
   document.getElementById('plData').value=d.data||'';
   document.getElementById('plDataFine').value=d.dataFine||'';
-  document.getElementById('plNote').value=d.note||'';
+    document.getElementById('plNote').value=d.note||'';
+    setBadgeLavoro(d.daFinire||((d.note||'').trim().length>0));
   // Vai allo step 2
   document.getElementById('plStep1').style.display='none';
   document.getElementById('plStep2').style.display='block';
@@ -3443,6 +3455,7 @@ async function plGeneraPDF(){
   const lavoroData={
     nome,location:loc||'',data:dataRaw,dataFine:dataFineRaw||'',
     tecnico,note:val('plNote'),
+    daFinire:val('plDaFinire')==='true'||((val('plNote')||'').trim().length>0),
     articoli:plArticoli.map(a=>({id:a.id||'',nome:a.nome,cat:a.cat||'',marca:a.marca||'',ser:a.ser||'',qty:a.qtyPrep||1})),
     htmlPrep:html, // salva HTML per riapertura dall'archivio
     updatedAt:new Date().toISOString()
@@ -4058,11 +4071,35 @@ function dichCardHtml(d){
   const dataUscita=fmtDataL(d.data||d.createdAt);
   const dataRientro=isRient?fmtDataL(d.rientroData):'<span style="color:var(--tx3)">Non rientrato</span>';
   const nPezzi=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
-  const statoBg=isRient?(d.rientrato?'rgba(34,197,94,.1)':'rgba(239,68,68,.08)'):'rgba(108,99,255,.1)';
-  const statoBd=isRient?(d.rientrato?'var(--gn)':'var(--rd)'):'var(--ac)';
-  const statoC=isRient?(d.rientrato?'bg':'br'):'bp';
-  const statoTxt=isRient?(d.rientrato?'✓ Rientrato':'⚠ Incompleto'):'📋 Preparato';
-  // Note del lavoro - espandibili se lunghe
+
+  // Badge logica nuova con pallini colorati
+  let statoBg,statoBd,pallino,statoTxt;
+  if(isRient){
+    statoBg=d.rientrato?'rgba(34,197,94,.1)':'rgba(239,68,68,.08)';
+    statoBd=d.rientrato?'var(--gn)':'var(--rd)';
+    pallino=d.rientrato?'🟢':'🔴';
+    statoTxt=d.rientrato?'✓ Rientrato':'⚠ Incompleto';
+  } else if(d.daFinire||d.note){
+    // Arancione — preparato ma manca materiale (ha note)
+    statoBg='rgba(245,158,11,.1)';
+    statoBd='var(--am)';
+    pallino='🟠';
+    statoTxt='⚠️ Da finire';
+  } else if(d.articoli&&d.articoli.length>0){
+    // Verde — preparato completo
+    statoBg='rgba(34,197,94,.1)';
+    statoBd='var(--gn)';
+    pallino='🟢';
+    statoTxt='✅ Pronto';
+  } else {
+    // Rosso — da preparare
+    statoBg='rgba(239,68,68,.08)';
+    statoBd='var(--rd)';
+    pallino='🔴';
+    statoTxt='❌ Da preparare';
+  }
+
+  // Note del lavoro - espandibili
   const noteHtml=d.note?
     '<div style="margin:8px 0;padding:8px 10px;background:rgba(245,158,11,.08);border-left:3px solid var(--am);border-radius:0 var(--rs) var(--rs) 0;cursor:pointer" onclick="toggleNota(\''+d.id+'\')">'+
       '<div style="display:flex;justify-content:space-between;align-items:center">'+
@@ -4072,12 +4109,14 @@ function dichCardHtml(d){
       '<div id="nota_txt_'+d.id+'" style="font-size:12px;color:var(--tx);margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+d.note+'</div>'+
     '</div>'
   :''
-  // Controlla ruolo FUORI dalla stringa HTML
   const puoGestire=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
   return '<div style="background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);margin-bottom:10px;overflow:hidden">'+
     '<div style="padding:11px 14px;background:'+statoBg+';border-bottom:2px solid '+statoBd+';display:flex;justify-content:space-between;align-items:center;gap:8px">'+
-      '<div style="font-size:14px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.nome+'</div>'+
-      '<span class="bdg '+statoC+'" style="flex-shrink:0">'+statoTxt+'</span>'+
+      '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">'+
+        '<span style="font-size:14px;flex-shrink:0">'+pallino+'</span>'+
+        '<div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.nome+'</div>'+
+      '</div>'+
+      '<span style="font-size:11px;font-weight:600;color:'+statoBd+';background:'+statoBg+';border:1px solid '+statoBd+';border-radius:10px;padding:2px 8px;flex-shrink:0;white-space:nowrap">'+statoTxt+'</span>'+
     '</div>'+
     '<div style="padding:12px 14px">'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">'+
@@ -4116,6 +4155,26 @@ function dichCardHtml(d){
       :'')+
     '</div>'+
   '</div>';
+}
+
+function setBadgeLavoro(daFinire){
+  const btnF=$('btnFinito');const btnD=$('btnDaFinire');const inp=$('plDaFinire');
+  if(!btnF||!btnD)return;
+  if(daFinire){
+    btnD.style.cssText='flex:1;padding:10px;font-size:13px;border:1px solid var(--am);background:rgba(245,158,11,.15);color:var(--am);border-radius:var(--r);font-family:var(--font);cursor:pointer;font-weight:600';
+    btnF.style.cssText='flex:1;padding:10px;font-size:13px;border:1px solid var(--b);background:none;color:var(--tx2);border-radius:var(--r);font-family:var(--font);cursor:pointer';
+    if(inp)inp.value='true';
+  } else {
+    btnF.style.cssText='flex:1;padding:10px;font-size:13px;border:1px solid var(--gn);background:rgba(34,197,94,.15);color:var(--gn);border-radius:var(--r);font-family:var(--font);cursor:pointer;font-weight:600';
+    btnD.style.cssText='flex:1;padding:10px;font-size:13px;border:1px solid var(--b);background:none;color:var(--tx2);border-radius:var(--r);font-family:var(--font);cursor:pointer';
+    if(inp)inp.value='false';
+  }
+}
+
+function aggiornaBadgeLavoro(){
+  // Se ci sono note → imposta automaticamente "Da finire"
+  const note=val('plNote')||'';
+  setBadgeLavoro(note.trim().length>0);
 }
 
 function toggleNota(id){
