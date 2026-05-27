@@ -1202,7 +1202,7 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.07</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.09</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -4062,11 +4062,18 @@ function dichCardHtml(d){
   const statoBd=isRient?(d.rientrato?'var(--gn)':'var(--rd)'):'var(--ac)';
   const statoC=isRient?(d.rientrato?'bg':'br'):'bp';
   const statoTxt=isRient?(d.rientrato?'✓ Rientrato':'⚠ Incompleto'):'📋 Preparato';
-  // Note del lavoro
-  const noteHtml=d.note?`<div style="margin:8px 0;padding:8px 10px;background:rgba(245,158,11,.08);border-left:3px solid var(--am);border-radius:0 var(--rs) var(--rs) 0">
-    <span style="font-size:10px;font-weight:600;color:var(--am);text-transform:uppercase;letter-spacing:.4px">📝 Nota</span>
-    <div style="font-size:12px;color:var(--tx);margin-top:2px">${d.note}</div>
-  </div>`:'';
+  // Note del lavoro - espandibili se lunghe
+  const noteHtml=d.note?
+    '<div style="margin:8px 0;padding:8px 10px;background:rgba(245,158,11,.08);border-left:3px solid var(--am);border-radius:0 var(--rs) var(--rs) 0;cursor:pointer" onclick="toggleNota(\''+d.id+'\')">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-size:10px;font-weight:600;color:var(--am);text-transform:uppercase;letter-spacing:.4px">📝 Nota</span>'+
+        '<span id="nota_ico_'+d.id+'" style="font-size:10px;color:var(--am)">▼</span>'+
+      '</div>'+
+      '<div id="nota_txt_'+d.id+'" style="font-size:12px;color:var(--tx);margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+d.note+'</div>'+
+    '</div>'
+  :''
+  // Controlla ruolo FUORI dalla stringa HTML
+  const puoGestire=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
   return '<div style="background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);margin-bottom:10px;overflow:hidden">'+
     '<div style="padding:11px 14px;background:'+statoBg+';border-bottom:2px solid '+statoBd+';display:flex;justify-content:space-between;align-items:center;gap:8px">'+
       '<div style="font-size:14px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.nome+'</div>'+
@@ -4096,19 +4103,33 @@ function dichCardHtml(d){
       '<button onclick="dichOpenDoc(\''+d.id+'\')" class="btn btn-p btn-f" style="font-size:13px;padding:10px;margin-top:8px">'+
         '📄 Apri PDF '+(isRient?'rientro':'preparazione')+
       '</button>'+
-      // Bottoni modifica e sostituzione (solo admin/responsabile, solo lavori non rientrati)
-      ((!isRient&&(isResponsabile()||isAdmin()))?
+      // Bottoni modifica e sostituzione
+      ((!isRient&&puoGestire)?
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'+
           '<button onclick="dichModifica(\''+d.id+'\')" class="btn btn-f" style="font-size:12px;padding:9px">'+
             '✏️ Modifica'+
           '</button>'+
           '<button onclick="dichSostituisci(\''+d.id+'\')" class="btn btn-f" style="font-size:12px;padding:9px;border-color:var(--rd);color:var(--rd)">'+
-            '🔄 Sostituisci scheda'+
+            '🔄 Sostituisci'+
           '</button>'+
         '</div>'
       :'')+
     '</div>'+
   '</div>';
+}
+
+function toggleNota(id){
+  const txt=document.getElementById('nota_txt_'+id);
+  const ico=document.getElementById('nota_ico_'+id);
+  if(!txt)return;
+  const isExpanded=txt.style.webkitLineClamp==='unset'||txt.style.display==='block';
+  if(isExpanded){
+    txt.style.cssText='font-size:12px;color:var(--tx);margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical';
+    if(ico)ico.textContent='▼';
+  } else {
+    txt.style.cssText='font-size:12px;color:var(--tx);margin-top:4px;display:block';
+    if(ico)ico.textContent='▲';
+  }
 }
 
 function dichModifica(id){
