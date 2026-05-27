@@ -571,11 +571,11 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <!-- Legenda -->
       <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#9ca3af"></div>Preventivo</div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#f59e0b"></div>Confermato</div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div>Da finire</div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#6c63ff"></div>Preparato</div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#22c55e"></div>In corso</div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#64748b"></div>Rientrato</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#ef4444"></div>Confermato</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#eab308"></div>Da finire</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#22c55e"></div>Preparato</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#7c3aed"></div>In corso</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#374151"></div>Rientrato</div>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
         <button id="btnNuovoLavoro" class="btn btn-p" style="padding:7px 12px;font-size:12px;display:none" onclick="apriNuovoLavoroCal()">+ Lavoro</button>
@@ -1248,7 +1248,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.20</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.22</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5323,21 +5323,20 @@ let splStream=null, splAnimFrame=null, splAnalyser=null, splPeak=-Infinity;
 // ── COLORI STATO LAVORO ──
 function getStatoLavoro(lav){
   const oggi=toLocalISO(new Date());
-  // Lavori dal calendario (lavori_cal)
   if(lav._fonte==='cal'||lav.createdBy!==undefined&&lav.articoli===undefined){
     const s=lav.stato||'confermato';
     if(s==='preventivo')  return{color:'#9ca3af',pallino:'⚪',label:'⚪ Preventivo',bg:'rgba(156,163,175,.1)',bd:'#9ca3af'};
-    if(s==='confermato')  return{color:'#f59e0b',pallino:'🟡',label:'🟡 Confermato',bg:'rgba(245,158,11,.1)',bd:'#f59e0b'};
-    if(lav.rientroData)   return{color:'#64748b',pallino:'⚫',label:'⚫ Rientrato',bg:'rgba(100,116,139,.1)',bd:'#64748b'};
-    if(lav.data&&lav.data<oggi) return{color:'#22c55e',pallino:'🟢',label:'🟢 In corso',bg:'rgba(34,197,94,.1)',bd:'#22c55e'};
-    return{color:'#f59e0b',pallino:'🟡',label:'🟡 Confermato',bg:'rgba(245,158,11,.1)',bd:'#f59e0b'};
+    if(s==='confermato')  return{color:'#ef4444',pallino:'🔴',label:'🔴 Confermato',bg:'rgba(239,68,68,.1)',bd:'#ef4444'};
+    if(lav.rientroData)   return{color:'#000000',pallino:'⚫',label:'⚫ Rientrato',bg:'rgba(0,0,0,.1)',bd:'#000000'};
+    if(lav.data&&lav.data<oggi) return{color:'#7c3aed',pallino:'🟣',label:'🟣 In corso',bg:'rgba(124,58,237,.1)',bd:'#7c3aed'};
+    return{color:'#ef4444',pallino:'🔴',label:'🔴 Confermato',bg:'rgba(239,68,68,.1)',bd:'#ef4444'};
   }
   // Lavori preparati (dich)
-  if(lav.rientroData)     return{color:'#64748b',pallino:'⚫',label:'⚫ Rientrato',bg:'rgba(100,116,139,.1)',bd:'#64748b'};
-  if(lav.data&&lav.data<oggi) return{color:'#22c55e',pallino:'🟢',label:'🟢 In corso',bg:'rgba(34,197,94,.1)',bd:'#22c55e'};
-  if(lav.daFinire||(lav.note||'').trim()) return{color:'#f97316',pallino:'🟠',label:'🟠 Da finire',bg:'rgba(249,115,22,.1)',bd:'#f97316'};
-  if(lav.articoli&&lav.articoli.length>0) return{color:'#6c63ff',pallino:'🟣',label:'🟣 Preparato',bg:'rgba(108,99,255,.1)',bd:'#6c63ff'};
-  return{color:'#ef4444',pallino:'🔴',label:'🔴 Da preparare',bg:'rgba(239,68,68,.08)',bd:'#ef4444'};
+  if(lav.rientroData)     return{color:'#000000',pallino:'⚫',label:'⚫ Rientrato',bg:'rgba(0,0,0,.1)',bd:'#000000'};
+  if(lav.data&&lav.data<oggi) return{color:'#7c3aed',pallino:'🟣',label:'🟣 In corso',bg:'rgba(124,58,237,.1)',bd:'#7c3aed'};
+  if(lav.daFinire||(lav.note||'').trim()) return{color:'#eab308',pallino:'🟡',label:'🟡 Da finire',bg:'rgba(234,179,8,.1)',bd:'#eab308'};
+  if(lav.articoli&&lav.articoli.length>0) return{color:'#22c55e',pallino:'🟢',label:'🟢 Preparato',bg:'rgba(34,197,94,.1)',bd:'#22c55e'};
+  return{color:'#9ca3af',pallino:'⚪',label:'⚪ Da preparare',bg:'rgba(156,163,175,.08)',bd:'#9ca3af'};
 }
 let planningPdfFiles=[];
 let planningLavoriManuali=[];
@@ -5784,7 +5783,7 @@ function calApriGiorno(g){
           <div style="font-size:10px;color:var(--tx3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">Cambia stato:</div>
           <div style="display:flex;gap:5px;flex-wrap:wrap">
             <button onclick="calCambiaStato('${lavId}','preventivo')" style="font-size:10px;padding:3px 8px;border-radius:8px;border:1px solid #9ca3af;background:${lav.stato==='preventivo'?'rgba(156,163,175,.2)':'none'};color:#9ca3af;cursor:pointer">⚪ Preventivo</button>
-            <button onclick="calCambiaStato('${lavId}','confermato')" style="font-size:10px;padding:3px 8px;border-radius:8px;border:1px solid #f59e0b;background:${lav.stato==='confermato'||!lav.stato?'rgba(245,158,11,.2)':'none'};color:#f59e0b;cursor:pointer">🟡 Confermato</button>
+            <button onclick="calCambiaStato('${lavId}','confermato')" style="font-size:10px;padding:3px 8px;border-radius:8px;border:1px solid #ef4444;background:${lav.stato==='confermato'||!lav.stato?'rgba(239,68,68,.2)':'none'};color:#ef4444;cursor:pointer">🔴 Confermato</button>
           </div>
         </div>`:''}
       </div>`;
