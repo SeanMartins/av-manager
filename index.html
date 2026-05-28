@@ -72,9 +72,9 @@ body.desktop-mode #calGriglia .cal-cell{min-height:100px!important}
 body.desktop-mode #calGriglia .cal-nome{display:block!important}
 body.desktop-mode #calGriglia .cal-dots{display:none!important}
 body.desktop-mode #calGiornoDetail .cal-empty-msg{display:block}
-/* Magazzino desktop — tabella */
-body.desktop-mode #magList{display:none!important}
-body.desktop-mode #magListDesktop{display:block!important}
+/* Team desktop */
+body.desktop-mode #teamListMobile{display:none!important}
+body.desktop-mode #teamListDesktop{display:block!important}
 /* Griglia più larga su desktop */
 body.desktop-mode .card{max-width:none}
 body.desktop-mode #magList .row,body.desktop-mode .row{max-width:none}
@@ -763,8 +763,11 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- TEAM -->
     <div class="page" id="p-team">
-      <div class="sec"><div class="stl">Dipendenti</div></div>
-      <div class="card" id="teamList"><div class="empty">Caricamento...</div></div>
+      <div class="sec"><div class="stl">👥 Team</div></div>
+      <!-- Vista mobile -->
+      <div id="teamListMobile" class="card"><div class="empty">Caricamento...</div></div>
+      <!-- Vista desktop -->
+      <div id="teamListDesktop" style="display:none"></div>
     </div>
 
     <!-- DICHIARAZIONE -->
@@ -1348,7 +1351,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.33</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.34</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2347,13 +2350,132 @@ function renderPresenze(){
 // ── RENDER TEAM ──
 function renderTeam(){
   const avC=['a1','a2','a3','a4'];
-  let h='';
-  if(!cacheTeam.length)h='<div class="empty">Nessun dipendente ancora</div>';
+  const oggi=toLocalISO(new Date());
+
+  // Vista mobile
+  let hm='';
+  if(!cacheTeam.length)hm='<div class="empty">Nessun dipendente ancora</div>';
   else cacheTeam.forEach((m,i)=>{
     const ini=(m.nome[0]+m.cognome[0]).toUpperCase();
-    h+='<div class="row"><div class="av '+avC[i%4]+'">'+ini+'</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">'+m.nome+' '+m.cognome+'</div><div style="font-size:11px;color:var(--tx2)">'+m.email+'</div></div><span class="bdg bp">'+m.ruolo+'</span></div>';
+    hm+='<div class="row"><div class="av '+avC[i%4]+'">'+ini+'</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">'+m.nome+' '+m.cognome+'</div><div style="font-size:11px;color:var(--tx2)">'+m.email+'</div></div><span class="bdg bp">'+m.ruolo+'</span></div>';
   });
-  const tl=$('teamList');if(tl)tl.innerHTML=h;
+  const tl=$('teamListMobile');if(tl)tl.innerHTML=hm;
+
+  // Vista desktop — tabella completa
+  if(document.body.classList.contains('desktop-mode')) renderTeamDesktop();
+}
+
+function renderTeamDesktop(){
+  const el=$('teamListDesktop');if(!el)return;
+  const oggi=toLocalISO(new Date());
+  const avC=['a1','a2','a3','a4'];
+  const canManage=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
+
+  // Calcola presenze oggi per ogni membro
+  const presenzeOggi={};
+  cachePresenze.filter(p=>p.entrata&&toLocalISO(new Date(p.entrata))===oggi).forEach(p=>{
+    presenzeOggi[p.uid]={luogo:p.luogo,entrata:p.entrata,uscita:p.uscita};
+  });
+
+  // Raggruppa per ruolo
+  const ruoliOrdine=['Responsabile','Project Manager','Dipendente','Collaboratore esterno'];
+  const perRuolo={};
+  cacheTeam.forEach(m=>{
+    const r=m.ruolo||'Altro';
+    if(!perRuolo[r])perRuolo[r]=[];
+    perRuolo[r].push(m);
+  });
+
+  const th='padding:10px 14px;font-size:11px;font-weight:600;color:var(--tx2);text-align:left;border-bottom:2px solid var(--b);white-space:nowrap';
+  const td='padding:10px 14px;border-bottom:1px solid var(--b);font-size:13px;vertical-align:middle';
+
+  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="display:flex;gap:12px">
+      <div class="sc" style="padding:12px 20px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--ac2)">${cacheTeam.length}</div>
+        <div style="font-size:11px;color:var(--tx2)">Totale team</div>
+      </div>
+      <div class="sc" style="padding:12px 20px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--gn)">${Object.keys(presenzeOggi).filter(uid=>!presenzeOggi[uid].uscita).length}</div>
+        <div style="font-size:11px;color:var(--tx2)">Presenti ora</div>
+      </div>
+      <div class="sc" style="padding:12px 20px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--am)">${cacheTeam.filter(m=>!m.approvato).length}</div>
+        <div style="font-size:11px;color:var(--tx2)">In attesa approvazione</div>
+      </div>
+    </div>
+    ${canManage?`<button class="btn btn-p" style="padding:9px 16px;font-size:13px" onclick="apriGestioneUtenti()">⚙️ Gestione utenti</button>`:''}
+  </div>`;
+
+  // Tabella per ogni gruppo
+  const allRuoli=[...new Set([...ruoliOrdine,...Object.keys(perRuolo)])].filter(r=>perRuolo[r]?.length);
+
+  allRuoli.forEach(ruolo=>{
+    const membri=perRuolo[ruolo]||[];
+    h+=`<div style="font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">${ruolo} (${membri.length})</div>`;
+    h+=`<div style="border-radius:var(--r);border:1px solid var(--b);overflow:hidden;margin-bottom:4px">
+    <table style="width:100%;border-collapse:collapse;background:var(--bg1)">
+      <thead><tr style="background:var(--bg2)">
+        <th style="${th}">Dipendente</th>
+        <th style="${th}">Email</th>
+        <th style="${th}">Telefono</th>
+        <th style="${th};text-align:center">Presenza oggi</th>
+        <th style="${th};text-align:center">Stato</th>
+        ${canManage?`<th style="${th};text-align:center">Azioni</th>`:''}
+      </tr></thead><tbody>`;
+
+    membri.forEach((m,i)=>{
+      const ini=(m.nome[0]+m.cognome[0]).toUpperCase();
+      const pres=presenzeOggi[m.id];
+      const isPresente=pres&&!pres.uscita;
+      const isUscito=pres&&pres.uscita;
+      const rb=i%2===0?'var(--bg1)':'var(--bg2)';
+      let presHtml='<span style="color:var(--tx3);font-size:11px">— Assente</span>';
+      if(isPresente){
+        const ora=new Date(pres.entrata).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+        presHtml=`<span style="color:var(--gn);font-size:11px">🟢 Dal ${ora}${pres.luogo?' · '+pres.luogo:''}</span>`;
+      } else if(isUscito){
+        const oraE=new Date(pres.entrata).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+        const oraU=new Date(pres.uscita).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+        presHtml=`<span style="color:var(--tx2);font-size:11px">✓ ${oraE}→${oraU}</span>`;
+      }
+      const statoHtml=m.approvato
+        ?'<span style="color:var(--gn);font-size:11px">✅ Attivo</span>'
+        :'<span style="color:var(--am);font-size:11px">⏳ In attesa</span>';
+
+      h+=`<tr style="background:${rb}" onmouseenter="this.style.background='var(--acb)'" onmouseleave="this.style.background='${rb}'">
+        <td style="${td}">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="av ${avC[i%4]}" style="width:32px;height:32px;font-size:11px;flex-shrink:0">${ini}</div>
+            <div>
+              <div style="font-weight:600">${m.nome} ${m.cognome}</div>
+              <div style="font-size:11px;color:var(--tx2)">${m.ruolo}</div>
+            </div>
+          </div>
+        </td>
+        <td style="${td};color:var(--tx2);font-size:12px">${m.email||'—'}</td>
+        <td style="${td};color:var(--tx2);font-size:12px">${m.telefono||'—'}</td>
+        <td style="${td};text-align:center">${presHtml}</td>
+        <td style="${td};text-align:center">${statoHtml}</td>
+        ${canManage?`<td style="${td};text-align:center">
+          <div style="display:flex;gap:4px;justify-content:center">
+            <button onclick="apriChatConUtente('${m.id}')" title="Invia messaggio" style="background:var(--acb);border:1px solid var(--ac);color:var(--ac2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✉️</button>
+            ${!m.approvato?`<button onclick="approvaUtente('${m.id}')" title="Approva" style="background:rgba(34,197,94,.1);border:1px solid var(--gn);color:var(--gn);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✅</button>`:''}
+            <button onclick="resetPin('${m.id}','${m.nome} ${m.cognome}')" title="Reset PIN" style="background:var(--bg3);border:1px solid var(--b);color:var(--tx2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">🔑</button>
+          </div>
+        </td>`:''}
+      </tr>`;
+    });
+    h+='</tbody></table></div>';
+  });
+
+  if(!cacheTeam.length)h='<div class="empty">Nessun membro del team</div>';
+  el.innerHTML=h;
+}
+
+function apriChatConUtente(uid){
+  goPage('chat');
+  setTimeout(()=>apriConv(uid),300);
 }
 
 // ── FORUM ──
