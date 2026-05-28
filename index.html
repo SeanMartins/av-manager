@@ -1348,7 +1348,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.32</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.33</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -5894,7 +5894,7 @@ function renderMagDesktop(){
       <th style="${th};text-align:center" onclick="magSort('disp')">Disp.${arrow('disp')}</th>
       <th style="${th};text-align:center">In uso</th>
       <th style="${th};text-align:center">Stato</th>
-      <th style="${th};text-align:center">Azioni</th>
+      <th style="${th}">Note / Azioni</th>
     </tr></thead><tbody>`;
   sorted.forEach((m,i)=>{
     const qtaTot=m.qty||1,qtaInUso=getInUso(m),qtaDisp=Math.max(0,qtaTot-qtaInUso);
@@ -5902,23 +5902,130 @@ function renderMagDesktop(){
     const dc=m.stato==='maint'?'var(--tx3)':qtaDisp===0?'var(--rd)':pct<=0.3?'var(--am)':'var(--gn)';
     const sl=m.stato==='maint'?'🔧 Manutenzione':qtaDisp===0?'🔴 Esaurito':pct<=0.3?'⚠️ Quasi':'✅ OK';
     const rb=i%2===0?'var(--bg1)':'var(--bg2)';
+    // Nota cliccabile
+    const notaHtml=m.note
+      ?`<button onclick="mostraNota('${encodeURIComponent(m.note||'')}','${encodeURIComponent(m.nome||'')}')" title="${m.note.replace(/"/g,'&quot;')}" style="background:rgba(245,158,11,.1);border:1px solid var(--am);color:var(--am);border-radius:6px;padding:2px 7px;font-size:11px;cursor:pointer;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📝 ${m.note.substring(0,20)}${m.note.length>20?'…':''}</button>`
+      :'<span style="color:var(--tx3);font-size:11px">—</span>';
     h+=`<tr style="background:${rb}" onmouseenter="this.style.background='var(--acb)'" onmouseleave="this.style.background='${rb}'">
       <td style="${td};font-weight:500">${m.nome}</td>
       <td style="${td};color:var(--tx2);font-size:12px">${m.marca||'—'}</td>
       <td style="${td};font-size:12px">${catL[m.cat]||m.cat||'—'}</td>
       <td style="${td};text-align:center;font-weight:600">${qtaTot}</td>
       <td style="${td};text-align:center;font-weight:700;color:${dc}">${qtaDisp}</td>
-      <td style="${td};text-align:center">${qtaInUso>0?`<button onclick="magDove('${m.id}')" style="background:rgba(239,68,68,.1);color:var(--rd);border:1px solid var(--rd);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer">${qtaInUso} ›</button>`:'<span style="color:var(--tx3)">—</span>'}</td>
+      <td style="${td};text-align:center">${qtaInUso>0
+        ?`<button onclick="apriInUsoStorico('${m.id}','${encodeURIComponent(m.nome)}')" style="background:rgba(239,68,68,.1);color:var(--rd);border:1px solid var(--rd);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-weight:600">${qtaInUso} in uso ›</button>`
+        :'<span style="color:var(--tx3)">—</span>'}</td>
       <td style="${td};text-align:center"><span style="font-size:11px;color:${dc}">${sl}</span></td>
-      <td style="${td};text-align:center"><div style="display:flex;gap:4px;justify-content:center">
-        <button onclick="apriStorico('${m.id}','${encodeURIComponent(m.nome)}')" style="background:var(--bg3);border:1px solid var(--b);color:var(--tx2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer" title="Storico">📋</button>
-        <button onclick="apriModificaArticolo('${m.id}')" style="background:var(--acb);border:1px solid var(--ac);color:var(--ac2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer" title="Modifica">✏️</button>
-      </div></td>
+      <td style="${td}">
+        <div style="display:flex;gap:4px;align-items:center">
+          ${notaHtml}
+          <button onclick="apriStorico('${m.id}','${encodeURIComponent(m.nome)}')" style="background:var(--bg3);border:1px solid var(--b);color:var(--tx2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer" title="Storico">📋</button>
+          <button onclick="apriModificaArticolo('${m.id}')" style="background:var(--acb);border:1px solid var(--ac);color:var(--ac2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer" title="Modifica">✏️</button>
+        </div>
+      </td>
     </tr>`;
   });
   if(!sorted.length)h+=`<tr><td colspan="8" style="padding:32px;text-align:center;color:var(--tx3)">Nessun articolo trovato</td></tr>`;
   h+='</tbody></table></div>';
   el.innerHTML=h;
+}
+
+function mostraNota(notaEnc, nomeEnc){
+  const nota=decodeURIComponent(notaEnc);
+  const nome=decodeURIComponent(nomeEnc);
+  // Crea popup leggero
+  const old=document.getElementById('notaPopup');if(old)old.remove();
+  const popup=document.createElement('div');
+  popup.id='notaPopup';
+  popup.style.cssText='position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px';
+  popup.onclick=e=>{if(e.target===popup)popup.remove();};
+  popup.innerHTML=`<div style="background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);padding:20px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:14px;font-weight:700">📝 Note — ${nome}</div>
+      <button onclick="document.getElementById('notaPopup').remove()" style="background:none;border:none;color:var(--tx2);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div style="font-size:14px;line-height:1.6;color:var(--tx);background:var(--bg2);padding:12px;border-radius:var(--rs);border-left:3px solid var(--am)">${nota}</div>
+  </div>`;
+  document.body.appendChild(popup);
+}
+
+function apriInUsoStorico(artId, nomeEnc){
+  const nome=decodeURIComponent(nomeEnc);
+  const m=cacheMag.find(x=>x.id===artId);if(!m)return;
+  const qtaTot=m.qty||1;
+  // Lavori dove è attualmente in uso
+  const lavoriInUso=cacheDich.filter(d=>
+    !d.rientroData&&(d.articoli||[]).some(a=>a.id===artId)
+  );
+  // Modal combinato
+  const old=document.getElementById('inUsoStoricoPopup');if(old)old.remove();
+  const popup=document.createElement('div');
+  popup.id='inUsoStoricoPopup';
+  popup.style.cssText='position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px';
+  popup.onclick=e=>{if(e.target===popup)popup.remove();};
+
+  // Sezione "Dove è ora"
+  let doveH='';
+  if(lavoriInUso.length){
+    doveH=lavoriInUso.map(d=>{
+      const art=(d.articoli||[]).find(a=>a.id===artId);
+      const qty=art?.qty||1;
+      const dataUsc=fmtData(d.data,{day:'2-digit',month:'short',year:'numeric'});
+      const dataRient=d.dataFine?fmtData(d.dataFine,{day:'2-digit',month:'short'}):'—';
+      return`<div style="padding:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:var(--rs);margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px;font-weight:600">${d.nome||'—'}</div>
+          <span style="font-size:12px;font-weight:700;color:var(--rd)">${qty} pz</span>
+        </div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:3px">
+          👤 ${d.tecnico||'—'} · 📍 ${d.location||'—'}
+        </div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:1px">
+          📅 ${dataUsc} → ${dataRient}
+        </div>
+      </div>`;
+    }).join('');
+  } else {
+    doveH='<div style="color:var(--tx3);font-size:12px;padding:8px 0">Nessun utilizzo attivo</div>';
+  }
+
+  // Sezione storico usi (dai lavori rientrati)
+  const storicoUsi=cacheDich.filter(d=>
+    d.rientroData&&(d.articoli||[]).some(a=>a.id===artId)
+  ).sort((a,b)=>(b.rientroData||'').localeCompare(a.rientroData||'')).slice(0,5);
+
+  let storicoH='';
+  if(storicoUsi.length){
+    storicoH=storicoUsi.map(d=>{
+      const art=(d.articoli||[]).find(a=>a.id===artId);
+      const qty=art?.qty||1;
+      return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--b)">
+        <div>
+          <div style="font-size:12px;font-weight:500">${d.nome||'—'}</div>
+          <div style="font-size:11px;color:var(--tx2)">${fmtData(d.data,{day:'2-digit',month:'short',year:'numeric'})}</div>
+        </div>
+        <span style="font-size:12px;color:var(--tx2)">${qty} pz</span>
+      </div>`;
+    }).join('');
+  } else {
+    storicoH='<div style="color:var(--tx3);font-size:12px;padding:8px 0">Nessuno storico disponibile</div>';
+  }
+
+  popup.innerHTML=`<div style="background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);padding:20px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-size:15px;font-weight:700">${nome}</div>
+        <div style="font-size:11px;color:var(--tx2)">Totale: ${qtaTot} pz · In uso: ${lavoriInUso.reduce((s,d)=>s+((d.articoli||[]).find(a=>a.id===artId)?.qty||1),0)} pz</div>
+      </div>
+      <button onclick="document.getElementById('inUsoStoricoPopup').remove()" style="background:none;border:none;color:var(--tx2);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div style="font-size:12px;font-weight:600;color:var(--rd);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">🔴 Attualmente in uso</div>
+    ${doveH}
+    <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 8px;padding-top:12px;border-top:1px solid var(--b)">📋 Ultimi utilizzi</div>
+    ${storicoH}
+    <button onclick="document.getElementById('inUsoStoricoPopup').remove()" class="btn btn-f" style="margin-top:14px;width:100%">Chiudi</button>
+  </div>`;
+  document.body.appendChild(popup);
 }
 
 function magSort(col){
