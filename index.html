@@ -1328,7 +1328,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.24</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.25</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1466,8 +1466,8 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
   <div class="msh">
     <div class="mhd"></div>
     <div class="stl" style="margin-bottom:6px">📊 Esporta presenze</div>
-    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Genera un file CSV/Excel con le timbrature del periodo.</div>
-    <div class="ig"><label class="il">Dipendente</label><select id="expDip"><option value="all">Tutti</option></select></div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Genera un file Excel con le timbrature del periodo selezionato.</div>
+    <div class="ig"><label class="il">👤 Dipendente</label><select id="expDip"><option value="all">— Tutti i dipendenti —</option></select></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="ig"><label class="il">Mese</label>
         <select id="expMese">
@@ -3814,40 +3814,51 @@ async function smGeneraPDF(){
 function openExport(){
   closeMod('mProfile');
   const canManage=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
-  const sel=document.getElementById('expDip');
+  const sel=$('expDip');
+  const selWrap=sel?sel.closest('.ig'):null;
+
   if(canManage){
+    // Responsabile/Manager/Admin — scelta dipendente
     sel.innerHTML='<option value="all">— Tutti i dipendenti —</option>';
-    // Raggruppa per tipo
-    const dipendenti=cacheTeam.filter(m=>m.approvato&&m.ruolo!=='Collaboratore esterno');
-    const collab=cacheTeam.filter(m=>m.approvato&&m.ruolo==='Collaboratore esterno');
+    const dipendenti=cacheTeam.filter(m=>m.approvato&&m.ruolo!=='Collaboratore esterno').sort((a,b)=>(a.cognome||'').localeCompare(b.cognome||''));
+    const collab=cacheTeam.filter(m=>m.approvato&&m.ruolo==='Collaboratore esterno').sort((a,b)=>(a.cognome||'').localeCompare(b.cognome||''));
     dipendenti.forEach(m=>{
       const o=document.createElement('option');
       o.value=m.id;
-      o.textContent=m.nome+' '+m.cognome+' ('+m.ruolo+')';
+      o.textContent=m.cognome+' '+m.nome+' — '+m.ruolo;
       sel.appendChild(o);
     });
     if(collab.length){
-      const sep=document.createElement('option');sep.disabled=true;sep.textContent='── Collaboratori esterni ──';sel.appendChild(sep);
+      const sep=document.createElement('option');
+      sep.disabled=true;
+      sep.textContent='──── Collaboratori esterni ────';
+      sel.appendChild(sep);
       collab.forEach(m=>{
         const o=document.createElement('option');
         o.value=m.id;
-        o.textContent=m.nome+' '+m.cognome+' (Collaboratore)';
+        o.textContent=m.cognome+' '+m.nome+' — Collaboratore';
         sel.appendChild(o);
       });
     }
     sel.disabled=false;
-    sel.parentElement.style.display='block';
+    if(selWrap)selWrap.style.display='block';
   } else {
+    // Dipendente normale — solo se stesso
     sel.innerHTML='';
-    const o=document.createElement('option');o.value=USER.id;o.textContent=USER.nome+' '+USER.cognome;
+    const o=document.createElement('option');
+    o.value=USER.id;
+    o.textContent=USER.nome+' '+USER.cognome;
     sel.appendChild(o);
     sel.disabled=true;
-    sel.parentElement.style.display='none';
+    if(selWrap)selWrap.style.display='none';
   }
+
   const now=new Date();
-  document.getElementById('expMese').value=now.getMonth();
-  const sa=document.getElementById('expAnno');sa.innerHTML='';
-  for(let y=now.getFullYear();y>=now.getFullYear()-2;y--){const o=document.createElement('option');o.value=y;o.textContent=y;sa.appendChild(o);}
+  $('expMese').value=now.getMonth();
+  const sa=$('expAnno');sa.innerHTML='';
+  for(let y=now.getFullYear();y>=now.getFullYear()-2;y--){
+    const o=document.createElement('option');o.value=y;o.textContent=y;sa.appendChild(o);
+  }
   openMod('mExport');
 }
 
