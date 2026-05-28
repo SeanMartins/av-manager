@@ -64,6 +64,14 @@ body.desktop-mode #content{flex:1;overflow-y:auto;height:100dvh;width:0;min-widt
 body.desktop-mode .page{padding:24px 28px 40px;max-width:none;width:100%;box-sizing:border-box}
 body.desktop-mode .page::after{display:none}
 body.desktop-mode #desktopSidebarInner{display:flex!important;width:240px;min-width:240px}
+/* Calendario desktop */
+body.desktop-mode #p-calendario{padding:20px 28px 40px}
+body.desktop-mode #calLayout{display:grid!important;grid-template-columns:1fr 340px;gap:20px;align-items:start}
+body.desktop-mode #calGiornoDetail{display:block!important;margin-top:0!important;position:sticky;top:20px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);padding:16px;max-height:calc(100vh - 200px);overflow-y:auto}
+body.desktop-mode #calGriglia .cal-cell{min-height:100px!important}
+body.desktop-mode #calGriglia .cal-nome{display:block!important}
+body.desktop-mode #calGriglia .cal-dots{display:none!important}
+body.desktop-mode #calGiornoDetail .cal-empty-msg{display:block}
 /* Griglia più larga su desktop */
 body.desktop-mode .card{max-width:none}
 body.desktop-mode #magList .row,body.desktop-mode .row{max-width:none}
@@ -640,35 +648,41 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <!-- CALENDARIO LAVORI -->
     <div class="page" id="p-calendario">
       <!-- Header navigazione -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <button class="btn" style="padding:8px 14px;font-size:16px" onclick="calSpostaM(-1)">‹</button>
-        <div style="text-align:center">
-          <div style="font-size:16px;font-weight:700" id="calTitolo">—</div>
-          <div style="font-size:11px;color:var(--tx2)" id="calSottotitolo">—</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="btn" style="padding:8px 16px;font-size:18px" onclick="calSpostaM(-1)">‹</button>
+          <div>
+            <div style="font-size:18px;font-weight:700" id="calTitolo">—</div>
+            <div style="font-size:11px;color:var(--tx2)" id="calSottotitolo">—</div>
+          </div>
+          <button class="btn" style="padding:8px 16px;font-size:18px" onclick="calSpostaM(1)">›</button>
         </div>
-        <button class="btn" style="padding:8px 14px;font-size:16px" onclick="calSpostaM(1)">›</button>
-      </div>
-      <!-- Legenda -->
-      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#9ca3af"></div>Preventivo</div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#ef4444"></div>Confermato</div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#eab308"></div>Da finire</div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#22c55e"></div>Preparato</div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#7c3aed"></div>In corso</div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#374151"></div>Rientrato</div>
-      </div>
-      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-        <button id="btnNuovoLavoro" class="btn btn-p" style="padding:7px 12px;font-size:12px;display:none" onclick="apriNuovoLavoroCal()">+ Lavoro</button>
-      </div>
-      <!-- Griglia calendario -->
-      <div id="calGriglia"></div>
-      <!-- Dettaglio giorno -->
-      <div id="calGiornoDetail" style="display:none;margin-top:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div style="font-size:14px;font-weight:600" id="calGiornoTitolo">—</div>
-          <button onclick="$('calGiornoDetail').style.display='none'" style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:20px;padding:4px">✕</button>
+        <div style="display:flex;align-items:center;gap:10px">
+          <!-- Legenda inline su desktop -->
+          <div id="calLegenda" style="display:flex;gap:8px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#9ca3af"></div>Preventivo</div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#ef4444"></div>Confermato</div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#eab308"></div>Da finire</div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#22c55e"></div>Preparato</div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#7c3aed"></div>In corso</div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#000"></div>Rientrato</div>
+          </div>
+          <button id="btnNuovoLavoro" class="btn btn-p" style="padding:8px 14px;font-size:12px;display:none" onclick="apriNuovoLavoroCal()">+ Lavoro</button>
         </div>
-        <div id="calGiornoList"></div>
+      </div>
+
+      <!-- Layout: griglia + pannello dettaglio affiancati su desktop -->
+      <div id="calLayout" style="display:block">
+        <!-- Griglia calendario -->
+        <div id="calGriglia"></div>
+        <!-- Dettaglio giorno (mobile: sotto, desktop: pannello laterale) -->
+        <div id="calGiornoDetail" style="display:none;margin-top:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-size:14px;font-weight:600" id="calGiornoTitolo">—</div>
+            <button onclick="chiudiDettaglioGiorno()" style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:20px;padding:4px">✕</button>
+          </div>
+          <div id="calGiornoList"></div>
+        </div>
       </div>
     </div>
 
@@ -1328,7 +1342,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.30</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.31</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -6171,16 +6185,32 @@ function renderCalendario(){
       const s=getStatoLavoro(d);
       return`<div style="width:6px;height:6px;border-radius:50%;background:${s.color}"></div>`;
     }).join('');
+    // Nomi lavori visibili su desktop
+    const nomiDesk=lavoriG.slice(0,4).map(d=>{
+      const s=getStatoLavoro(d);
+      return`<div class="cal-nome" style="display:none;font-size:10px;font-weight:500;color:#fff;background:${s.color};border-radius:3px;padding:1px 5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.nome||'—'}</div>`;
+    }).join('');
     const canAdd=(isResponsabile()||isAdmin())&&!isWeekend;
     h+=`<div onclick="calApriGiorno(${g})" ${canAdd?`ondblclick="calNuovoGiorno(${g})"`:''}
+      class="cal-cell"
       style="min-height:52px;border-radius:6px;background:${isOggi?'var(--acb)':isWeekend?'rgba(255,255,255,.02)':'var(--bg1)'};border:1px solid ${isOggi?'var(--ac)':'var(--b)'};padding:4px 5px;cursor:pointer;position:relative">
       <div style="font-size:11px;font-weight:${isOggi?700:400};color:${isOggi?'var(--ac2)':isWeekend?'var(--tx3)':'var(--tx)'}">${g}</div>
-      ${dots?`<div style="display:flex;gap:2px;flex-wrap:wrap;margin-top:3px">${dots}</div>`:''}
-      ${lavoriG.length>3?`<div style="font-size:9px;color:var(--tx3);margin-top:1px">+${lavoriG.length-3}</div>`:''}
+      <div class="cal-dots" style="display:flex;gap:2px;flex-wrap:wrap;margin-top:3px">${dots}</div>
+      ${nomiDesk}
+      ${lavoriG.length>4?`<div style="font-size:9px;color:var(--tx3);margin-top:2px">+${lavoriG.length-4} altri</div>`:''}
     </div>`;
   }
   h+='</div>';
   const el=$('calGriglia');if(el)el.innerHTML=h;
+
+  // Desktop: inizializza pannello laterale
+  if(document.body.classList.contains('desktop-mode')){
+    const det=$('calGiornoDetail');
+    if(det&&!det.querySelector('[id^="calGiornoList"]')?.innerHTML){
+      $('calGiornoList').innerHTML='<div style="text-align:center;color:var(--tx3);padding:40px 0;font-size:13px">← Clicca su un giorno per vedere i lavori</div>';
+      det.style.display='block';
+    }
+  }
   $('calGiornoDetail').style.display='none';
 }
 
@@ -6189,6 +6219,17 @@ function calNuovoGiorno(g){
   const dataStr=`${calAnno}-${pad(calMese+1)}-${pad(g)}`;
   calDataSelezionata=dataStr;
   apriNuovoLavoroCal(dataStr);
+}
+
+function chiudiDettaglioGiorno(){
+  const det=$('calGiornoDetail');
+  if(!det)return;
+  if(document.body.classList.contains('desktop-mode')){
+    // Su desktop mostra placeholder
+    det.innerHTML='<div style="text-align:center;color:var(--tx3);padding:40px 0;font-size:13px">← Clicca su un giorno per vedere i lavori</div>';
+  } else {
+    det.style.display='none';
+  }
 }
 
 function calApriGiorno(g){
@@ -6282,8 +6323,17 @@ function calApriGiorno(g){
   }
 
   $('calGiornoList').innerHTML=h;
-  $('calGiornoDetail').style.display='block';
-  $('calGiornoDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
+  const det=$('calGiornoDetail');
+  if(det){
+    det.style.display='block';
+    // Su mobile scrolla, su desktop è già visibile nel pannello laterale
+    if(!document.body.classList.contains('desktop-mode')){
+      det.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+    // Aggiorna titolo
+    const titEl=$('calGiornoTitolo');
+    if(titEl)titEl.textContent=GG_S[d.getDay()]+' '+g+' '+MESI_S[calMese];
+  }
 }
 
 async function setStatoCal(stato){
