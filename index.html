@@ -72,6 +72,9 @@ body.desktop-mode #calGriglia .cal-cell{min-height:100px!important}
 body.desktop-mode #calGriglia .cal-nome{display:block!important}
 body.desktop-mode #calGriglia .cal-dots{display:none!important}
 body.desktop-mode #calGiornoDetail .cal-empty-msg{display:block}
+/* Archivio desktop */
+body.desktop-mode #dichList{display:none!important}
+body.desktop-mode #dichListDesktop{display:block!important}
 /* Team desktop */
 body.desktop-mode #teamListMobile{display:none!important}
 body.desktop-mode #teamListDesktop{display:block!important}
@@ -772,8 +775,8 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- DICHIARAZIONE -->
     <div class="page" id="p-dichiarazione">
-      <!-- Stats -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <!-- Stats (sempre visibili) -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px" id="dichStats">
         <div class="sc" style="cursor:pointer" onclick="dichFilter('prep')">
           <div class="sn" id="nDichPrep">0</div>
           <div class="sl">📋 Preparazioni</div>
@@ -785,12 +788,12 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       </div>
 
       <!-- Filtri + Ordinamento -->
-      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap" id="dichFiltri">
         <button class="btn" id="dfAll" onclick="dichFilter('all')" style="flex:1;font-size:12px;min-width:60px;background:var(--acb);border-color:var(--ac);color:var(--ac2)">Tutti</button>
         <button class="btn" id="dfPrep" onclick="dichFilter('prep')" style="flex:1;font-size:12px;min-width:60px">📋 Preparazioni</button>
         <button class="btn" id="dfRient" onclick="dichFilter('rient')" style="flex:1;font-size:12px;min-width:60px">✅ Rientri</button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">
+      <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center" id="dichSortWrap">
         <span style="font-size:12px;color:var(--tx2)">Ordina:</span>
         <select id="dichSort" onchange="renderDich()" style="flex:1;font-size:12px;padding:7px 10px">
           <option value="data_desc">📅 Data ↓ (recente)</option>
@@ -803,8 +806,11 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <!-- Ricerca -->
       <input type="text" id="dichSearch" placeholder="🔍 Cerca per nome o location..." oninput="renderDich()" style="margin-bottom:14px">
 
-      <!-- Lista -->
+      <!-- Vista mobile: card -->
       <div id="dichList"><div class="empty">Caricamento...</div></div>
+
+      <!-- Vista desktop: tabella -->
+      <div id="dichListDesktop" style="display:none"></div>
 
       <!-- Download ZIP -->
       <div style="margin-top:16px;padding:14px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--r)">
@@ -1351,7 +1357,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.34</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.35</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -4668,6 +4674,69 @@ function renderDich(){
   } else {
     list.forEach(d=>{h+=dichCardHtml(d);});
   }
+  el.innerHTML=h;
+  // Desktop: tabella
+  if(document.body.classList.contains('desktop-mode')) renderDichDesktop(list);
+}
+
+function renderDichDesktop(list){
+  const el=$('dichListDesktop');if(!el)return;
+  if(!list||!list.length){el.innerHTML='<div class="empty">Nessun documento trovato</div>';return;}
+  const canManage=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
+  const th='padding:10px 14px;font-size:11px;font-weight:600;color:var(--tx2);text-align:left;border-bottom:2px solid var(--b);white-space:nowrap';
+  const td='padding:9px 14px;border-bottom:1px solid var(--b);font-size:13px;vertical-align:middle';
+  let h=`<div style="font-size:12px;color:var(--tx2);margin-bottom:10px">${list.length} lavori</div>
+  <div style="border-radius:var(--r);border:1px solid var(--b);overflow:hidden;overflow-x:auto">
+  <table style="width:100%;border-collapse:collapse;background:var(--bg1)">
+    <thead><tr style="background:var(--bg2)">
+      <th style="${th}">Stato</th>
+      <th style="${th}">Lavoro</th>
+      <th style="${th}">Tecnico</th>
+      <th style="${th}">Location</th>
+      <th style="${th};text-align:center">Uscita</th>
+      <th style="${th};text-align:center">Rientro</th>
+      <th style="${th};text-align:center">Materiale</th>
+      <th style="${th}">Note</th>
+      <th style="${th};text-align:center">Azioni</th>
+    </tr></thead><tbody>`;
+  list.forEach((d,i)=>{
+    const isRient=!!d.rientroData;
+    const nPezzi=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
+    const nArt=(d.articoli||[]).length;
+    const rb=i%2===0?'var(--bg1)':'var(--bg2)';
+    let pallino,statoTxt,statoColor;
+    if(isRient){pallino='🟢';statoTxt='Rientrato';statoColor='var(--gn)';}
+    else if(d.daFinire||d.note){pallino='🟠';statoTxt='Da finire';statoColor='var(--am)';}
+    else if(d.articoli&&d.articoli.length>0){pallino='🟢';statoTxt='Pronto';statoColor='var(--gn)';}
+    else{pallino='🔴';statoTxt='Da prep.';statoColor='var(--rd)';}
+    const dataUsc=d.data?fmtData(d.data,{day:'2-digit',month:'short',year:'numeric'}):'—';
+    const dataRient=d.rientroData?fmtData(d.rientroData,{day:'2-digit',month:'short',year:'numeric'}):'—';
+    const notaHtml=d.note
+      ?`<span title="${(d.note||'').replace(/"/g,'&quot;')}" style="font-size:11px;color:var(--am);cursor:pointer;max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle" onclick="mostraNota('${encodeURIComponent(d.note||'')}','${encodeURIComponent(d.nome||'')}')">📝 ${d.note.substring(0,28)}${d.note.length>28?'…':''}</span>`
+      :'<span style="color:var(--tx3)">—</span>';
+    const docs=d.documenti||[];
+    const pdfHtml=docs.map(doc=>`<a href="${doc.url}" target="_blank" style="font-size:10px;background:var(--acb);color:var(--ac2);border:1px solid var(--ac);border-radius:5px;padding:1px 5px;text-decoration:none">📄</a>`).join(' ');
+    h+=`<tr style="background:${rb}" onmouseenter="this.style.background='var(--acb)'" onmouseleave="this.style.background='${rb}'">
+      <td style="${td}"><span style="font-size:12px;color:${statoColor};white-space:nowrap">${pallino} ${statoTxt}</span></td>
+      <td style="${td};font-weight:600;max-width:220px">
+        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.nome||'—'}</div>
+        ${pdfHtml?`<div style="margin-top:2px">${pdfHtml}</div>`:''}
+      </td>
+      <td style="${td};color:var(--tx2);font-size:12px;white-space:nowrap">${d.tecnico||'—'}</td>
+      <td style="${td};color:var(--tx2);font-size:12px;white-space:nowrap">📍 ${d.location||'—'}</td>
+      <td style="${td};text-align:center;font-size:12px;white-space:nowrap">${dataUsc}</td>
+      <td style="${td};text-align:center;font-size:12px;white-space:nowrap;color:${isRient?'var(--gn)':'var(--tx3)'}">${dataRient}</td>
+      <td style="${td};text-align:center;font-size:12px">${nPezzi>0?`<b>${nPezzi}</b> pz · ${nArt} art.`:'<span style="color:var(--tx3)">—</span>'}</td>
+      <td style="${td};max-width:180px">${notaHtml}</td>
+      <td style="${td}">
+        <div style="display:flex;gap:4px;justify-content:center">
+          <button onclick="dichOpenDoc('${d.id}')" title="Apri PDF" style="background:var(--acb);border:1px solid var(--ac);color:var(--ac2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">📄 PDF</button>
+          ${!isRient&&canManage?`<button onclick="dichModifica('${d.id}')" title="Modifica" style="background:var(--bg3);border:1px solid var(--b);color:var(--tx2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✏️</button>`:''}
+        </div>
+      </td>
+    </tr>`;
+  });
+  h+='</tbody></table></div>';
   el.innerHTML=h;
 }
 
