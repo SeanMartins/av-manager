@@ -1328,7 +1328,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.27</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.28</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2973,26 +2973,246 @@ async function loadLocFotos(lid){
     if(!snap.docs.length){grid.innerHTML='<div style="font-size:12px;color:var(--tx3);padding:8px 0">Nessuna foto caricata</div>';return;}
     grid.innerHTML=snap.docs.map(d=>{
       const f=d.data();
-      return`<div class="pth" style="cursor:pointer;position:relative" onclick="apriLightbox('${f.url}','${f.nome||''}')">
+      const annot=f.annotazioni||[];
+      const badge=annot.length?`<div style="position:absolute;top:4px;right:4px;background:#6c63ff;color:#fff;font-size:9px;border-radius:6px;padding:1px 5px">${annot.length} note</div>`:'';
+      return`<div class="pth" style="cursor:pointer;position:relative" onclick="apriEditor('${lid}','${d.id}','${f.url}','${encodeURIComponent(f.nome||'')}')">
         <img src="${f.url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px" loading="lazy">
+        ${badge}
         <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;padding:3px 5px;border-radius:0 0 6px 6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${f.nome||''}</div>
       </div>`;
     }).join('');
   }catch(e){console.warn('loadLocFotos:',e);}
 }
 
-function apriLightbox(url, nome){
-  // Apre immagine a schermo intero
-  const lb=document.createElement('div');
-  lb.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer';
-  lb.onclick=()=>lb.remove();
-  lb.innerHTML=`
-    <div style="position:absolute;top:16px;right:16px;color:#fff;font-size:28px;cursor:pointer;z-index:2" onclick="this.closest('div').remove()">✕</div>
-    <img src="${url}" style="max-width:95vw;max-height:88vh;object-fit:contain;border-radius:8px">
-    ${nome?`<div style="color:#fff;font-size:13px;margin-top:10px;opacity:.8">${nome}</div>`:''}
-    <div style="color:rgba(255,255,255,.5);font-size:11px;margin-top:6px">Tocca per chiudere</div>
+// ── EDITOR FOTO LOCATION ──
+let editorState={lid:null,fid:null,url:null,nome:null,canvas:null,ctx:null,drawing:false,tool:'penna',color:'#ef4444',size:3,annotations:[],history:[],img:null};
+
+function apriEditor(lid, fid, url, nomeEnc){
+  const nome=decodeURIComponent(nomeEnc||'');
+  editorState={...editorState,lid,fid,url,nome,drawing:false,history:[]};
+
+  // Crea overlay editor
+  const ed=document.createElement('div');
+  ed.id='fotoEditor';
+  ed.style.cssText='position:fixed;inset:0;z-index:9999;background:#111;display:flex;flex-direction:column;overflow:hidden';
+  ed.innerHTML=`
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#1a1a2e;border-bottom:1px solid #333;flex-shrink:0">
+      <button onclick="chiudiEditor()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:0 6px">←</button>
+      <div style="flex:1;font-size:13px;color:#fff;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nome}</div>
+      <button onclick="editorUndo()" style="background:rgba(255,255,255,.1);border:none;color:#fff;font-size:12px;cursor:pointer;padding:5px 10px;border-radius:6px">↩ Annulla</button>
+      <button onclick="editorSalva()" style="background:#6c63ff;border:none;color:#fff;font-size:12px;cursor:pointer;padding:5px 12px;border-radius:6px;font-weight:600">💾 Salva</button>
+    </div>
+
+    <!-- Canvas area -->
+    <div style="flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+      <canvas id="edCanvas" style="max-width:100%;max-height:100%;touch-action:none"></canvas>
+    </div>
+
+    <!-- Note testuale -->
+    <div id="edNoteWrap" style="display:none;padding:10px 14px;background:#1a1a2e;border-top:1px solid #333">
+      <div style="font-size:11px;color:#aaa;margin-bottom:4px">📝 Aggiungi nota testuale:</div>
+      <div style="display:flex;gap:8px">
+        <input id="edNotaInput" type="text" placeholder="Scrivi una nota..." style="flex:1;background:#222;border:1px solid #444;color:#fff;border-radius:6px;padding:7px 10px;font-size:13px">
+        <input id="edNotaColor" type="color" value="#ffff00" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px">
+        <button onclick="editorAggiungiNota()" style="background:#6c63ff;border:none;color:#fff;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:13px">+</button>
+      </div>
+    </div>
+
+    <!-- Toolbar strumenti -->
+    <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;background:#1a1a2e;border-top:1px solid #333;flex-shrink:0;overflow-x:auto">
+      <!-- Strumenti -->
+      <button id="edTool_penna" onclick="editorSetTool('penna')" style="background:#6c63ff;border:1px solid #6c63ff;color:#fff;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:12px;white-space:nowrap">✏️ Penna</button>
+      <button id="edTool_freccia" onclick="editorSetTool('freccia')" style="background:none;border:1px solid #555;color:#ccc;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:12px;white-space:nowrap">➡️ Freccia</button>
+      <button id="edTool_cerchio" onclick="editorSetTool('cerchio')" style="background:none;border:1px solid #555;color:#ccc;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:12px;white-space:nowrap">⭕ Cerchio</button>
+      <button id="edTool_rettangolo" onclick="editorSetTool('rettangolo')" style="background:none;border:1px solid #555;color:#ccc;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:12px;white-space:nowrap">⬜ Rettangolo</button>
+      <button id="edTool_nota" onclick="editorSetTool('nota')" style="background:none;border:1px solid #555;color:#ccc;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:12px;white-space:nowrap">📝 Testo</button>
+      <div style="width:1px;height:28px;background:#333;flex-shrink:0"></div>
+      <!-- Colore -->
+      <input id="edColor" type="color" value="#ef4444" onchange="editorState.color=this.value" style="width:32px;height:32px;border:2px solid #555;border-radius:6px;cursor:pointer;padding:2px;background:none;flex-shrink:0">
+      <!-- Spessore -->
+      <select id="edSize" onchange="editorState.size=parseInt(this.value)" style="background:#222;border:1px solid #444;color:#fff;border-radius:6px;padding:5px;font-size:12px">
+        <option value="2">Sottile</option>
+        <option value="4" selected>Normale</option>
+        <option value="8">Spesso</option>
+      </select>
+    </div>
   `;
-  document.body.appendChild(lb);
+  document.body.appendChild(ed);
+
+  // Carica immagine e annotazioni esistenti
+  const img=new Image();
+  img.crossOrigin='anonymous';
+  img.onload=async()=>{
+    const canvas=$('edCanvas');
+    const maxW=ed.children[1].clientWidth-20;
+    const maxH=ed.children[1].clientHeight-20;
+    const ratio=Math.min(maxW/img.width, maxH/img.height, 1);
+    canvas.width=Math.round(img.width*ratio);
+    canvas.height=Math.round(img.height*ratio);
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    editorState.canvas=canvas;
+    editorState.ctx=ctx;
+    editorState.img=img;
+    editorState.ratio=ratio;
+    // Carica annotazioni esistenti
+    try{
+      const doc=await DB.collection('locations').doc(lid).collection('fotos').doc(fid).get();
+      const annot=(doc.data()||{}).annotazioni||[];
+      editorState.annotations=[...annot];
+      editorRidisegna();
+    }catch(e){}
+    // Setup eventi canvas
+    editorSetupEvents(canvas);
+  };
+  img.src=url;
+}
+
+function editorSetTool(t){
+  editorState.tool=t;
+  ['penna','freccia','cerchio','rettangolo','nota'].forEach(tool=>{
+    const b=$('edTool_'+tool);
+    if(!b)return;
+    if(tool===t){b.style.background='#6c63ff';b.style.borderColor='#6c63ff';b.style.color='#fff';}
+    else{b.style.background='none';b.style.borderColor='#555';b.style.color='#ccc';}
+  });
+  const nw=$('edNoteWrap');
+  if(nw)nw.style.display=t==='nota'?'block':'none';
+}
+
+function editorSetupEvents(canvas){
+  let startX,startY,drawing=false,penPoints=[];
+  const getP=e=>{
+    const r=canvas.getBoundingClientRect();
+    const src=e.touches?e.touches[0]:e;
+    return{x:src.clientX-r.left,y:src.clientY-r.top};
+  };
+  const down=e=>{
+    e.preventDefault();
+    drawing=true;
+    const p=getP(e);startX=p.x;startY=p.y;
+    penPoints=[p];
+    if(editorState.tool==='penna'){editorState.ctx.beginPath();editorState.ctx.moveTo(p.x,p.y);}
+  };
+  const move=e=>{
+    e.preventDefault();
+    if(!drawing)return;
+    const p=getP(e);
+    const ctx=editorState.ctx;
+    if(editorState.tool==='penna'){
+      penPoints.push(p);
+      ctx.strokeStyle=editorState.color;ctx.lineWidth=editorState.size;ctx.lineCap='round';ctx.lineJoin='round';
+      ctx.lineTo(p.x,p.y);ctx.stroke();
+    } else {
+      editorRidisegna();
+      editorDisegnaForma(editorState.tool,startX,startY,p.x,p.y,editorState.color,editorState.size,true);
+    }
+  };
+  const up=e=>{
+    e.preventDefault();
+    if(!drawing)return;drawing=false;
+    const p=getP(e);
+    const annot={tool:editorState.tool,color:editorState.color,size:editorState.size,x1:startX,y1:startY,x2:p.x,y2:p.y};
+    if(editorState.tool==='penna')annot.points=[...penPoints];
+    editorState.annotations.push(annot);
+    editorState.history.push([...editorState.annotations]);
+    editorRidisegna();
+  };
+  canvas.addEventListener('mousedown',down);canvas.addEventListener('mousemove',move);canvas.addEventListener('mouseup',up);
+  canvas.addEventListener('touchstart',down,{passive:false});canvas.addEventListener('touchmove',move,{passive:false});canvas.addEventListener('touchend',up,{passive:false});
+}
+
+function editorDisegnaForma(tool,x1,y1,x2,y2,color,size,preview){
+  const ctx=editorState.ctx;
+  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=size;ctx.lineCap='round';
+  if(tool==='freccia'){
+    // Linea
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    // Punta freccia
+    const angle=Math.atan2(y2-y1,x2-x1);
+    const hl=14+size*2;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-hl*Math.cos(angle-0.4),y2-hl*Math.sin(angle-0.4));
+    ctx.lineTo(x2-hl*Math.cos(angle+0.4),y2-hl*Math.sin(angle+0.4));
+    ctx.closePath();ctx.fill();
+  } else if(tool==='cerchio'){
+    const rx=Math.abs(x2-x1)/2,ry=Math.abs(y2-y1)/2;
+    ctx.beginPath();ctx.ellipse(x1+rx*Math.sign(x2-x1),y1+ry*Math.sign(y2-y1),rx,ry,0,0,Math.PI*2);ctx.stroke();
+  } else if(tool==='rettangolo'){
+    ctx.beginPath();ctx.strokeRect(x1,y1,x2-x1,y2-y1);
+  }
+}
+
+function editorRidisegna(){
+  const {canvas,ctx,img,ratio,annotations}=editorState;
+  if(!canvas||!ctx||!img)return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(img,0,0,canvas.width,canvas.height);
+  annotations.forEach(a=>{
+    ctx.strokeStyle=a.color;ctx.fillStyle=a.color;ctx.lineWidth=a.size;ctx.lineCap='round';ctx.lineJoin='round';
+    if(a.tool==='penna'&&a.points){
+      ctx.beginPath();
+      a.points.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+      ctx.stroke();
+    } else if(a.tool==='nota'&&a.text){
+      ctx.font=`bold ${14+(a.size||2)*2}px sans-serif`;
+      ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(a.x1-2,a.y1-18,ctx.measureText(a.text).width+8,22);
+      ctx.fillStyle=a.color;ctx.fillText(a.text,a.x1+2,a.y1);
+    } else {
+      editorDisegnaForma(a.tool,a.x1,a.y1,a.x2,a.y2,a.color,a.size,false);
+    }
+  });
+}
+
+function editorAggiungiNota(){
+  const inp=$('edNotaInput');const col=$('edNotaColor');
+  const text=inp?.value?.trim();if(!text)return;
+  const canvas=editorState.canvas;
+  // Posiziona al centro
+  const a={tool:'nota',text,color:col?.value||'#ffff00',size:editorState.size,x1:Math.round(canvas.width*0.1),y1:Math.round(canvas.height*0.5)};
+  editorState.annotations.push(a);
+  editorRidisegna();
+  if(inp)inp.value='';
+  toast('✓ Nota aggiunta — salva per conservarla');
+}
+
+function editorUndo(){
+  if(!editorState.annotations.length)return;
+  editorState.annotations.pop();
+  editorRidisegna();
+}
+
+async function editorSalva(){
+  const {canvas,lid,fid,annotations}=editorState;
+  if(!canvas||!lid||!fid)return;
+  try{
+    // Salva annotazioni nel documento Firestore
+    await DB.collection('locations').doc(lid).collection('fotos').doc(fid).update({
+      annotazioni:annotations,
+      annotataIl:new Date().toISOString()
+    });
+    // Salva anche l'immagine annotata su Storage come preview
+    canvas.toBlob(async blob=>{
+      try{
+        const STOR=firebase.storage();
+        const ref=STOR.ref(`locations/${lid}/annotate/${fid}_annot.jpg`);
+        await ref.put(blob);
+        const urlAnnot=await ref.getDownloadURL();
+        await DB.collection('locations').doc(lid).collection('fotos').doc(fid).update({urlAnnotata:urlAnnot});
+      }catch(e){console.warn('Salva annotazione:',e);}
+    },'image/jpeg',0.85);
+    toast('✅ Annotazioni salvate');
+    chiudiEditor();
+    setTimeout(()=>loadLocFotos(lid),500);
+  }catch(e){toast('Errore salvataggio: '+e.message,'r');}
+}
+
+function chiudiEditor(){
+  const ed=$('fotoEditor');
+  if(ed)ed.remove();
+  editorState={...editorState,canvas:null,ctx:null,annotations:[],history:[],img:null};
 }
 
 async function handleLocPhotos(e,lid){
