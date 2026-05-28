@@ -568,38 +568,38 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       </div>
       <!-- KPI riga 1 -->
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
-        <div class="card" style="padding:18px;text-align:center">
+        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('team')" title="Vai al team">
           <div style="font-size:32px;font-weight:800;color:var(--ac2)" id="kpiTeam">—</div>
           <div style="font-size:12px;color:var(--tx2);margin-top:4px">👥 Team attivo</div>
         </div>
-        <div class="card" style="padding:18px;text-align:center">
+        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('presenze')" title="Vai alle presenze">
           <div style="font-size:32px;font-weight:800;color:#22c55e" id="kpiPresenti">—</div>
           <div style="font-size:12px;color:var(--tx2);margin-top:4px">🟢 Presenti oggi</div>
         </div>
-        <div class="card" style="padding:18px;text-align:center">
+        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('dichiarazione')" title="Vai ai lavori">
           <div style="font-size:32px;font-weight:800;color:#ef4444" id="kpiLavori">—</div>
           <div style="font-size:12px;color:var(--tx2);margin-top:4px">📋 Lavori in corso</div>
         </div>
-        <div class="card" style="padding:18px;text-align:center">
+        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('magazzino')" title="Vai al magazzino">
           <div style="font-size:32px;font-weight:800;color:var(--am)" id="kpiMagazzino">—</div>
           <div style="font-size:12px;color:var(--tx2);margin-top:4px">📦 Articoli in uso</div>
         </div>
       </div>
       <!-- KPI riga 2 -->
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px">
-        <div class="card" style="padding:18px;text-align:center">
+        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('calendario')" title="Vai al calendario">
           <div style="font-size:32px;font-weight:800;color:#7c3aed" id="kpiLavoriMese">—</div>
           <div style="font-size:12px;color:var(--tx2);margin-top:4px">📅 Lavori questo mese</div>
         </div>
-        <div class="card" style="padding:18px;text-align:center">
+        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('magazzino')" title="Vai al magazzino">
           <div style="font-size:32px;font-weight:800;color:#22c55e" id="kpiMagDisp">—</div>
           <div style="font-size:12px;color:var(--tx2);margin-top:4px">✅ Articoli disponibili</div>
         </div>
-        <div class="card" style="padding:18px;text-align:center">
+        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('forum')" title="Vai al forum">
           <div style="font-size:32px;font-weight:800;color:var(--tx2)" id="kpiForumPost">—</div>
           <div style="font-size:12px;color:var(--tx2);margin-top:4px">💬 Post forum</div>
         </div>
-        <div class="card" style="padding:18px;text-align:center">
+        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="apriTurniDaConfermare()" title="Vedi turni da confermare">
           <div style="font-size:32px;font-weight:800;color:#f59e0b" id="kpiTurniConf">—</div>
           <div style="font-size:12px;color:var(--tx2);margin-top:4px">⏳ Turni da confermare</div>
         </div>
@@ -1328,7 +1328,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.23</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.24</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -1452,6 +1452,16 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 </div>
 
 <!-- EXPORT PRESENZE -->
+<div class="mol" id="mTurniConf" onclick="if(event.target===this)closeMod('mTurniConf')">
+  <div class="msh" style="max-height:85vh;overflow-y:auto">
+    <div class="mhd"></div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px">⏳ Turni da confermare</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:14px" id="turniConfSubtitle">—</div>
+    <div id="turniConfList"></div>
+    <button class="btn btn-f" style="margin-top:12px" onclick="closeMod('mTurniConf')">Chiudi</button>
+  </div>
+</div>
+
 <div class="mol" id="mExport" onclick="if(event.target===this)closeMod('mExport')">
   <div class="msh">
     <div class="mhd"></div>
@@ -3803,15 +3813,31 @@ async function smGeneraPDF(){
 // ── EXPORT PRESENZE ──
 function openExport(){
   closeMod('mProfile');
+  const canManage=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
   const sel=document.getElementById('expDip');
-  if(isResponsabile()){
-    // Responsabile vede tutti
-    sel.innerHTML='<option value="all">Tutti i dipendenti</option>';
-    cacheTeam.forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.nome+' '+m.cognome;sel.appendChild(o);});
+  if(canManage){
+    sel.innerHTML='<option value="all">— Tutti i dipendenti —</option>';
+    // Raggruppa per tipo
+    const dipendenti=cacheTeam.filter(m=>m.approvato&&m.ruolo!=='Collaboratore esterno');
+    const collab=cacheTeam.filter(m=>m.approvato&&m.ruolo==='Collaboratore esterno');
+    dipendenti.forEach(m=>{
+      const o=document.createElement('option');
+      o.value=m.id;
+      o.textContent=m.nome+' '+m.cognome+' ('+m.ruolo+')';
+      sel.appendChild(o);
+    });
+    if(collab.length){
+      const sep=document.createElement('option');sep.disabled=true;sep.textContent='── Collaboratori esterni ──';sel.appendChild(sep);
+      collab.forEach(m=>{
+        const o=document.createElement('option');
+        o.value=m.id;
+        o.textContent=m.nome+' '+m.cognome+' (Collaboratore)';
+        sel.appendChild(o);
+      });
+    }
     sel.disabled=false;
     sel.parentElement.style.display='block';
   } else {
-    // Dipendente normale — solo se stesso, select nascosto
     sel.innerHTML='';
     const o=document.createElement('option');o.value=USER.id;o.textContent=USER.nome+' '+USER.cognome;
     sel.appendChild(o);
@@ -5422,6 +5448,35 @@ function getStatoLavoro(lav){
   return{color:'#9ca3af',pallino:'⚪',label:'⚪ Da preparare',bg:'rgba(156,163,175,.08)',bd:'#9ca3af'};
 }
 // ── DASHBOARD KPI ──
+function apriTurniDaConfermare(){
+  const oggi=toLocalISO(new Date());
+  const turni=cacheAgenda.filter(t=>!t.confermato&&t.data>=oggi).sort((a,b)=>a.data.localeCompare(b.data));
+  const sub=$('turniConfSubtitle');
+  if(sub)sub.textContent=turni.length+' turni in attesa di conferma';
+  const el=$('turniConfList');
+  if(!el)return;
+  if(!turni.length){
+    el.innerHTML='<div class="empty">✅ Tutti i turni sono stati confermati</div>';
+  } else {
+    el.innerHTML=turni.map(t=>{
+      const dataStr=fmtData(t.data,{weekday:'short',day:'2-digit',month:'short'});
+      return`<div style="padding:10px 12px;background:var(--bg2);border-radius:var(--rs);margin-bottom:6px;border-left:3px solid var(--am)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div>
+            <div style="font-size:13px;font-weight:600">${t.nome||'—'}</div>
+            <div style="font-size:11px;color:var(--tx2);margin-top:2px">
+              📅 ${dataStr} · 📍 ${t.location||'—'}
+            </div>
+            ${t.note?`<div style="font-size:11px;color:var(--tx3);margin-top:2px">📝 ${t.note}</div>`:''}
+          </div>
+          <span style="font-size:10px;color:var(--am);border:1px solid var(--am);border-radius:8px;padding:2px 8px;white-space:nowrap;flex-shrink:0">⏳ In attesa</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  openMod('mTurniConf');
+}
+
 function renderDashboard(){
   const oggi=toLocalISO(new Date());
   const ora=new Date().toLocaleString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
