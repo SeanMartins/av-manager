@@ -1357,7 +1357,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.35</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.36</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -2088,8 +2088,10 @@ function startListeners(){
     cacheTeam.sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
     $('nTeam').textContent=cacheTeam.length;
     renderPresenze();renderTeam();
-    // Aggiorna chat se aperta
-    if($('p-chat')&&$('p-chat').classList.contains('on')) renderChatTeam();
+    // Aggiorna chat sempre (anche senza messaggi precedenti)
+    renderChatTeam();
+    // Aggiorna dashboard se aperta
+    if($('p-dashboard')&&$('p-dashboard').classList.contains('on')) renderDashboard();
   });
   // Presenze oggi — usa range esplicito per evitare problemi timezone
   const todayStart=new Date();todayStart.setHours(0,0,0,0);
@@ -2100,10 +2102,11 @@ function startListeners(){
     .onSnapshot(snap=>{
       cachePresenze=snap.docs.map(d=>({id:d.id,...d.data()}));
       renderPresenze();
-      // Aggiorna "Le mie ore" in tempo reale
       if($('mieOreTable')&&$('p-presenze')&&$('p-presenze').classList.contains('on')){
         renderMieOre();
       }
+      // Aggiorna dashboard se aperta
+      if($('p-dashboard')&&$('p-dashboard').classList.contains('on')) renderDashboard();
     });
   // Forum — realtime con notifiche
   let forumFirstLoad=true;
@@ -4616,11 +4619,11 @@ function startDichListener(){
   DB.collection('lavori').orderBy('createdAt','desc').onSnapshot(snap=>{
     cacheDich=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderDich();
-    // Aggiorna disponibilità magazzino quando cambiano i lavori
     renderMag();
     if($('magTabStatus')&&$('magTabStatus').style.display!=='none') renderStatusMag();
     if($('magTabStats')&&$('magTabStats').style.display!=='none') renderStatsMag();
     if($('magTabLavori')&&$('magTabLavori').style.display!=='none') renderMagLavori();
+    if($('p-dashboard')&&$('p-dashboard').classList.contains('on')) renderDashboard();
   });
 }
 
