@@ -1214,13 +1214,15 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div class="ig"><label class="il">🔴 Uscita</label><input type="time" id="atUscita"></div>
     </div>
     <div class="ig"><label class="il">Luogo</label>
-      <select id="atLuogo">
-        <option>🏢 In sede</option>
-        <option>🔧 Assistenza</option>
-        <option>✈️ Trasferta</option>
-        <option>📍 Altro (specifica)</option>
-        <option>🤒 Malattia</option>
+      <select id="atLuogo" onchange="atLuogoChange(this)">
+        <option value="🏢 In sede">🏢 In sede</option>
+        <option value="🔧 Assistenza">🔧 Assistenza</option>
+        <option value="✈️ Trasferta">✈️ Trasferta</option>
+        <option value="📍 Altro">📍 Altro</option>
+        <option value="🤒 Malattia">🤒 Malattia</option>
       </select>
+      <!-- Campo testo libero per dettaglio luogo -->
+      <input type="text" id="atLuogoExtra" placeholder="Specifica dove... (es: Hotel Villa Rosa, Firenze)" style="margin-top:6px;display:none">
     </div>
     <!-- Pause -->
     <div style="margin-bottom:10px">
@@ -1357,7 +1359,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
-    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.36</div>
+    <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.37</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
   </div>
 </div>
@@ -8194,12 +8196,59 @@ function editTimb(id){
     $('atData').value=r.entrata?new Date(r.entrata).toISOString().slice(0,10):'';
     $('atEntrata').value=fmtTime(r.entrata);
     $('atUscita').value=fmtTime(r.uscita);
-    $('atLuogo').value=r.luogo||'🏢 In sede';
+    atSetLuogo(r.luogo||'🏢 In sede');
     $('atNota').value=r.notaModifica||'';
     atPause=[...(r.pause||[])];
     renderAtPause();
     openMod('mAddTimb');
   });
+}
+
+function atLuogoChange(sel){
+  const extra=$('atLuogoExtra');if(!extra)return;
+  const v=sel.value;
+  // Mostra campo testo per Assistenza, Trasferta e Altro
+  const needsExtra=v.includes('Assistenza')||v.includes('Trasferta')||v.includes('Altro');
+  extra.style.display=needsExtra?'block':'none';
+  if(needsExtra){
+    extra.placeholder=v.includes('Assistenza')?'Specifica dove (es: Hotel Villa Rosa, Firenze)':
+      v.includes('Trasferta')?'Specifica destinazione (es: Milano, Roma)':
+      'Specifica luogo...';
+    extra.focus();
+  } else {
+    extra.value='';
+  }
+}
+
+function atGetLuogo(){
+  const sel=$('atLuogo');
+  const extra=$('atLuogoExtra');
+  const v=sel?.value||'🏢 In sede';
+  const extraVal=(extra?.value||'').trim();
+  if(extraVal&&(v.includes('Assistenza')||v.includes('Trasferta')||v.includes('Altro'))){
+    return v+' — '+extraVal;
+  }
+  return v;
+}
+
+function atSetLuogo(luogo){
+  const sel=$('atLuogo');
+  const extra=$('atLuogoExtra');
+  if(!sel||!extra)return;
+  // Controlla se contiene un dettaglio dopo " — "
+  const sep=luogo.indexOf(' — ');
+  if(sep>=0){
+    const base=luogo.substring(0,sep);
+    const det=luogo.substring(sep+3);
+    // Trova l'opzione più vicina
+    const opt=Array.from(sel.options).find(o=>o.value.replace(/[🏢🔧✈️📍🤒] /,'').includes(base.replace(/[🏢🔧✈️📍🤒] /,'')));
+    if(opt){sel.value=opt.value;extra.value=det;extra.style.display='block';}
+    else{sel.value='📍 Altro';extra.value=luogo;extra.style.display='block';}
+  } else {
+    const opt=Array.from(sel.options).find(o=>o.value===luogo||luogo.startsWith(o.value));
+    sel.value=opt?opt.value:'🏢 In sede';
+    extra.value='';extra.style.display='none';
+  }
 }
 
 function apriNuovaTimb(){
@@ -8209,7 +8258,7 @@ function apriNuovaTimb(){
   $('atData').value=$('gestTimbData')?.value||toLocalISO(new Date());
   $('atEntrata').value='09:00';
   $('atUscita').value='18:00';
-  $('atLuogo').value='🏢 In sede';
+  atSetLuogo('🏢 In sede');
   $('atNota').value='';
   atPause=[];renderAtPause();
   popolaAtDip(null);
@@ -8266,7 +8315,7 @@ async function saveTimb(){
   }).filter(p=>p.inizio);
   const doc={
     uid,nome:m?m.nome+' '+m.cognome:'—',
-    entrata,uscita,luogo:val('atLuogo'),
+    entrata,uscita,luogo:atGetLuogo(),
     pause,
     notaModifica:val('atNota')||'Modifica manuale',
     modificatoDa:USER.nome+' '+USER.cognome,
