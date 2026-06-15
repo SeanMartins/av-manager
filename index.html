@@ -1025,6 +1025,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       </div>
       <input type="hidden" id="nlcStato" value="confermato">
     </div>
+    <div class="ig"><label class="il">📝 Note</label><textarea id="nlcNote" placeholder="Note aggiuntive sull'evento..." style="min-height:70px"></textarea></div>
     <!-- Upload PDF -->
     <div class="ig">
       <label class="il">📎 Documenti lavoro (PDF)</label>
@@ -6755,11 +6756,11 @@ async function calCambiaStato(id, nuovoStato){
   }catch(e){toast('Errore: '+e.message,'r');}
 }
 
-async function calSostituisciLavoro(id){
+function calSostituisciLavoro(id){
   const lav=cacheLavoriCal.find(l=>l.id===id);if(!lav)return;
   if(!confirm('⚠️ Sostituire la scheda "'+lav.nome+'"?\n\nLa vecchia scheda verrà eliminata e sostituita con una nuova.'))return;
   // Apri il form precompilato
-  await modificaLavoroCal(id);
+  modificaLavoroCal(id);
   // Segna che dopo il salvataggio va eliminata la vecchia
   setTimeout(()=>{
     toast('🔄 Modifica e salva — la vecchia scheda sarà eliminata','a');
@@ -6859,12 +6860,12 @@ async function modificaLavoroCal(id){
   calEditingId=id;
   nlcPdfFiles=[];
   renderNlcPdfList();
-  $('mNLCTitolo').textContent='✏️ Modifica lavoro';
-  $('nlcNome').value=lav.nome||'';
-  $('nlcData').value=lav.data||'';
-  $('nlcDataFine').value=lav.dataFine||'';
-  $('nlcNote').value=lav.note||'';
-  $('nlcDeleteBtn').style.display='block';
+  const mTit=$('mNLCTitolo');if(mTit)mTit.textContent='✏️ Modifica lavoro';
+  const nm=$('nlcNome');if(nm)nm.value=lav.nome||'';
+  const da=$('nlcData');if(da)da.value=lav.data||'';
+  const df=$('nlcDataFine');if(df)df.value=lav.dataFine||'';
+  const nt=$('nlcNote');if(nt)nt.value=lav.note||'';
+  const db=$('nlcDeleteBtn');if(db)db.style.display='block';
   setStatoCal(lav.stato||'confermato');
   nlcPopola(lav.location||'', lav.tecnicoUid||'');
   openMod('mNuovoLavoroCal');
