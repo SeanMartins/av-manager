@@ -6755,11 +6755,11 @@ async function calCambiaStato(id, nuovoStato){
   }catch(e){toast('Errore: '+e.message,'r');}
 }
 
-function calSostituisciLavoro(id){
+async function calSostituisciLavoro(id){
   const lav=cacheLavoriCal.find(l=>l.id===id);if(!lav)return;
   if(!confirm('⚠️ Sostituire la scheda "'+lav.nome+'"?\n\nLa vecchia scheda verrà eliminata e sostituita con una nuova.'))return;
   // Apri il form precompilato
-  modificaLavoroCal(id);
+  await modificaLavoroCal(id);
   // Segna che dopo il salvataggio va eliminata la vecchia
   setTimeout(()=>{
     toast('🔄 Modifica e salva — la vecchia scheda sarà eliminata','a');
@@ -6850,12 +6850,11 @@ function apriNuovoLavoroCal(dataDefault=''){
 async function modificaLavoroCal(id){
   let lav=cacheLavoriCal.find(l=>l.id===id);
   if(!lav){
-    // Fallback: leggi direttamente da Firestore se la cache non è ancora aggiornata
     try{
       const snap=await DB.collection('lavori_cal').doc(id).get();
       if(!snap.exists){toast('Lavoro non trovato','r');return;}
       lav={id:snap.id,...snap.data()};
-    }catch(e){toast('Errore nel caricamento: '+e.message,'r');return;}
+    }catch(e){toast('Errore caricamento: '+e.message,'r');return;}
   }
   calEditingId=id;
   nlcPdfFiles=[];
@@ -6870,6 +6869,7 @@ async function modificaLavoroCal(id){
   nlcPopola(lav.location||'', lav.tecnicoUid||'');
   openMod('mNuovoLavoroCal');
 }
+window.modificaLavoroCal=modificaLavoroCal;
 
 let nlcPdfFiles=[];
 
