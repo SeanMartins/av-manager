@@ -6847,8 +6847,16 @@ function apriNuovoLavoroCal(dataDefault=''){
   openMod('mNuovoLavoroCal');
 }
 
-function modificaLavoroCal(id){
-  const lav=cacheLavoriCal.find(l=>l.id===id);if(!lav)return;
+async function modificaLavoroCal(id){
+  let lav=cacheLavoriCal.find(l=>l.id===id);
+  if(!lav){
+    // Fallback: leggi direttamente da Firestore se la cache non è ancora aggiornata
+    try{
+      const snap=await DB.collection('lavori_cal').doc(id).get();
+      if(!snap.exists){toast('Lavoro non trovato','r');return;}
+      lav={id:snap.id,...snap.data()};
+    }catch(e){toast('Errore nel caricamento: '+e.message,'r');return;}
+  }
   calEditingId=id;
   nlcPdfFiles=[];
   renderNlcPdfList();
