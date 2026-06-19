@@ -7090,12 +7090,14 @@ function renderAgendaDip(){
   days.forEach((d,i)=>{
     const ds=toLocalISO(d);
     const isToday=d.toDateString()===today;
+    const festivita=getFestivitaItaliane(d.getFullYear()).find(f=>f.data===ds);
     const turni=cacheAgenda.filter(t=>t.uid===USER.id&&t.data===ds);    h+='<div class="ag-day'+(isToday?' today':'')+'">'+
       '<div class="ag-day-header">'+
         '<span class="ag-day-name">'+GG[i]+'</span>'+
         '<span class="ag-day-date">'+d.toLocaleDateString('it-IT',{day:'2-digit',month:'short'})+'</span>'+
-      '</div>';
-    if(!turni.length){h+='<div class="ag-empty">Nessun turno assegnato</div>';}
+      '</div>'+
+      (festivita?'<div style="font-size:11px;font-weight:600;color:var(--rd);background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:4px 8px;margin-bottom:6px">🎌 '+festivita.nome+'</div>':'');
+    if(!turni.length){h+='<div class="ag-empty">'+(festivita?'Giorno festivo':'Nessun turno assegnato')+'</div>';}
     else turni.forEach(t=>{
       const c=TURNO_COLORS[t.tipo]||TURNO_COLORS.lavoro;
       const confBadge=t.confermato
@@ -7148,6 +7150,7 @@ function renderAgendaAdmin(){
   days.forEach((d,i)=>{
     const ds=toLocalISO(d);
     const isToday=d.toDateString()===today;
+    const festivita=getFestivitaItaliane(d.getFullYear()).find(f=>f.data===ds);
     let turni=cacheAgenda.filter(t=>t.data===ds);
     if(filterUid!=='all')turni=turni.filter(t=>t.uid===filterUid);
     h+='<div class="ag-day'+(isToday?' today':'')+'">'+
@@ -7155,7 +7158,8 @@ function renderAgendaAdmin(){
         '<span class="ag-day-name">'+GG[i]+'</span>'+
         '<span class="ag-day-date">'+d.toLocaleDateString('it-IT',{day:'2-digit',month:'short'})+'</span>'+
         '<span class="bdg ba" style="font-size:10px">'+turni.length+' turni</span>'+
-      '</div>';
+      '</div>'+
+      (festivita?'<div style="font-size:11px;font-weight:600;color:var(--rd);background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:4px 8px;margin-bottom:6px">🎌 '+festivita.nome+'</div>':'');
     if(!turni.length){h+='<div class="ag-empty">Nessun turno</div>';}
     else {
       // Raggruppa per dipendente se "tutti"
@@ -8439,8 +8443,11 @@ function renderCalendario(){
   for(let i=0;i<offsetLun;i++)h+='<div style="min-height:52px"></div>';
 
   for(let g=1;g<=giorniMese;g++){
-    const isOggi=`${calAnno}-${pad(calMese+1)}-${pad(g)}`===oggi;
+    const dataGISO=`${calAnno}-${pad(calMese+1)}-${pad(g)}`;
+    const isOggi=dataGISO===oggi;
     const isWeekend=new Date(calAnno,calMese,g).getDay()===0||new Date(calAnno,calMese,g).getDay()===6;
+    const festivita=getFestivitaItaliane(calAnno).find(f=>f.data===dataGISO);
+    const isFestivo=!!festivita;
     const lavoriG=byDay[g]||[];
     const colorMap={pianificato:'#f59e0b',preparato:'#6c63ff',rientrato:'#64748b'};
     const dots=lavoriG.slice(0,3).map(d=>{
@@ -8452,11 +8459,12 @@ function renderCalendario(){
       const s=getStatoLavoro(d);
       return`<div class="cal-nome" style="display:none;font-size:10px;font-weight:500;color:#fff;background:${s.color};border-radius:3px;padding:1px 5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.nome||'—'}</div>`;
     }).join('');
-    const canAdd=(isResponsabile()||isAdmin())&&!isWeekend;
+    const canAdd=(isResponsabile()||isAdmin())&&!isWeekend&&!isFestivo;
     h+=`<div onclick="calApriGiorno(${g})" ${canAdd?`ondblclick="calNuovoGiorno(${g})"`:''}
-      class="cal-cell"
-      style="min-height:52px;border-radius:6px;background:${isOggi?'var(--acb)':isWeekend?'rgba(255,255,255,.02)':'var(--bg1)'};border:1px solid ${isOggi?'var(--ac)':'var(--b)'};padding:4px 5px;cursor:pointer;position:relative">
-      <div style="font-size:11px;font-weight:${isOggi?700:400};color:${isOggi?'var(--ac2)':isWeekend?'var(--tx3)':'var(--tx)'}">${g}</div>
+      class="cal-cell" title="${isFestivo?festivita.nome:''}"
+      style="min-height:52px;border-radius:6px;background:${isOggi?'var(--acb)':isFestivo?'rgba(239,68,68,.07)':isWeekend?'rgba(255,255,255,.02)':'var(--bg1)'};border:1px solid ${isOggi?'var(--ac)':isFestivo?'rgba(239,68,68,.25)':'var(--b)'};padding:4px 5px;cursor:pointer;position:relative">
+      <div style="font-size:11px;font-weight:${isOggi?700:400};color:${isOggi?'var(--ac2)':isFestivo?'var(--rd)':isWeekend?'var(--tx3)':'var(--tx)'}">${g}</div>
+      ${isFestivo?`<div style="font-size:8px;color:var(--rd);font-weight:600;line-height:1.2;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🎌 ${festivita.nome}</div>`:''}
       <div class="cal-dots" style="display:flex;gap:2px;flex-wrap:wrap;margin-top:3px">${dots}</div>
       ${nomiDesk}
       ${lavoriG.length>4?`<div style="font-size:9px;color:var(--tx3);margin-top:2px">+${lavoriG.length-4} altri</div>`:''}
