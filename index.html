@@ -4225,13 +4225,45 @@ function pvRenderRighe(){
     pvUpdateDocPreview();return;
   }
   el.innerHTML=pvRigheCorrenti.map((r,i)=>`
-    <div style="display:grid;grid-template-columns:1fr 50px 70px 28px;gap:6px;align-items:center;margin-bottom:6px">
-      <input type="text" value="${(r.nome||'').replace(/"/g,'&quot;')}" placeholder="Descrizione" oninput="pvRigheCorrenti[${i}].nome=this.value" style="padding:8px;font-size:12px">
-      <input type="number" value="${r.qty}" min="0" step="1" oninput="pvRigheCorrenti[${i}].qty=parseFloat(this.value)||0;pvUpdateDocPreview()" style="padding:8px;font-size:12px;text-align:center">
-      <input type="number" value="${r.prezzo}" min="0" step="0.01" oninput="pvRigheCorrenti[${i}].prezzo=parseFloat(this.value)||0;pvUpdateDocPreview()" style="padding:8px;font-size:12px;text-align:right">
-      <button onclick="pvRigheCorrenti.splice(${i},1);pvRenderRighe()" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">✕</button>
+    <div style="position:relative;margin-bottom:6px">
+      <div style="display:grid;grid-template-columns:1fr 50px 70px 28px;gap:6px;align-items:center">
+        <input type="text" value="${(r.nome||'').replace(/"/g,'&quot;')}" placeholder="Descrizione" autocomplete="off"
+          oninput="pvRigheCorrenti[${i}].nome=this.value;pvShowSuggest(${i},this.value)"
+          onfocus="pvShowSuggest(${i},this.value)"
+          onblur="setTimeout(()=>pvHideSuggest(${i}),150)"
+          style="padding:8px;font-size:12px">
+        <input type="number" value="${r.qty}" min="0" step="1" oninput="pvRigheCorrenti[${i}].qty=parseFloat(this.value)||0;pvUpdateDocPreview()" style="padding:8px;font-size:12px;text-align:center">
+        <input type="number" value="${r.prezzo}" min="0" step="0.01" oninput="pvRigheCorrenti[${i}].prezzo=parseFloat(this.value)||0;pvUpdateDocPreview()" style="padding:8px;font-size:12px;text-align:right">
+        <button onclick="pvRigheCorrenti.splice(${i},1);pvRenderRighe()" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">✕</button>
+      </div>
+      <div id="pvSuggest_${i}" style="display:none;position:absolute;top:100%;left:0;right:78px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--rs);margin-top:2px;max-height:160px;overflow-y:auto;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.3)"></div>
     </div>`).join('');
   pvUpdateDocPreview();
+}
+
+function pvShowSuggest(i,query){
+  const box=$('pvSuggest_'+i);if(!box)return;
+  const q=(query||'').trim().toLowerCase();
+  if(!q){box.style.display='none';box.innerHTML='';return;}
+  const matches=cachePvListino.filter(v=>(v.nome||'').toLowerCase().includes(q)).slice(0,6);
+  if(!matches.length){box.style.display='none';box.innerHTML='';return;}
+  box.innerHTML=matches.map(v=>`
+    <div onmousedown="pvApplySuggest(${i},'${v.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--b);font-size:12px">
+      <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:8px">${v.nome}</span>
+      <span style="color:var(--ac2);font-weight:600;white-space:nowrap">${fmtEuro(v.prezzo)}</span>
+    </div>`).join('');
+  box.style.display='block';
+}
+
+function pvHideSuggest(i){
+  const box=$('pvSuggest_'+i);if(box){box.style.display='none';}
+}
+
+function pvApplySuggest(i,voceId){
+  const v=cachePvListino.find(x=>x.id===voceId);if(!v)return;
+  pvRigheCorrenti[i]={...pvRigheCorrenti[i],nome:v.nome,prezzo:v.prezzo,um:v.um,fonte:'listino',listinoId:v.id};
+  pvHideSuggest(i);
+  pvRenderRighe();
 }
 
 function pvCalcolaTotali(){
