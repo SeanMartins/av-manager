@@ -724,6 +724,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
       <!-- TAB: PREVENTIVI (documenti) -->
       <div id="pvTab_doc" style="display:none">
+        <div id="pvStatsBar" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px"></div>
         <button class="btn btn-p btn-f" style="margin-bottom:12px" onclick="pvOpenNuovoPreventivo()">+ Nuovo preventivo</button>
         <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto">
           <button class="chip on" onclick="pvFiltraStato('tutti',this)" data-stato="tutti">Tutti</button>
@@ -4139,15 +4140,44 @@ function pvFiltraStato(stato,btn){
 const PV_STATO_LABEL={bozza:'⚪ Bozza',inviato:'🔵 Inviato',accettato:'🟢 Accettato',rifiutato:'🔴 Rifiutato'};
 const PV_STATO_COLOR={bozza:'var(--tx3)',inviato:'var(--ac2)',accettato:'var(--gn)',rifiutato:'var(--rd)'};
 
+function pvRenderStats(){
+  const bar=$('pvStatsBar');if(!bar)return;
+  const now=new Date();
+  const meseCorrente=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const delMese=cachePvDoc.filter(d=>(d.createdAt||'').startsWith(meseCorrente));
+  const inviatiOAltro=delMese.filter(d=>d.stato!=='bozza');
+  const accettati=delMese.filter(d=>d.stato==='accettato');
+  const tassoAccettazione=inviatiOAltro.length?Math.round(accettati.length/inviatiOAltro.length*100):0;
+  const valoreAccettati=cachePvDoc.filter(d=>d.stato==='accettato'&&(d.createdAt||'').startsWith(meseCorrente)).reduce((s,d)=>s+(d.totale||0),0);
+
+  const card=(label,value,color)=>`<div style="background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);padding:10px;text-align:center">
+    <div style="font-size:18px;font-weight:800;color:${color||'var(--tx)'}">${value}</div>
+    <div style="font-size:9px;color:var(--tx2);text-transform:uppercase;letter-spacing:.3px;margin-top:2px">${label}</div>
+  </div>`;
+  bar.innerHTML=card('Preventivi mese',delMese.length)+
+    card('% Accettati',tassoAccettazione+'%','var(--gn)')+
+    card('Valore accettato',fmtEuro(valoreAccettati).replace('€ ',''),'var(--ac2)');
+}
+
+function pvIsScaduto(d){
+  if(d.stato==='accettato'||d.stato==='rifiutato')return false; // chiusi, non serve avviso
+  if(!d.createdAt||!d.validitaGiorni)return false;
+  const scadenza=new Date(d.createdAt);
+  scadenza.setDate(scadenza.getDate()+parseInt(d.validitaGiorni));
+  return new Date()>scadenza;
+}
+
 function renderPvDocList(){
   const list=$('pvDocList');if(!list)return;
+  pvRenderStats();
   const filtered=pvFiltroStato==='tutti'?cachePvDoc:cachePvDoc.filter(d=>d.stato===pvFiltroStato);
   if(!filtered.length){list.innerHTML='<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessun preventivo'+(pvFiltroStato!=='tutti'?' in questo stato':' — creane uno!')+'</div>';return;}
   list.innerHTML=filtered.map(d=>{
     const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
-    return `<div onclick="pvViewDoc('${d.id}')" class="row" style="align-items:center;padding:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px;cursor:pointer">
+    const scaduto=pvIsScaduto(d);
+    return `<div onclick="pvViewDoc('${d.id}')" class="row" style="align-items:center;padding:12px;background:var(--bg1);border:1px solid ${scaduto?'var(--am)':'var(--b)'};border-radius:var(--rs);margin-bottom:8px;cursor:pointer">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600">${d.numero||'—'} · ${d.oggetto||'Senza oggetto'}</div>
+        <div style="font-size:13px;font-weight:600">${d.numero||'—'} · ${d.oggetto||'Senza oggetto'}${scaduto?' <span style="font-size:10px;font-weight:700;color:var(--am);background:var(--amb);padding:1px 6px;border-radius:8px;margin-left:4px">⏰ Scaduto</span>':''}</div>
         <div style="font-size:11px;color:var(--tx2);margin-top:2px">${cliente?cliente.nome:'Cliente eliminato'}</div>
         <div style="font-size:11px;color:var(--tx3);margin-top:2px">${d.dataEvento?new Date(d.dataEvento+'T12:00:00').toLocaleDateString('it-IT'):''}</div>
       </div>
@@ -4322,6 +4352,39 @@ async function pvCambiaStato(docId,nuovoStato){
   try{
     await DB.collection('preventivi').doc(docId).update({stato:nuovoStato,updatedAt:new Date().toISOString()});
     toast('Stato aggiornato: '+PV_STATO_LABEL[nuovoStato]);
+    const d=cachePvDoc.find(x=>x.id===docId);
+    if(nuovoStato==='accettato'&&d&&!d.lavoroCalId){
+      pvViewDoc(docId); // refresh per mostrare lo stato e il bottone "Crea lavoro"
+    } else {
+      pvViewDoc(docId);
+    }
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function pvCreaLavoroDaPreventivo(docId){
+  const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
+  if(d.lavoroCalId){toast('Questo preventivo è già collegato a un lavoro in calendario','a');return;}
+  const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+  if(!d.dataEvento){toast('Aggiungi prima la data evento al preventivo (modifica preventivo)','r');return;}
+  const nomeLavoro=(d.oggetto||'Lavoro')+(cliente?' — '+cliente.nome:'');
+  const noteLavoro='Generato da preventivo '+(d.numero||'')+(cliente?' · Cliente: '+cliente.nome:'')+(d.note?'\n\n'+d.note:'');
+  try{
+    const lavData={
+      nome:nomeLavoro,
+      data:d.dataEvento,
+      dataFine:d.dataEvento,
+      location:cliente?cliente.indirizzo||'':'',
+      note:noteLavoro,
+      tecnicoUid:'',tecnicoNome:'—',
+      stato:'confermato',
+      createdBy:USER.id,
+      preventivoId:d.id,
+      createdAt:new Date().toISOString(),
+      updatedAt:new Date().toISOString()
+    };
+    const ref=await DB.collection('lavori_cal').add(lavData);
+    await DB.collection('preventivi').doc(docId).update({lavoroCalId:ref.id});
+    toast('✓ Lavoro creato in calendario — assegna il tecnico dal Calendario Lavori');
     pvViewDoc(docId);
   }catch(e){toast('Errore: '+e.message,'r');}
 }
@@ -4335,9 +4398,37 @@ async function pvDeleteDoc(docId){
   }catch(e){toast('Errore: '+e.message,'r');}
 }
 
+async function pvDuplicaDoc(docId){
+  const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
+  if(!confirm('Creare una copia di questo preventivo come nuova bozza?'))return;
+  const now=new Date().toISOString();
+  const chi=USER?USER.nome+' '+USER.cognome:'—';
+  const nuovo={
+    clienteId:d.clienteId,
+    oggetto:(d.oggetto||'')+' (copia)',
+    dataEvento:'', // l'evento è probabilmente diverso, lasciamo da compilare
+    validitaGiorni:d.validitaGiorni||30,
+    righe:JSON.parse(JSON.stringify(d.righe||[])),
+    imponibile:d.imponibile,ivaPct:d.ivaPct,iva:d.iva,totale:d.totale,
+    note:d.note||'',
+    numero:pvGeneraNumero(),
+    stato:'bozza',
+    creatoDa:chi,
+    duplicatoDa:d.numero||d.id,
+    createdAt:now,updatedAt:now
+  };
+  try{
+    await DB.collection('preventivi').add(nuovo);
+    toast('✓ Preventivo duplicato: '+nuovo.numero);
+    closeMod('mPvDocView');
+    pvSwitchTab('doc');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
 function pvViewDoc(docId){
   const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
   const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+  const scaduto=pvIsScaduto(d);
   const righeHtml=(d.righe||[]).map(r=>`
     <tr><td style="padding:6px 4px;font-size:12px;border-bottom:1px solid var(--b)">${r.nome}</td>
     <td style="padding:6px 4px;font-size:12px;text-align:center;border-bottom:1px solid var(--b)">${r.qty} ${r.um||''}</td>
@@ -4348,6 +4439,7 @@ function pvViewDoc(docId){
       <div>
         <div class="stl">${d.numero} — ${d.oggetto||''}</div>
         <div style="font-size:12px;color:var(--tx2);margin-top:2px">${cliente?cliente.nome:'Cliente eliminato'}</div>
+        ${scaduto?'<div style="font-size:11px;font-weight:700;color:var(--am);margin-top:4px">⏰ Validità scaduta</div>':''}
       </div>
       <span style="font-size:11px;font-weight:600;color:${PV_STATO_COLOR[d.stato]};white-space:nowrap">${PV_STATO_LABEL[d.stato]}</span>
     </div>
@@ -4365,9 +4457,14 @@ function pvViewDoc(docId){
       <button class="btn btn-f" style="flex:1;font-size:11px;min-width:90px;color:var(--gn)" onclick="pvCambiaStato('${d.id}','accettato')">🟢 Accettato</button>
       <button class="btn btn-f" style="flex:1;font-size:11px;min-width:90px;color:var(--rd)" onclick="pvCambiaStato('${d.id}','rifiutato')">🔴 Rifiutato</button>
     </div>
+    ${d.stato==='accettato'?(d.lavoroCalId
+      ?'<div style="background:var(--gnb);border:1px solid var(--gn);border-radius:var(--rs);padding:10px;margin-bottom:10px;font-size:12px;color:var(--gn);display:flex;align-items:center;gap:6px">✅ Collegato al Calendario Lavori — assegna il tecnico da lì</div>'
+      :'<button class="btn btn-p btn-f" style="margin-bottom:10px;font-size:12px" onclick="pvCreaLavoroDaPreventivo(\''+d.id+'\')">📅 Crea lavoro in Calendario</button>')
+      :''}
     <div style="display:flex;gap:8px">
       <button class="btn btn-f" onclick="pvGeneraPDF('${d.id}')">📄 PDF</button>
       <button class="btn btn-f" onclick="pvOpenModificaPreventivo('${d.id}')">✏️ Modifica</button>
+      <button class="btn btn-f" onclick="pvDuplicaDoc('${d.id}')">📑 Duplica</button>
       <button class="btn btn-f" style="color:var(--rd)" onclick="pvDeleteDoc('${d.id}')">🗑</button>
     </div>`;
   openMod('mPvDocView');
