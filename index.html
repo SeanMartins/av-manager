@@ -1031,6 +1031,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       Gestione turni
     </button>
     <!-- AI Analisi -->
+    <div id="sbPreventiviSection">
     <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Intelligenza Artificiale</div>
     <button class="sidebar-btn" onclick="chiudiSidebar();goPage('preventivi')" style="color:var(--ac2)">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
@@ -1040,6 +1041,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/><circle cx="18" cy="6" r="4" fill="currentColor" opacity=".2" stroke="currentColor"/><path d="M18 4v4"/><path d="M16 6h4"/></svg>
       AI Analisi Preventivi
     </button>
+    </div>
   </div>
 </div>
 
@@ -1934,6 +1936,10 @@ function closeMod(id){
   document.body.style.overflow='';
 }
 function goPage(n){
+  if((n==='preventivi'||n==='ai-preventivi')&&!pvCanAccess()){
+    toast('Accesso riservato a Responsabili e Project Manager','r');
+    return;
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(b=>b.classList.remove('on'));
   $('p-'+n)&&$('p-'+n).classList.add('on');$('n-'+n)&&$('n-'+n).classList.add('on');
@@ -2126,9 +2132,11 @@ function renderDeskNav(){
     {id:'forum',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',label:'Forum'},
     {id:'chat',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9h8"/><path d="M8 13h6"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6l-4 4V7a3 3 0 0 1 3-3h13z"/></svg>',label:'Chat'},
     {id:'dichiarazione',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',label:'Archivio'},
-    {id:'preventivi',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>',label:'Preventivi'},
-    {id:'ai-preventivi',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',label:'AI Preventivi',special:true},
   ];
+  if(pvCanAccess()){
+    pages.push({id:'preventivi',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>',label:'Preventivi'});
+    pages.push({id:'ai-preventivi',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',label:'AI Preventivi',special:true});
+  }
 
   // Sezione principale
   let h='<div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:6px 8px 4px">Menu</div>';
@@ -2169,6 +2177,8 @@ function apriSidebar(){
   const s=$('sidebar'),o=$('sidebarOverlay');
   if(!s||!o)return;
   $('sidebarUser').textContent=(USER?.nome||'')+' '+(USER?.cognome||'')+' · '+(USER?.ruolo||'');
+  const pvSection=$('sbPreventiviSection');
+  if(pvSection)pvSection.style.display=pvCanAccess()?'block':'none';
   s.style.right='0';
   o.style.display='block';
 }
@@ -4361,6 +4371,56 @@ async function pvCambiaStato(docId,nuovoStato){
   }catch(e){toast('Errore: '+e.message,'r');}
 }
 
+function pvGeneraSchedaLavoroPDF(d,cliente){
+  // Scheda lavoro: solo elenco materiali/servizi e dati evento, NESSUN prezzo o totale.
+  // Usata per il documento allegato al Calendario Lavori, visibile anche ai tecnici.
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF();
+  let y=20;
+  doc.setFontSize(18);doc.setFont(undefined,'bold');
+  doc.text('SCHEDA LAVORO',14,y);
+  y+=6;
+  doc.setFontSize(9);doc.setTextColor(120);
+  doc.text('MMG Logistics · Martins Osemwengie',14,y);
+  doc.text('Rif. preventivo: '+(d.numero||'—'),196,y,{align:'right'});
+  y+=12;
+  doc.setTextColor(0);doc.setFontSize(10);doc.setFont(undefined,'bold');
+  doc.text('Cliente:',14,y);y+=5;
+  doc.setFont(undefined,'normal');
+  doc.text(cliente?cliente.nome:'—',14,y);y+=5;
+  if(cliente&&cliente.indirizzo){doc.text(cliente.indirizzo,14,y);y+=5;}
+  if(cliente&&cliente.referente){doc.text('Referente: '+cliente.referente+(cliente.tel?' · '+cliente.tel:''),14,y);y+=5;}
+  y+=4;
+  if(d.oggetto){doc.setFont(undefined,'bold');doc.text('Oggetto: ',14,y);doc.setFont(undefined,'normal');doc.text(d.oggetto,32,y);y+=6;}
+  if(d.dataEvento){doc.text('Data evento: '+new Date(d.dataEvento+'T12:00:00').toLocaleDateString('it-IT'),14,y);y+=8;} else y+=4;
+
+  // Tabella materiali/servizi — niente colonna prezzo/totale
+  doc.setFillColor(240,240,245);
+  doc.rect(14,y,182,7,'F');
+  doc.setFontSize(9);doc.setFont(undefined,'bold');
+  doc.text('Descrizione',16,y+5);doc.text('Quantità',160,y+5);
+  y+=10;
+  doc.setFont(undefined,'normal');
+  (d.righe||[]).forEach(r=>{
+    if(y>270){doc.addPage();y=20;}
+    const nomeLines=doc.splitTextToSize(r.nome||'',135);
+    doc.text(nomeLines,16,y);
+    doc.text(String(r.qty)+(r.um?' '+r.um:''),160,y);
+    y+=Math.max(6,nomeLines.length*5);
+  });
+  y+=8;
+  doc.setDrawColor(220);doc.line(14,y,196,y);y+=8;
+  if(d.note){
+    doc.setFontSize(9);doc.setTextColor(100);
+    const noteLines=doc.splitTextToSize('Note: '+d.note,182);
+    doc.text(noteLines,14,y);y+=noteLines.length*4+6;
+  }
+  doc.setFontSize(8);doc.setTextColor(150);
+  doc.text('Documento ad uso interno/tecnico — non riporta importi economici.',14,285);
+
+  return doc.output('blob');
+}
+
 async function pvCreaLavoroDaPreventivo(docId){
   const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
   if(d.lavoroCalId){toast('Questo preventivo è già collegato a un lavoro in calendario','a');return;}
@@ -4383,8 +4443,24 @@ async function pvCreaLavoroDaPreventivo(docId){
       updatedAt:new Date().toISOString()
     };
     const ref=await DB.collection('lavori_cal').add(lavData);
-    await DB.collection('preventivi').doc(docId).update({lavoroCalId:ref.id});
-    toast('✓ Lavoro creato in calendario — assegna il tecnico dal Calendario Lavori');
+    const lavId=ref.id;
+
+    // Genera e allega la scheda lavoro PDF, senza prezzi, usando lo stesso meccanismo di upload dei documenti lavoro
+    try{
+      const blob=pvGeneraSchedaLavoroPDF(d,cliente);
+      const nomeFile='Scheda_lavoro_'+(d.numero||lavId).replace('/','-')+'.pdf';
+      const file=new File([blob],nomeFile,{type:'application/pdf'});
+      const docs=await uploadPdfLavoro(lavId,[file],nomeLavoro);
+      if(docs.length){
+        await DB.collection('lavori_cal').doc(lavId).update({documenti:docs});
+      }
+    }catch(pdfErr){
+      console.warn('Scheda lavoro PDF non allegata:',pdfErr);
+      toast('Lavoro creato, ma la scheda PDF non è stata allegata automaticamente','a');
+    }
+
+    await DB.collection('preventivi').doc(docId).update({lavoroCalId:lavId});
+    toast('✓ Lavoro creato in calendario con scheda allegata — assegna il tecnico dal Calendario Lavori');
     pvViewDoc(docId);
   }catch(e){toast('Errore: '+e.message,'r');}
 }
@@ -6011,6 +6087,7 @@ const TURNO_ICONS={lavoro:'💼',assistenza:'🔧',trasferta:'✈️',jolly:'�
 function isResponsabile(){return USER&&USER.ruolo==='Responsabile';}
 function isEsterno(){return USER&&USER.ruolo==='Collaboratore esterno';}
 function isAdmin(){return USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile');}
+function pvCanAccess(){return USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');}
 
 function getWeekDates(offset){
   const now=new Date();
