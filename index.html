@@ -4717,6 +4717,11 @@ async function pvCambiaStato(docId,nuovoStato){
   }catch(e){toast('Errore: '+e.message,'r');}
 }
 
+function pvSafeNum(v){
+  const n=parseFloat(v);
+  return isNaN(n)?0:n;
+}
+
 function pvGeneraSchedaLavoroPDF(d,cliente){
   // Scheda lavoro: solo elenco materiali/servizi e dati evento, NESSUN prezzo o totale.
   // Usata per il documento allegato al Calendario Lavori, visibile anche ai tecnici.
@@ -4751,7 +4756,7 @@ function pvGeneraSchedaLavoroPDF(d,cliente){
     if(y>270){doc.addPage();y=20;}
     const nomeLines=doc.splitTextToSize(r.nome||'',135);
     doc.text(nomeLines,16,y);
-    doc.text(String(r.qty)+(r.um?' '+r.um:''),160,y);
+    doc.text(String(pvSafeNum(r.qty))+(r.um?' '+r.um:''),160,y);
     y+=Math.max(6,nomeLines.length*5);
   });
   y+=8;
@@ -4851,11 +4856,13 @@ function pvViewDoc(docId){
   const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
   const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
   const scaduto=pvIsScaduto(d);
-  const righeHtml=(d.righe||[]).map(r=>`
-    <tr><td style="padding:6px 4px;font-size:12px;border-bottom:1px solid var(--b)">${r.nome}</td>
-    <td style="padding:6px 4px;font-size:12px;text-align:center;border-bottom:1px solid var(--b)">${r.qty} ${r.um||''}</td>
-    <td style="padding:6px 4px;font-size:12px;text-align:right;border-bottom:1px solid var(--b)">${fmtEuro(r.prezzo)}</td>
-    <td style="padding:6px 4px;font-size:12px;text-align:right;border-bottom:1px solid var(--b);font-weight:600">${fmtEuro(r.qty*r.prezzo)}</td></tr>`).join('');
+  const righeHtml=(d.righe||[]).map(r=>{
+    const qty=pvSafeNum(r.qty),prezzo=pvSafeNum(r.prezzo);
+    return `<tr><td style="padding:6px 4px;font-size:12px;border-bottom:1px solid var(--b)">${r.nome}</td>
+    <td style="padding:6px 4px;font-size:12px;text-align:center;border-bottom:1px solid var(--b)">${qty} ${r.um||''}</td>
+    <td style="padding:6px 4px;font-size:12px;text-align:right;border-bottom:1px solid var(--b)">${fmtEuro(prezzo)}</td>
+    <td style="padding:6px 4px;font-size:12px;text-align:right;border-bottom:1px solid var(--b);font-weight:600">${fmtEuro(qty*prezzo)}</td></tr>`;
+  }).join('');
   $('pvDocViewBody').innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
       <div>
@@ -4924,11 +4931,12 @@ function pvBuildPreventivoPDF(d,cliente){
   doc.setFont(undefined,'normal');
   (d.righe||[]).forEach(r=>{
     if(y>270){doc.addPage();y=20;}
+    const qty=pvSafeNum(r.qty),prezzo=pvSafeNum(r.prezzo);
     const nomeLines=doc.splitTextToSize(r.nome||'',110);
     doc.text(nomeLines,16,y);
-    doc.text(String(r.qty)+(r.um?' '+r.um:''),130,y);
-    doc.text(fmtEuro(r.prezzo),150,y);
-    doc.text(fmtEuro(r.qty*r.prezzo),182,y,{align:'right'});
+    doc.text(String(qty)+(r.um?' '+r.um:''),130,y);
+    doc.text(fmtEuro(prezzo),150,y);
+    doc.text(fmtEuro(qty*prezzo),182,y,{align:'right'});
     y+=Math.max(6,nomeLines.length*5);
   });
   y+=4;
