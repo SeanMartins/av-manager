@@ -695,6 +695,47 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       </div>
     </div>
 
+    <!-- PREVENTIVI -->
+    <div class="page" id="p-preventivi">
+      <!-- Tab switcher -->
+      <div style="display:flex;gap:6px;margin-bottom:14px;background:var(--bg2);border-radius:var(--rs);padding:3px">
+        <button id="pvTabBtn_clienti" onclick="pvSwitchTab('clienti')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:var(--ac);color:#fff">👤 Clienti</button>
+        <button id="pvTabBtn_listino" onclick="pvSwitchTab('listino')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2)">💶 Listino</button>
+        <button id="pvTabBtn_doc" onclick="pvSwitchTab('doc')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2)">📋 Preventivi</button>
+      </div>
+
+      <!-- TAB: CLIENTI -->
+      <div id="pvTab_clienti">
+        <button class="btn btn-p btn-f" style="margin-bottom:12px" onclick="pvOpenClienteForm()">+ Nuovo cliente</button>
+        <input type="text" id="pvClientiSearch" placeholder="🔍 Cerca cliente..." oninput="renderPvClienti()" style="width:100%;padding:10px;border-radius:var(--rs);border:1px solid var(--b);background:var(--bg2);color:var(--tx);font-family:var(--font);font-size:13px;margin-bottom:10px">
+        <div id="pvClientiList"></div>
+      </div>
+
+      <!-- TAB: LISTINO -->
+      <div id="pvTab_listino" style="display:none">
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="btn btn-p" style="flex:1" onclick="pvOpenListinoForm()">+ Voce listino</button>
+          <button class="btn btn-f" style="flex:1" onclick="$('pvImportExcelInput').click()">📥 Importa Excel</button>
+          <input type="file" id="pvImportExcelInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="pvHandleExcelFile(this)">
+        </div>
+        <input type="text" id="pvListinoSearch" placeholder="🔍 Cerca voce listino..." oninput="renderPvListino()" style="width:100%;padding:10px;border-radius:var(--rs);border:1px solid var(--b);background:var(--bg2);color:var(--tx);font-family:var(--font);font-size:13px;margin-bottom:10px">
+        <div id="pvListinoList"></div>
+      </div>
+
+      <!-- TAB: PREVENTIVI (documenti) -->
+      <div id="pvTab_doc" style="display:none">
+        <button class="btn btn-p btn-f" style="margin-bottom:12px" onclick="pvOpenNuovoPreventivo()">+ Nuovo preventivo</button>
+        <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto">
+          <button class="chip on" onclick="pvFiltraStato('tutti',this)" data-stato="tutti">Tutti</button>
+          <button class="chip" onclick="pvFiltraStato('bozza',this)" data-stato="bozza">⚪ Bozza</button>
+          <button class="chip" onclick="pvFiltraStato('inviato',this)" data-stato="inviato">🔵 Inviato</button>
+          <button class="chip" onclick="pvFiltraStato('accettato',this)" data-stato="accettato">🟢 Accettato</button>
+          <button class="chip" onclick="pvFiltraStato('rifiutato',this)" data-stato="rifiutato">🔴 Rifiutato</button>
+        </div>
+        <div id="pvDocList"></div>
+      </div>
+    </div>
+
     <!-- AI PREVENTIVI -->
     <div class="page" id="p-ai-preventivi">
       <!-- Header -->
@@ -990,6 +1031,10 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </button>
     <!-- AI Analisi -->
     <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Intelligenza Artificiale</div>
+    <button class="sidebar-btn" onclick="chiudiSidebar();goPage('preventivi')" style="color:var(--ac2)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+      Preventivi
+    </button>
     <button class="sidebar-btn" onclick="chiudiSidebar();goPage('ai-preventivi')" style="color:var(--ac2)">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/><circle cx="18" cy="6" r="4" fill="currentColor" opacity=".2" stroke="currentColor"/><path d="M18 4v4"/><path d="M16 6h4"/></svg>
       AI Analisi Preventivi
@@ -1729,6 +1774,128 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
   </div>
 </div>
 
+<!-- PV: NUOVO/MODIFICA CLIENTE -->
+<div class="mol" id="mPvCliente" onclick="if(event.target===this)closeMod('mPvCliente')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px" id="mPvClienteTitle">👤 Nuovo cliente</div>
+    <input type="hidden" id="pvcId">
+    <div class="ig"><label class="il">Ragione sociale / Nome</label><input type="text" id="pvcNome" placeholder="Hotel Excelsior Firenze Srl"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">P.IVA</label><input type="text" id="pvcPiva" placeholder="01234567890"></div>
+      <div class="ig"><label class="il">Codice Fiscale</label><input type="text" id="pvcCf" placeholder="(se diverso da P.IVA)"></div>
+    </div>
+    <div class="ig"><label class="il">Indirizzo</label><input type="text" id="pvcIndirizzo" placeholder="Via dei Fossi 12, Firenze"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Email</label><input type="email" id="pvcEmail" placeholder="amministrazione@cliente.it"></div>
+      <div class="ig"><label class="il">Telefono</label><input type="tel" id="pvcTel" placeholder="055 1234567"></div>
+    </div>
+    <div class="ig"><label class="il">Referente</label><input type="text" id="pvcReferente" placeholder="Mario Rossi"></div>
+    <div class="ig"><label class="il">Note</label><textarea id="pvcNote" placeholder="Note interne sul cliente..." style="min-height:60px"></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mPvCliente')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="pvSaveCliente()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- PV: NUOVA/MODIFICA VOCE LISTINO -->
+<div class="mol" id="mPvListino" onclick="if(event.target===this)closeMod('mPvListino')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px" id="mPvListinoTitle">💶 Nuova voce listino</div>
+    <input type="hidden" id="pvlId">
+    <div class="ig"><label class="il">Categoria</label>
+      <select id="pvlCat"><option value="audio">🎙 Audio</option><option value="luci">💡 Luci</option><option value="ledwall">🖥 LED wall</option><option value="traduzione">🎧 Traduzione simultanea</option><option value="video">📽 Video / Proiezione</option><option value="strutture">🏗 Strutture</option><option value="manodopera">🧑‍🔧 Manodopera/Servizio</option><option value="altro">📦 Altro</option></select>
+    </div>
+    <div class="ig"><label class="il">Descrizione voce</label><input type="text" id="pvlNome" placeholder="Service audio line array (coppia)"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Prezzo unitario (€)</label><input type="number" id="pvlPrezzo" step="0.01" min="0" placeholder="350.00"></div>
+      <div class="ig"><label class="il">Unità di misura</label><input type="text" id="pvlUm" placeholder="giorno / pezzo / ora"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mPvListino')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="pvSaveListino()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- PV: MAPPATURA IMPORT EXCEL -->
+<div class="mol" id="mPvImportMap" onclick="if(event.target===this)closeMod('mPvImportMap')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:6px">📥 Importa listino da Excel</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Associa le colonne del tuo file alle informazioni del listino. Trovate <span id="pvImportRowCount">0</span> righe nel foglio "<span id="pvImportSheetName">—</span>".</div>
+    <div class="ig"><label class="il">Colonna Descrizione/Nome *</label><select id="pvImpColNome"></select></div>
+    <div class="ig"><label class="il">Colonna Prezzo *</label><select id="pvImpColPrezzo"></select></div>
+    <div class="ig"><label class="il">Colonna Categoria (opzionale)</label><select id="pvImpColCat"></select></div>
+    <div class="ig"><label class="il">Colonna Unità di misura (opzionale)</label><select id="pvImpColUm"></select></div>
+    <div id="pvImportPreview" style="background:var(--bg2);border-radius:var(--rs);padding:10px;font-size:11px;color:var(--tx2);margin-bottom:12px;max-height:140px;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mPvImportMap')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="pvConfirmImport()">Importa</button>
+    </div>
+  </div>
+</div>
+
+<!-- PV: EDITOR PREVENTIVO -->
+<div class="mol" id="mPvDoc" onclick="if(event.target===this)closeMod('mPvDoc')">
+  <div class="msh" style="max-width:560px">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px" id="mPvDocTitle">📋 Nuovo preventivo</div>
+    <input type="hidden" id="pvdId">
+    <div class="ig"><label class="il">Cliente</label>
+      <select id="pvdCliente" onchange="pvUpdateDocPreview()"></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Oggetto / Evento</label><input type="text" id="pvdOggetto" placeholder="Service audio luci - Gala 14/09"></div>
+      <div class="ig"><label class="il">Data evento</label><input type="date" id="pvdDataEvento"></div>
+    </div>
+    <div class="ig"><label class="il">Validità offerta (giorni)</label><input type="number" id="pvdValidita" value="30" min="1" style="max-width:120px"></div>
+
+    <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 8px;display:flex;justify-content:space-between;align-items:center">
+      <span>Righe preventivo</span>
+      <button class="btn btn-f" style="padding:6px 10px;font-size:11px;width:auto" onclick="pvAddRigaFromListino()">+ Dal listino</button>
+    </div>
+    <div id="pvdRighe"></div>
+    <button class="btn btn-f" style="margin-bottom:14px;font-size:12px" onclick="pvAddRigaLibera()">+ Riga libera</button>
+
+    <div style="background:var(--bg2);border-radius:var(--rs);padding:12px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--tx2)">Imponibile</span><span id="pvdImponibile">€ 0,00</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:4px">
+        <span style="color:var(--tx2)">IVA</span>
+        <span><input type="number" id="pvdIva" value="22" min="0" max="100" style="width:50px;padding:4px;text-align:right;display:inline-block" oninput="pvUpdateDocPreview()">%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;margin-top:6px;padding-top:6px;border-top:1px solid var(--b)"><span>Totale</span><span id="pvdTotale" style="color:var(--ac2)">€ 0,00</span></div>
+    </div>
+
+    <div class="ig"><label class="il">Note / condizioni</label><textarea id="pvdNote" placeholder="Acconto 30% alla conferma, saldo a fine lavori..." style="min-height:60px"></textarea></div>
+
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mPvDoc')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="pvSaveDoc()">💾 Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- PV: DETTAGLIO PREVENTIVO (visualizzazione + azioni) -->
+<div class="mol" id="mPvDocView" onclick="if(event.target===this)closeMod('mPvDocView')">
+  <div class="msh" style="max-width:560px">
+    <div class="mhd"></div>
+    <div id="pvDocViewBody"></div>
+  </div>
+</div>
+
+<!-- PV: SCEGLI VOCE DA LISTINO -->
+<div class="mol" id="mPvPickListino" onclick="if(event.target===this)closeMod('mPvPickListino')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:12px">💶 Scegli dal listino</div>
+    <input type="text" id="pvPickSearch" placeholder="🔍 Cerca..." oninput="pvRenderPickList()" style="width:100%;padding:10px;border-radius:var(--rs);border:1px solid var(--b);background:var(--bg2);color:var(--tx);font-family:var(--font);font-size:13px;margin-bottom:10px">
+    <div id="pvPickList" style="max-height:300px;overflow-y:auto"></div>
+  </div>
+</div>
+
 <script>
 // ── FIREBASE ──
 firebase.initializeApp({
@@ -1769,12 +1936,13 @@ function goPage(n){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(b=>b.classList.remove('on'));
   $('p-'+n)&&$('p-'+n).classList.add('on');$('n-'+n)&&$('n-'+n).classList.add('on');
-  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda',chat:'✉️ Messaggi',tools:'🔧 Tools Tecnici AV',calendario:'📅 Calendario Lavori','ai-preventivi':'🤖 AI Analisi Preventivi',dashboard:'📊 Dashboard'};
+  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda',chat:'✉️ Messaggi',tools:'🔧 Tools Tecnici AV',calendario:'📅 Calendario Lavori','ai-preventivi':'🤖 AI Analisi Preventivi',preventivi:'📋 Preventivi',dashboard:'📊 Dashboard'};
   $('ptitle').textContent=t[n]||n;
   if(n==='agenda'){clearAgendaDot();renderAgenda();}
   if(n==='calendario'){renderCalendario();}
   if(n==='chat'){clearChatDot();chiudiChat();renderChatTeam();}
   if(n==='dashboard'){renderDashboard();}
+  if(n==='preventivi'){initPreventiviPage();}
   // Aggiorna sidebar desktop
   if(document.body.classList.contains('desktop-mode')) setTimeout(renderDeskNav,50);
 }
@@ -1957,6 +2125,7 @@ function renderDeskNav(){
     {id:'forum',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',label:'Forum'},
     {id:'chat',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9h8"/><path d="M8 13h6"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6l-4 4V7a3 3 0 0 1 3-3h13z"/></svg>',label:'Chat'},
     {id:'dichiarazione',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',label:'Archivio'},
+    {id:'preventivi',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>',label:'Preventivi'},
     {id:'ai-preventivi',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',label:'AI Preventivi',special:true},
   ];
 
@@ -3676,6 +3845,561 @@ async function mostraStorico(artId){
     el.innerHTML+=btnH;
   }
   openMod('mStorico');
+}
+
+// ══════════════════════════════════════════
+// ── PREVENTIVI ──
+// ══════════════════════════════════════════
+let cachePvClienti=[],cachePvListino=[],cachePvDoc=[];
+let pvActiveTab='clienti',pvFiltroStato='tutti';
+let pvRigheCorrenti=[]; // righe del preventivo in editing: [{nome,um,qty,prezzo,fonte}]
+let pvImportRows=[],pvImportHeaders=[]; // dati grezzi import excel in attesa di mappatura
+let _pvListenersStarted=false;
+
+function initPreventiviPage(){
+  if(!_pvListenersStarted){
+    _pvListenersStarted=true;
+    DB.collection('clienti').orderBy('nome').onSnapshot(snap=>{
+      cachePvClienti=snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderPvClienti();
+      pvPopolaSelectClienti();
+    },e=>console.error('clienti listener:',e));
+    DB.collection('listino').orderBy('nome').onSnapshot(snap=>{
+      cachePvListino=snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderPvListino();
+    },e=>console.error('listino listener:',e));
+    DB.collection('preventivi').orderBy('createdAt','desc').onSnapshot(snap=>{
+      cachePvDoc=snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderPvDocList();
+    },e=>console.error('preventivi listener:',e));
+  } else {
+    renderPvClienti();renderPvListino();renderPvDocList();
+  }
+}
+
+function pvSwitchTab(tab){
+  pvActiveTab=tab;
+  ['clienti','listino','doc'].forEach(t=>{
+    $('pvTab_'+t).style.display=t===tab?'block':'none';
+    $('pvTabBtn_'+t).style.background=t===tab?'var(--ac)':'transparent';
+    $('pvTabBtn_'+t).style.color=t===tab?'#fff':'var(--tx2)';
+  });
+}
+
+function fmtEuro(n){return '€ '+(parseFloat(n)||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+// ── CLIENTI ──
+function pvOpenClienteForm(cliId){
+  ['pvcId','pvcNome','pvcPiva','pvcCf','pvcIndirizzo','pvcEmail','pvcTel','pvcReferente','pvcNote'].forEach(id=>$(id).value='');
+  if(cliId){
+    const c=cachePvClienti.find(x=>x.id===cliId);if(!c)return;
+    $('mPvClienteTitle').textContent='👤 Modifica cliente';
+    $('pvcId').value=c.id;$('pvcNome').value=c.nome||'';$('pvcPiva').value=c.piva||'';
+    $('pvcCf').value=c.cf||'';$('pvcIndirizzo').value=c.indirizzo||'';$('pvcEmail').value=c.email||'';
+    $('pvcTel').value=c.tel||'';$('pvcReferente').value=c.referente||'';$('pvcNote').value=c.note||'';
+  } else {
+    $('mPvClienteTitle').textContent='👤 Nuovo cliente';
+  }
+  openMod('mPvCliente');
+}
+
+async function pvSaveCliente(){
+  const nome=val('pvcNome');
+  if(!nome){toast('Inserisci la ragione sociale / nome','r');return;}
+  const id=val('pvcId');
+  const data={
+    nome,piva:val('pvcPiva'),cf:val('pvcCf'),indirizzo:val('pvcIndirizzo'),
+    email:val('pvcEmail'),tel:val('pvcTel'),referente:val('pvcReferente'),note:val('pvcNote'),
+    updatedAt:new Date().toISOString()
+  };
+  try{
+    if(id){
+      await DB.collection('clienti').doc(id).update(data);
+      toast('✓ Cliente aggiornato');
+    } else {
+      data.createdAt=data.updatedAt;
+      await DB.collection('clienti').add(data);
+      toast('✓ Cliente salvato');
+    }
+    closeMod('mPvCliente');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function pvDeleteCliente(cliId){
+  if(!confirm('Eliminare questo cliente? I preventivi già emessi non verranno toccati.'))return;
+  try{
+    await DB.collection('clienti').doc(cliId).delete();
+    toast('Cliente eliminato');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+function renderPvClienti(){
+  const list=$('pvClientiList');if(!list)return;
+  const q=(val('pvClientiSearch')||'').toLowerCase();
+  const filtered=cachePvClienti.filter(c=>!q||((c.nome||'')+(c.referente||'')+(c.email||'')).toLowerCase().includes(q));
+  if(!filtered.length){list.innerHTML='<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessun cliente'+(q?' trovato':' — aggiungine uno!')+'</div>';return;}
+  list.innerHTML=filtered.map(c=>`
+    <div class="row" style="align-items:flex-start;padding:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px">
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="pvOpenClienteForm('${c.id}')">
+        <div style="font-size:14px;font-weight:600">${c.nome||'—'}</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${c.piva?'P.IVA '+c.piva+' · ':''}${c.referente||''}</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${c.email||''}${c.email&&c.tel?' · ':''}${c.tel||''}</div>
+      </div>
+      <button onclick="pvDeleteCliente('${c.id}')" style="flex-shrink:0;width:32px;height:32px;border-radius:var(--rs);border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:13px;cursor:pointer">🗑</button>
+    </div>`).join('');
+}
+
+function pvPopolaSelectClienti(){
+  const sel=$('pvdCliente');if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Seleziona cliente —</option>'+cachePvClienti.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
+  if(cur)sel.value=cur;
+}
+
+// ── LISTINO ──
+function pvOpenListinoForm(voceId){
+  ['pvlId','pvlNome','pvlPrezzo','pvlUm'].forEach(id=>$(id).value='');
+  $('pvlCat').value='audio';
+  if(voceId){
+    const v=cachePvListino.find(x=>x.id===voceId);if(!v)return;
+    $('mPvListinoTitle').textContent='💶 Modifica voce';
+    $('pvlId').value=v.id;$('pvlCat').value=v.cat||'altro';$('pvlNome').value=v.nome||'';
+    $('pvlPrezzo').value=v.prezzo||'';$('pvlUm').value=v.um||'';
+  } else {
+    $('mPvListinoTitle').textContent='💶 Nuova voce listino';
+  }
+  openMod('mPvListino');
+}
+
+async function pvSaveListino(){
+  const nome=val('pvlNome');
+  const prezzo=parseFloat(val('pvlPrezzo'));
+  if(!nome){toast('Inserisci una descrizione','r');return;}
+  if(isNaN(prezzo)||prezzo<0){toast('Inserisci un prezzo valido','r');return;}
+  const id=val('pvlId');
+  const data={cat:val('pvlCat'),nome,prezzo,um:val('pvlUm')||'pezzo',updatedAt:new Date().toISOString()};
+  try{
+    if(id){
+      await DB.collection('listino').doc(id).update(data);
+      toast('✓ Voce aggiornata');
+    } else {
+      data.createdAt=data.updatedAt;data.fonte='manuale';
+      await DB.collection('listino').add(data);
+      toast('✓ Voce salvata');
+    }
+    closeMod('mPvListino');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function pvDeleteListino(voceId){
+  if(!confirm('Eliminare questa voce dal listino?'))return;
+  try{
+    await DB.collection('listino').doc(voceId).delete();
+    toast('Voce eliminata');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+const PV_CAT_LABEL={audio:'🎙 Audio',luci:'💡 Luci',ledwall:'🖥 LED wall',traduzione:'🎧 Traduzione',video:'📽 Video',strutture:'🏗 Strutture',manodopera:'🧑‍🔧 Manodopera',altro:'📦 Altro'};
+
+function renderPvListino(){
+  const list=$('pvListinoList');if(!list)return;
+  const q=(val('pvListinoSearch')||'').toLowerCase();
+  const filtered=cachePvListino.filter(v=>!q||(v.nome||'').toLowerCase().includes(q));
+  if(!filtered.length){list.innerHTML='<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessuna voce'+(q?' trovata':' in listino — aggiungine una o importa da Excel!')+'</div>';return;}
+  list.innerHTML=filtered.map(v=>`
+    <div class="row" style="align-items:center;padding:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px">
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="pvOpenListinoForm('${v.id}')">
+        <div style="font-size:13px;font-weight:500">${v.nome||'—'}</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${PV_CAT_LABEL[v.cat]||v.cat||''} · ${v.um||'pezzo'}${v.fonte==='import'?' · 📥 da import':''}</div>
+      </div>
+      <div style="font-size:14px;font-weight:700;color:var(--ac2);margin-right:8px;white-space:nowrap">${fmtEuro(v.prezzo)}</div>
+      <button onclick="pvDeleteListino('${v.id}')" style="flex-shrink:0;width:32px;height:32px;border-radius:var(--rs);border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:13px;cursor:pointer">🗑</button>
+    </div>`).join('');
+}
+
+// ── IMPORT EXCEL LISTINO ──
+function pvHandleExcelFile(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const sheetName=wb.SheetNames[0];
+      const sheet=wb.Sheets[sheetName];
+      const rows=XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,defval:''});
+      if(!rows.length){toast('File vuoto o non leggibile','r');return;}
+      pvImportHeaders=rows[0].map((h,i)=>String(h||'Colonna '+(i+1)));
+      pvImportRows=rows.slice(1).filter(r=>r.some(c=>String(c||'').trim()!==''));
+      if(!pvImportRows.length){toast('Nessuna riga dati trovata sotto l\'intestazione','r');return;}
+      $('pvImportSheetName').textContent=sheetName;
+      $('pvImportRowCount').textContent=pvImportRows.length;
+      // Popola select colonne con auto-detect su nomi comuni
+      const opts=pvImportHeaders.map((h,i)=>`<option value="${i}">${h}</option>`).join('');
+      const emptyOpt='<option value="-1">— Nessuna —</option>';
+      $('pvImpColNome').innerHTML=opts;
+      $('pvImpColPrezzo').innerHTML=opts;
+      $('pvImpColCat').innerHTML=emptyOpt+opts;
+      $('pvImpColUm').innerHTML=emptyOpt+opts;
+      // Auto-detect colonne per nome comune (IT/EN, formati export tipici Zucchetti/Sistemi/Excel generico)
+      const findCol=(keywords)=>{
+        const idx=pvImportHeaders.findIndex(h=>keywords.some(k=>h.toLowerCase().includes(k)));
+        return idx>=0?idx:null;
+      };
+      const cNome=findCol(['descrizione','nome','articolo','voce','prodotto','servizio','item','description']);
+      const cPrezzo=findCol(['prezzo','importo','costo','price','unitario','tariffa']);
+      const cCat=findCol(['categoria','reparto','famiglia','category','tipo']);
+      const cUm=findCol(['unità','unita','u.m.','um','misura','unit']);
+      if(cNome!==null)$('pvImpColNome').value=cNome;
+      if(cPrezzo!==null)$('pvImpColPrezzo').value=cPrezzo;
+      $('pvImpColCat').value=cCat!==null?cCat:-1;
+      $('pvImpColUm').value=cUm!==null?cUm:-1;
+      pvRenderImportPreview();
+      ['pvImpColNome','pvImpColPrezzo','pvImpColCat','pvImpColUm'].forEach(id=>{
+        $(id).onchange=pvRenderImportPreview;
+      });
+      openMod('mPvImportMap');
+    }catch(err){
+      console.error('Excel parse error:',err);
+      toast('Errore lettura file: '+err.message,'r',5000);
+    }finally{
+      input.value=''; // reset per permettere ricaricamento stesso file
+    }
+  };
+  reader.onerror=()=>toast('Errore lettura file','r');
+  reader.readAsArrayBuffer(file);
+}
+
+function pvRenderImportPreview(){
+  const iNome=parseInt($('pvImpColNome').value),iPrezzo=parseInt($('pvImpColPrezzo').value);
+  const prev=$('pvImportPreview');
+  const sample=pvImportRows.slice(0,5).map(r=>{
+    const nome=r[iNome]||'—';
+    const prezzoRaw=r[iPrezzo]||'';
+    const prezzo=pvParsePrezzo(prezzoRaw);
+    return `${nome} — ${isNaN(prezzo)?'⚠️ prezzo non valido ("'+prezzoRaw+'")':fmtEuro(prezzo)}`;
+  });
+  prev.innerHTML='Anteprima (prime '+sample.length+' righe):<br>'+sample.map(s=>'• '+s).join('<br>');
+}
+
+function pvParsePrezzo(raw){
+  if(typeof raw==='number')return raw;
+  let s=String(raw||'').trim().replace(/[€\s]/g,'');
+  // Gestisce sia formato italiano (1.234,56) che internazionale (1234.56)
+  if(s.includes(',')&&s.includes('.')){
+    s=s.replace(/\./g,'').replace(',','.');
+  } else if(s.includes(',')){
+    s=s.replace(',','.');
+  }
+  return parseFloat(s);
+}
+
+async function pvConfirmImport(){
+  const iNome=parseInt($('pvImpColNome').value);
+  const iPrezzo=parseInt($('pvImpColPrezzo').value);
+  const iCat=parseInt($('pvImpColCat').value);
+  const iUm=parseInt($('pvImpColUm').value);
+  if(isNaN(iNome)||iNome<0||isNaN(iPrezzo)||iPrezzo<0){toast('Seleziona almeno colonna Nome e Prezzo','r');return;}
+
+  const validCats=Object.keys(PV_CAT_LABEL);
+  const now=new Date().toISOString();
+  let imported=0,skipped=0;
+  const batch=DB.batch();
+  pvImportRows.forEach(r=>{
+    const nome=String(r[iNome]||'').trim();
+    const prezzo=pvParsePrezzo(r[iPrezzo]);
+    if(!nome||isNaN(prezzo)){skipped++;return;}
+    let cat='altro';
+    if(iCat>=0&&r[iCat]){
+      const catRaw=String(r[iCat]).toLowerCase().trim();
+      const match=validCats.find(c=>catRaw.includes(c)||PV_CAT_LABEL[c].toLowerCase().includes(catRaw));
+      if(match)cat=match;
+    }
+    const um=(iUm>=0&&r[iUm])?String(r[iUm]).trim():'pezzo';
+    const ref=DB.collection('listino').doc();
+    batch.set(ref,{nome,prezzo,cat,um,fonte:'import',createdAt:now,updatedAt:now});
+    imported++;
+  });
+  if(imported===0){toast('Nessuna riga valida da importare','r');return;}
+  try{
+    await batch.commit();
+    toast(`✓ Importate ${imported} voci`+(skipped?` (${skipped} righe saltate per dati mancanti)`:''));
+    closeMod('mPvImportMap');
+  }catch(e){toast('Errore import: '+e.message,'r');}
+}
+
+// ── PREVENTIVI (documenti) ──
+function pvFiltraStato(stato,btn){
+  pvFiltroStato=stato;
+  document.querySelectorAll('#pvTab_doc .chip').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  renderPvDocList();
+}
+
+const PV_STATO_LABEL={bozza:'⚪ Bozza',inviato:'🔵 Inviato',accettato:'🟢 Accettato',rifiutato:'🔴 Rifiutato'};
+const PV_STATO_COLOR={bozza:'var(--tx3)',inviato:'var(--ac2)',accettato:'var(--gn)',rifiutato:'var(--rd)'};
+
+function renderPvDocList(){
+  const list=$('pvDocList');if(!list)return;
+  const filtered=pvFiltroStato==='tutti'?cachePvDoc:cachePvDoc.filter(d=>d.stato===pvFiltroStato);
+  if(!filtered.length){list.innerHTML='<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessun preventivo'+(pvFiltroStato!=='tutti'?' in questo stato':' — creane uno!')+'</div>';return;}
+  list.innerHTML=filtered.map(d=>{
+    const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+    return `<div onclick="pvViewDoc('${d.id}')" class="row" style="align-items:center;padding:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px;cursor:pointer">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600">${d.numero||'—'} · ${d.oggetto||'Senza oggetto'}</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${cliente?cliente.nome:'Cliente eliminato'}</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${d.dataEvento?new Date(d.dataEvento+'T12:00:00').toLocaleDateString('it-IT'):''}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:14px;font-weight:700;color:var(--ac2)">${fmtEuro(d.totale)}</div>
+        <div style="font-size:10px;font-weight:600;color:${PV_STATO_COLOR[d.stato]||'var(--tx2)'};margin-top:2px">${PV_STATO_LABEL[d.stato]||d.stato}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function pvOpenNuovoPreventivo(){
+  ['pvdId','pvdOggetto','pvdDataEvento','pvdNote'].forEach(id=>$(id).value='');
+  $('pvdValidita').value='30';$('pvdIva').value='22';
+  pvRigheCorrenti=[];
+  pvPopolaSelectClienti();
+  $('pvdCliente').value='';
+  $('mPvDocTitle').textContent='📋 Nuovo preventivo';
+  pvRenderRighe();
+  openMod('mPvDoc');
+}
+
+function pvOpenModificaPreventivo(docId){
+  const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
+  pvPopolaSelectClienti();
+  $('pvdId').value=d.id;$('pvdCliente').value=d.clienteId||'';
+  $('pvdOggetto').value=d.oggetto||'';$('pvdDataEvento').value=d.dataEvento||'';
+  $('pvdValidita').value=d.validitaGiorni||30;$('pvdIva').value=d.ivaPct!=null?d.ivaPct:22;
+  $('pvdNote').value=d.note||'';
+  pvRigheCorrenti=JSON.parse(JSON.stringify(d.righe||[]));
+  $('mPvDocTitle').textContent='📋 Modifica preventivo '+(d.numero||'');
+  pvRenderRighe();
+  closeMod('mPvDocView');
+  openMod('mPvDoc');
+}
+
+function pvAddRigaLibera(){
+  pvRigheCorrenti.push({nome:'',um:'pezzo',qty:1,prezzo:0,fonte:'libera'});
+  pvRenderRighe();
+}
+
+function pvAddRigaFromListino(){
+  if(!cachePvListino.length){toast('Il listino è vuoto — aggiungi voci o importa da Excel','a');return;}
+  $('pvPickSearch').value='';
+  pvRenderPickList();
+  openMod('mPvPickListino');
+}
+
+function pvRenderPickList(){
+  const q=(val('pvPickSearch')||'').toLowerCase();
+  const filtered=cachePvListino.filter(v=>!q||(v.nome||'').toLowerCase().includes(q));
+  const list=$('pvPickList');
+  if(!filtered.length){list.innerHTML='<div style="padding:14px;text-align:center;color:var(--tx3);font-size:12px">Nessuna voce trovata</div>';return;}
+  list.innerHTML=filtered.map(v=>`
+    <div onclick="pvPickListinoVoce('${v.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid var(--b);cursor:pointer">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.nome}</div>
+        <div style="font-size:11px;color:var(--tx2)">${PV_CAT_LABEL[v.cat]||''} · ${v.um||'pezzo'}</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--ac2);white-space:nowrap;margin-left:10px">${fmtEuro(v.prezzo)}</div>
+    </div>`).join('');
+}
+
+function pvPickListinoVoce(voceId){
+  const v=cachePvListino.find(x=>x.id===voceId);if(!v)return;
+  pvRigheCorrenti.push({nome:v.nome,um:v.um,qty:1,prezzo:v.prezzo,fonte:'listino',listinoId:v.id});
+  pvRenderRighe();
+  closeMod('mPvPickListino');
+}
+
+function pvRenderRighe(){
+  const el=$('pvdRighe');
+  if(!pvRigheCorrenti.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--tx3);padding:10px 0">Nessuna riga — aggiungi dal listino o una riga libera.</div>';
+    pvUpdateDocPreview();return;
+  }
+  el.innerHTML=pvRigheCorrenti.map((r,i)=>`
+    <div style="display:grid;grid-template-columns:1fr 50px 70px 28px;gap:6px;align-items:center;margin-bottom:6px">
+      <input type="text" value="${(r.nome||'').replace(/"/g,'&quot;')}" placeholder="Descrizione" oninput="pvRigheCorrenti[${i}].nome=this.value" style="padding:8px;font-size:12px">
+      <input type="number" value="${r.qty}" min="0" step="1" oninput="pvRigheCorrenti[${i}].qty=parseFloat(this.value)||0;pvUpdateDocPreview()" style="padding:8px;font-size:12px;text-align:center">
+      <input type="number" value="${r.prezzo}" min="0" step="0.01" oninput="pvRigheCorrenti[${i}].prezzo=parseFloat(this.value)||0;pvUpdateDocPreview()" style="padding:8px;font-size:12px;text-align:right">
+      <button onclick="pvRigheCorrenti.splice(${i},1);pvRenderRighe()" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">✕</button>
+    </div>`).join('');
+  pvUpdateDocPreview();
+}
+
+function pvCalcolaTotali(){
+  const imponibile=pvRigheCorrenti.reduce((s,r)=>s+(parseFloat(r.qty)||0)*(parseFloat(r.prezzo)||0),0);
+  const ivaPct=parseFloat($('pvdIva').value)||0;
+  const iva=imponibile*ivaPct/100;
+  const totale=imponibile+iva;
+  return {imponibile,ivaPct,iva,totale};
+}
+
+function pvUpdateDocPreview(){
+  const {imponibile,totale}=pvCalcolaTotali();
+  if($('pvdImponibile'))$('pvdImponibile').textContent=fmtEuro(imponibile);
+  if($('pvdTotale'))$('pvdTotale').textContent=fmtEuro(totale);
+}
+
+function pvGeneraNumero(){
+  const anno=new Date().getFullYear();
+  const numAnno=cachePvDoc.filter(d=>(d.numero||'').includes('/'+anno)).length+1;
+  return String(numAnno).padStart(3,'0')+'/'+anno;
+}
+
+async function pvSaveDoc(){
+  const clienteId=val('pvdCliente');
+  if(!clienteId){toast('Seleziona un cliente','r');return;}
+  if(!pvRigheCorrenti.length){toast('Aggiungi almeno una riga','r');return;}
+  const righeValide=pvRigheCorrenti.filter(r=>r.nome&&r.nome.trim());
+  if(!righeValide.length){toast('Le righe devono avere una descrizione','r');return;}
+  const {imponibile,ivaPct,iva,totale}=pvCalcolaTotali();
+  const id=val('pvdId');
+  const now=new Date().toISOString();
+  const data={
+    clienteId,oggetto:val('pvdOggetto'),dataEvento:val('pvdDataEvento'),
+    validitaGiorni:parseInt(val('pvdValidita'))||30,
+    righe:righeValide,imponibile,ivaPct,iva,totale,
+    note:val('pvdNote'),updatedAt:now
+  };
+  try{
+    if(id){
+      await DB.collection('preventivi').doc(id).update(data);
+      toast('✓ Preventivo aggiornato');
+    } else {
+      data.numero=pvGeneraNumero();
+      data.stato='bozza';
+      data.createdAt=now;
+      const chi=USER?USER.nome+' '+USER.cognome:'—';
+      data.creatoDa=chi;
+      await DB.collection('preventivi').add(data);
+      toast('✓ Preventivo creato');
+    }
+    closeMod('mPvDoc');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function pvCambiaStato(docId,nuovoStato){
+  try{
+    await DB.collection('preventivi').doc(docId).update({stato:nuovoStato,updatedAt:new Date().toISOString()});
+    toast('Stato aggiornato: '+PV_STATO_LABEL[nuovoStato]);
+    pvViewDoc(docId);
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function pvDeleteDoc(docId){
+  if(!confirm('Eliminare questo preventivo? Azione non reversibile.'))return;
+  try{
+    await DB.collection('preventivi').doc(docId).delete();
+    toast('Preventivo eliminato');
+    closeMod('mPvDocView');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+function pvViewDoc(docId){
+  const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
+  const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+  const righeHtml=(d.righe||[]).map(r=>`
+    <tr><td style="padding:6px 4px;font-size:12px;border-bottom:1px solid var(--b)">${r.nome}</td>
+    <td style="padding:6px 4px;font-size:12px;text-align:center;border-bottom:1px solid var(--b)">${r.qty} ${r.um||''}</td>
+    <td style="padding:6px 4px;font-size:12px;text-align:right;border-bottom:1px solid var(--b)">${fmtEuro(r.prezzo)}</td>
+    <td style="padding:6px 4px;font-size:12px;text-align:right;border-bottom:1px solid var(--b);font-weight:600">${fmtEuro(r.qty*r.prezzo)}</td></tr>`).join('');
+  $('pvDocViewBody').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+      <div>
+        <div class="stl">${d.numero} — ${d.oggetto||''}</div>
+        <div style="font-size:12px;color:var(--tx2);margin-top:2px">${cliente?cliente.nome:'Cliente eliminato'}</div>
+      </div>
+      <span style="font-size:11px;font-weight:600;color:${PV_STATO_COLOR[d.stato]};white-space:nowrap">${PV_STATO_LABEL[d.stato]}</span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+      <thead><tr><th style="text-align:left;font-size:10px;color:var(--tx3);padding-bottom:6px">DESCRIZIONE</th><th style="font-size:10px;color:var(--tx3);padding-bottom:6px">QTÀ</th><th style="text-align:right;font-size:10px;color:var(--tx3);padding-bottom:6px">PREZZO</th><th style="text-align:right;font-size:10px;color:var(--tx3);padding-bottom:6px">TOT.</th></tr></thead>
+      <tbody>${righeHtml}</tbody>
+    </table>
+    <div style="background:var(--bg2);border-radius:var(--rs);padding:10px;margin-bottom:14px;font-size:12px">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">Imponibile</span><span>${fmtEuro(d.imponibile)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">IVA (${d.ivaPct}%)</span><span>${fmtEuro(d.iva)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px;margin-top:4px;padding-top:4px;border-top:1px solid var(--b)"><span>Totale</span><span style="color:var(--ac2)">${fmtEuro(d.totale)}</span></div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-f" style="flex:1;font-size:11px;min-width:90px" onclick="pvCambiaStato('${d.id}','inviato')">🔵 Inviato</button>
+      <button class="btn btn-f" style="flex:1;font-size:11px;min-width:90px;color:var(--gn)" onclick="pvCambiaStato('${d.id}','accettato')">🟢 Accettato</button>
+      <button class="btn btn-f" style="flex:1;font-size:11px;min-width:90px;color:var(--rd)" onclick="pvCambiaStato('${d.id}','rifiutato')">🔴 Rifiutato</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="pvGeneraPDF('${d.id}')">📄 PDF</button>
+      <button class="btn btn-f" onclick="pvOpenModificaPreventivo('${d.id}')">✏️ Modifica</button>
+      <button class="btn btn-f" style="color:var(--rd)" onclick="pvDeleteDoc('${d.id}')">🗑</button>
+    </div>`;
+  openMod('mPvDocView');
+}
+
+function pvGeneraPDF(docId){
+  const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
+  const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF();
+  let y=20;
+  doc.setFontSize(18);doc.setFont(undefined,'bold');
+  doc.text('PREVENTIVO',14,y);
+  doc.setFontSize(11);doc.setFont(undefined,'normal');
+  doc.text(d.numero||'',196,y,{align:'right'});
+  y+=6;
+  doc.setFontSize(9);doc.setTextColor(120);
+  doc.text('MMG Logistics · Martins Osemwengie',14,y);
+  doc.text('Data: '+new Date(d.createdAt).toLocaleDateString('it-IT'),196,y,{align:'right'});
+  y+=12;
+  doc.setTextColor(0);doc.setFontSize(10);doc.setFont(undefined,'bold');
+  doc.text('Cliente:',14,y);y+=5;
+  doc.setFont(undefined,'normal');
+  doc.text(cliente?cliente.nome:'—',14,y);y+=5;
+  if(cliente&&cliente.piva){doc.text('P.IVA '+cliente.piva,14,y);y+=5;}
+  if(cliente&&cliente.indirizzo){doc.text(cliente.indirizzo,14,y);y+=5;}
+  y+=4;
+  if(d.oggetto){doc.setFont(undefined,'bold');doc.text('Oggetto: ',14,y);doc.setFont(undefined,'normal');doc.text(d.oggetto,32,y);y+=6;}
+  if(d.dataEvento){doc.text('Data evento: '+new Date(d.dataEvento+'T12:00:00').toLocaleDateString('it-IT'),14,y);y+=8;} else y+=4;
+
+  // Tabella righe
+  doc.setFillColor(240,240,245);
+  doc.rect(14,y,182,7,'F');
+  doc.setFontSize(9);doc.setFont(undefined,'bold');
+  doc.text('Descrizione',16,y+5);doc.text('Qtà',130,y+5);doc.text('Prezzo',150,y+5);doc.text('Totale',182,y+5,{align:'right'});
+  y+=10;
+  doc.setFont(undefined,'normal');
+  (d.righe||[]).forEach(r=>{
+    if(y>270){doc.addPage();y=20;}
+    const nomeLines=doc.splitTextToSize(r.nome||'',110);
+    doc.text(nomeLines,16,y);
+    doc.text(String(r.qty)+(r.um?' '+r.um:''),130,y);
+    doc.text(fmtEuro(r.prezzo),150,y);
+    doc.text(fmtEuro(r.qty*r.prezzo),182,y,{align:'right'});
+    y+=Math.max(6,nomeLines.length*5);
+  });
+  y+=4;
+  doc.setDrawColor(220);doc.line(14,y,196,y);y+=8;
+  doc.setFontSize(10);
+  doc.text('Imponibile',150,y);doc.text(fmtEuro(d.imponibile),182,y,{align:'right'});y+=6;
+  doc.text('IVA ('+d.ivaPct+'%)',150,y);doc.text(fmtEuro(d.iva),182,y,{align:'right'});y+=7;
+  doc.setFont(undefined,'bold');doc.setFontSize(12);
+  doc.text('TOTALE',150,y);doc.text(fmtEuro(d.totale),182,y,{align:'right'});
+  y+=12;
+  if(d.note){
+    doc.setFont(undefined,'normal');doc.setFontSize(9);doc.setTextColor(100);
+    const noteLines=doc.splitTextToSize('Note: '+d.note,182);
+    doc.text(noteLines,14,y);y+=noteLines.length*4+6;
+  }
+  doc.setFontSize(8);doc.setTextColor(150);
+  doc.text('Preventivo valido '+(d.validitaGiorni||30)+' giorni dalla data di emissione.',14,285);
+
+  doc.save('Preventivo_'+(d.numero||'').replace('/','-')+'.pdf');
+  toast('📄 PDF generato');
 }
 
 // ── PREPARA LAVORO ──
