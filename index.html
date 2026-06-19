@@ -698,15 +698,20 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <!-- PREVENTIVI -->
     <div class="page" id="p-preventivi">
       <!-- Tab switcher -->
-      <div style="display:flex;gap:6px;margin-bottom:14px;background:var(--bg2);border-radius:var(--rs);padding:3px">
-        <button id="pvTabBtn_clienti" onclick="pvSwitchTab('clienti')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:var(--ac);color:#fff">👤 Clienti</button>
-        <button id="pvTabBtn_listino" onclick="pvSwitchTab('listino')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2)">💶 Listino</button>
-        <button id="pvTabBtn_doc" onclick="pvSwitchTab('doc')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2)">📋 Preventivi</button>
+      <div style="display:flex;gap:6px;margin-bottom:14px;background:var(--bg2);border-radius:var(--rs);padding:3px;overflow-x:auto">
+        <button id="pvTabBtn_clienti" onclick="pvSwitchTab('clienti')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:var(--ac);color:#fff;white-space:nowrap">👤 Clienti</button>
+        <button id="pvTabBtn_listino" onclick="pvSwitchTab('listino')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2);white-space:nowrap">💶 Listino</button>
+        <button id="pvTabBtn_pacchetti" onclick="pvSwitchTab('pacchetti')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2);white-space:nowrap">📦 Pacchetti</button>
+        <button id="pvTabBtn_doc" onclick="pvSwitchTab('doc')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2);white-space:nowrap">📋 Preventivi</button>
       </div>
 
       <!-- TAB: CLIENTI -->
       <div id="pvTab_clienti">
-        <button class="btn btn-p btn-f" style="margin-bottom:12px" onclick="pvOpenClienteForm()">+ Nuovo cliente</button>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="btn btn-p" style="flex:1" onclick="pvOpenClienteForm()">+ Nuovo cliente</button>
+          <button class="btn btn-f" style="flex:1" onclick="$('pvImportClientiInput').click()">📥 Importa Excel</button>
+          <input type="file" id="pvImportClientiInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="pvHandleExcelFileClienti(this)">
+        </div>
         <input type="text" id="pvClientiSearch" placeholder="🔍 Cerca cliente..." oninput="renderPvClienti()" style="width:100%;padding:10px;border-radius:var(--rs);border:1px solid var(--b);background:var(--bg2);color:var(--tx);font-family:var(--font);font-size:13px;margin-bottom:10px">
         <div id="pvClientiList"></div>
       </div>
@@ -722,10 +727,20 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
         <div id="pvListinoList"></div>
       </div>
 
+      <!-- TAB: PACCHETTI (lavori frequenti) -->
+      <div id="pvTab_pacchetti" style="display:none">
+        <button class="btn btn-p btn-f" style="margin-bottom:12px" onclick="pvOpenPacchettoForm()">+ Nuovo pacchetto</button>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Gruppi di voci che usi spesso insieme (es. "Service base wedding") — aggiungili a un preventivo con un click.</div>
+        <div id="pvPacchettiList"></div>
+      </div>
+
       <!-- TAB: PREVENTIVI (documenti) -->
       <div id="pvTab_doc" style="display:none">
         <div id="pvStatsBar" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px"></div>
-        <button class="btn btn-p btn-f" style="margin-bottom:12px" onclick="pvOpenNuovoPreventivo()">+ Nuovo preventivo</button>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="btn btn-p" style="flex:1" onclick="pvOpenNuovoPreventivo()">+ Nuovo preventivo</button>
+          <button id="pvExportZipBtn" class="btn btn-f" style="flex:1" onclick="pvExportArchivioZip()">📦 Scarica archivio ZIP</button>
+        </div>
         <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto">
           <button class="chip on" onclick="pvFiltraStato('tutti',this)" data-stato="tutti">Tutti</button>
           <button class="chip" onclick="pvFiltraStato('bozza',this)" data-stato="bozza">⚪ Bozza</button>
@@ -1856,12 +1871,18 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <div class="ig"><label class="il">Validità offerta (giorni)</label><input type="number" id="pvdValidita" value="30" min="1" style="max-width:120px"></div>
 
-    <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 8px;display:flex;justify-content:space-between;align-items:center">
+    <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
       <span>Righe preventivo</span>
-      <button class="btn btn-f" style="padding:6px 10px;font-size:11px;width:auto" onclick="pvAddRigaFromListino()">+ Dal listino</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-f" style="padding:6px 10px;font-size:11px;width:auto" onclick="pvOpenPickPacchetto()">📦 Pacchetto</button>
+        <button class="btn btn-f" style="padding:6px 10px;font-size:11px;width:auto" onclick="pvAddRigaFromListino()">+ Dal listino</button>
+      </div>
     </div>
     <div id="pvdRighe"></div>
-    <button class="btn btn-f" style="margin-bottom:14px;font-size:12px" onclick="pvAddRigaLibera()">+ Riga libera</button>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn btn-f" style="flex:1;font-size:12px" onclick="pvAddRigaLibera()">+ Riga libera</button>
+      <button class="btn btn-f" style="flex:1;font-size:12px" onclick="pvOpenSaveAsPacchetto()">📦 Salva come pacchetto</button>
+    </div>
 
     <div style="background:var(--bg2);border-radius:var(--rs);padding:12px;margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--tx2)">Imponibile</span><span id="pvdImponibile">€ 0,00</span></div>
@@ -1886,6 +1907,70 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
   <div class="msh" style="max-width:560px">
     <div class="mhd"></div>
     <div id="pvDocViewBody"></div>
+  </div>
+</div>
+
+<!-- PV: MAPPATURA IMPORT EXCEL CLIENTI -->
+<div class="mol" id="mPvImportClientiMap" onclick="if(event.target===this)closeMod('mPvImportClientiMap')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:6px">📥 Importa clienti da Excel</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Associa le colonne del tuo file ai dati del cliente. Trovate <span id="pvImportClientiRowCount">0</span> righe nel foglio "<span id="pvImportClientiSheetName">—</span>".</div>
+    <div class="ig"><label class="il">Colonna Ragione sociale/Nome *</label><select id="pvImpClColNome"></select></div>
+    <div class="ig"><label class="il">Colonna P.IVA (opzionale)</label><select id="pvImpClColPiva"></select></div>
+    <div class="ig"><label class="il">Colonna Codice Fiscale (opzionale)</label><select id="pvImpClColCf"></select></div>
+    <div class="ig"><label class="il">Colonna Indirizzo (opzionale)</label><select id="pvImpClColIndirizzo"></select></div>
+    <div class="ig"><label class="il">Colonna Email (opzionale)</label><select id="pvImpClColEmail"></select></div>
+    <div class="ig"><label class="il">Colonna Telefono (opzionale)</label><select id="pvImpClColTel"></select></div>
+    <div class="ig"><label class="il">Colonna Referente (opzionale)</label><select id="pvImpClColReferente"></select></div>
+    <div id="pvImportClientiPreview" style="background:var(--bg2);border-radius:var(--rs);padding:10px;font-size:11px;color:var(--tx2);margin-bottom:12px;max-height:140px;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mPvImportClientiMap')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="pvConfirmImportClienti()">Importa</button>
+    </div>
+  </div>
+</div>
+
+<!-- PV: NUOVO/MODIFICA PACCHETTO -->
+<div class="mol" id="mPvPacchetto" onclick="if(event.target===this)closeMod('mPvPacchetto')">
+  <div class="msh" style="max-width:560px">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px" id="mPvPacchettoTitle">📦 Nuovo pacchetto</div>
+    <input type="hidden" id="pvpkId">
+    <div class="ig"><label class="il">Nome pacchetto</label><input type="text" id="pvpkNome" placeholder="Service base wedding"></div>
+    <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 8px;display:flex;justify-content:space-between;align-items:center">
+      <span>Voci incluse</span>
+      <button class="btn btn-f" style="padding:6px 10px;font-size:11px;width:auto" onclick="pvPkAddRigaFromListino()">+ Dal listino</button>
+    </div>
+    <div id="pvpkRighe"></div>
+    <button class="btn btn-f" style="margin-bottom:14px;font-size:12px" onclick="pvPkAddRigaLibera()">+ Riga libera</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mPvPacchetto')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="pvSavePacchetto()">💾 Salva pacchetto</button>
+    </div>
+  </div>
+</div>
+
+<!-- PV: SCEGLI PACCHETTO DA APPLICARE -->
+<div class="mol" id="mPvPickPacchetto" onclick="if(event.target===this)closeMod('mPvPickPacchetto')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:12px">📦 Applica pacchetto</div>
+    <div id="pvPickPacchettoList" style="max-height:320px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- PV: SALVA RIGHE CORRENTI COME PACCHETTO -->
+<div class="mol" id="mPvSaveAsPacchetto" onclick="if(event.target===this)closeMod('mPvSaveAsPacchetto')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px">📦 Salva come pacchetto</div>
+    <div class="ig"><label class="il">Nome pacchetto</label><input type="text" id="pvSaveAsPkNome" placeholder="Es. Service base wedding"></div>
+    <div style="font-size:11px;color:var(--tx2);margin-bottom:14px">Verranno salvate le righe attualmente nel preventivo (quantità incluse) come modello riutilizzabile.</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mPvSaveAsPacchetto')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="pvConfirmSaveAsPacchetto()">Salva</button>
+    </div>
   </div>
 </div>
 
@@ -3861,7 +3946,9 @@ async function mostraStorico(artId){
 // ══════════════════════════════════════════
 // ── PREVENTIVI ──
 // ══════════════════════════════════════════
-let cachePvClienti=[],cachePvListino=[],cachePvDoc=[];
+let cachePvClienti=[],cachePvListino=[],cachePvDoc=[],cachePvPacchetti=[];
+let pvpkRigheCorrenti=[]; // righe del pacchetto in editing (stesso formato di pvRigheCorrenti)
+let pvPickTarget='preventivo'; // 'preventivo' | 'pacchetto' — decide su quale array scrive il picker listino
 let pvActiveTab='clienti',pvFiltroStato='tutti';
 let pvRigheCorrenti=[]; // righe del preventivo in editing: [{nome,um,qty,prezzo,fonte}]
 let pvImportRows=[],pvImportHeaders=[]; // dati grezzi import excel in attesa di mappatura
@@ -3883,14 +3970,18 @@ function initPreventiviPage(){
       cachePvDoc=snap.docs.map(d=>({id:d.id,...d.data()}));
       renderPvDocList();
     },e=>console.error('preventivi listener:',e));
+    DB.collection('pacchetti').orderBy('nome').onSnapshot(snap=>{
+      cachePvPacchetti=snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderPvPacchetti();
+    },e=>console.error('pacchetti listener:',e));
   } else {
-    renderPvClienti();renderPvListino();renderPvDocList();
+    renderPvClienti();renderPvListino();renderPvDocList();renderPvPacchetti();
   }
 }
 
 function pvSwitchTab(tab){
   pvActiveTab=tab;
-  ['clienti','listino','doc'].forEach(t=>{
+  ['clienti','listino','pacchetti','doc'].forEach(t=>{
     $('pvTab_'+t).style.display=t===tab?'block':'none';
     $('pvTabBtn_'+t).style.background=t===tab?'var(--ac)':'transparent';
     $('pvTabBtn_'+t).style.color=t===tab?'#fff':'var(--tx2)';
@@ -3965,6 +4056,254 @@ function pvPopolaSelectClienti(){
   const cur=sel.value;
   sel.innerHTML='<option value="">— Seleziona cliente —</option>'+cachePvClienti.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
   if(cur)sel.value=cur;
+}
+
+// ── IMPORT EXCEL CLIENTI ──
+let pvImportClientiRows=[],pvImportClientiHeaders=[];
+
+function pvHandleExcelFileClienti(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const sheetName=wb.SheetNames[0];
+      const sheet=wb.Sheets[sheetName];
+      const rows=XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,defval:''});
+      if(!rows.length){toast('File vuoto o non leggibile','r');return;}
+      pvImportClientiHeaders=rows[0].map((h,i)=>String(h||'Colonna '+(i+1)));
+      pvImportClientiRows=rows.slice(1).filter(r=>r.some(c=>String(c||'').trim()!==''));
+      if(!pvImportClientiRows.length){toast('Nessuna riga dati trovata sotto l\'intestazione','r');return;}
+      $('pvImportClientiSheetName').textContent=sheetName;
+      $('pvImportClientiRowCount').textContent=pvImportClientiRows.length;
+      const opts=pvImportClientiHeaders.map((h,i)=>`<option value="${i}">${h}</option>`).join('');
+      const emptyOpt='<option value="-1">— Nessuna —</option>';
+      $('pvImpClColNome').innerHTML=opts;
+      $('pvImpClColPiva').innerHTML=emptyOpt+opts;
+      $('pvImpClColCf').innerHTML=emptyOpt+opts;
+      $('pvImpClColIndirizzo').innerHTML=emptyOpt+opts;
+      $('pvImpClColEmail').innerHTML=emptyOpt+opts;
+      $('pvImpClColTel').innerHTML=emptyOpt+opts;
+      $('pvImpClColReferente').innerHTML=emptyOpt+opts;
+      const findCol=(keywords)=>{
+        const idx=pvImportClientiHeaders.findIndex(h=>keywords.some(k=>h.toLowerCase().includes(k)));
+        return idx>=0?idx:null;
+      };
+      const cNome=findCol(['ragione sociale','nome','denominazione','azienda','cliente','company','name']);
+      const cPiva=findCol(['p.iva','piva','partita iva','vat']);
+      const cCf=findCol(['codice fiscale','cod.fiscale','cf']);
+      const cIndirizzo=findCol(['indirizzo','address','via']);
+      const cEmail=findCol(['email','mail','e-mail']);
+      const cTel=findCol(['telefono','tel','phone','cellulare']);
+      const cReferente=findCol(['referente','contatto','contact person']);
+      if(cNome!==null)$('pvImpClColNome').value=cNome;
+      $('pvImpClColPiva').value=cPiva!==null?cPiva:-1;
+      $('pvImpClColCf').value=cCf!==null?cCf:-1;
+      $('pvImpClColIndirizzo').value=cIndirizzo!==null?cIndirizzo:-1;
+      $('pvImpClColEmail').value=cEmail!==null?cEmail:-1;
+      $('pvImpClColTel').value=cTel!==null?cTel:-1;
+      $('pvImpClColReferente').value=cReferente!==null?cReferente:-1;
+      pvRenderImportClientiPreview();
+      ['pvImpClColNome','pvImpClColPiva','pvImpClColCf','pvImpClColIndirizzo','pvImpClColEmail','pvImpClColTel','pvImpClColReferente'].forEach(id=>{
+        $(id).onchange=pvRenderImportClientiPreview;
+      });
+      openMod('mPvImportClientiMap');
+    }catch(err){
+      console.error('Excel parse error:',err);
+      toast('Errore lettura file: '+err.message,'r',5000);
+    }finally{
+      input.value='';
+    }
+  };
+  reader.onerror=()=>toast('Errore lettura file','r');
+  reader.readAsArrayBuffer(file);
+}
+
+function pvRenderImportClientiPreview(){
+  const iNome=parseInt($('pvImpClColNome').value);
+  const prev=$('pvImportClientiPreview');
+  const sample=pvImportClientiRows.slice(0,5).map(r=>r[iNome]||'⚠️ nome mancante');
+  prev.innerHTML='Anteprima (prime '+sample.length+' righe):<br>'+sample.map(s=>'• '+s).join('<br>');
+}
+
+async function pvConfirmImportClienti(){
+  const iNome=parseInt($('pvImpClColNome').value);
+  if(isNaN(iNome)||iNome<0){toast('Seleziona la colonna Nome','r');return;}
+  const iPiva=parseInt($('pvImpClColPiva').value);
+  const iCf=parseInt($('pvImpClColCf').value);
+  const iIndirizzo=parseInt($('pvImpClColIndirizzo').value);
+  const iEmail=parseInt($('pvImpClColEmail').value);
+  const iTel=parseInt($('pvImpClColTel').value);
+  const iReferente=parseInt($('pvImpClColReferente').value);
+
+  const now=new Date().toISOString();
+  let imported=0,skipped=0;
+  const batch=DB.batch();
+  pvImportClientiRows.forEach(r=>{
+    const nome=String(r[iNome]||'').trim();
+    if(!nome){skipped++;return;}
+    const ref=DB.collection('clienti').doc();
+    batch.set(ref,{
+      nome,
+      piva:iPiva>=0?String(r[iPiva]||'').trim():'',
+      cf:iCf>=0?String(r[iCf]||'').trim():'',
+      indirizzo:iIndirizzo>=0?String(r[iIndirizzo]||'').trim():'',
+      email:iEmail>=0?String(r[iEmail]||'').trim():'',
+      tel:iTel>=0?String(r[iTel]||'').trim():'',
+      referente:iReferente>=0?String(r[iReferente]||'').trim():'',
+      note:'',
+      fonte:'import',
+      createdAt:now,updatedAt:now
+    });
+    imported++;
+  });
+  if(imported===0){toast('Nessuna riga valida da importare','r');return;}
+  try{
+    await batch.commit();
+    toast(`✓ Importati ${imported} clienti`+(skipped?` (${skipped} righe saltate per nome mancante)`:''));
+    closeMod('mPvImportClientiMap');
+  }catch(e){toast('Errore import: '+e.message,'r');}
+}
+
+// ── PACCHETTI (lavori frequenti) ──
+function pvOpenPacchettoForm(pkId){
+  pvpkRigheCorrenti=[];
+  $('pvpkId').value='';$('pvpkNome').value='';
+  if(pkId){
+    const p=cachePvPacchetti.find(x=>x.id===pkId);if(!p)return;
+    $('mPvPacchettoTitle').textContent='📦 Modifica pacchetto';
+    $('pvpkId').value=p.id;$('pvpkNome').value=p.nome||'';
+    pvpkRigheCorrenti=JSON.parse(JSON.stringify(p.righe||[]));
+  } else {
+    $('mPvPacchettoTitle').textContent='📦 Nuovo pacchetto';
+  }
+  pvPkRenderRighe();
+  openMod('mPvPacchetto');
+}
+
+function pvPkAddRigaLibera(){
+  pvpkRigheCorrenti.push({nome:'',um:'pezzo',qty:1,prezzo:0,fonte:'libera'});
+  pvPkRenderRighe();
+}
+
+function pvPkAddRigaFromListino(){
+  if(!cachePvListino.length){toast('Il listino è vuoto — aggiungi voci o importa da Excel','a');return;}
+  // riusa lo stesso picker del preventivo, ma con target diverso
+  pvPickTarget='pacchetto';
+  $('pvPickSearch').value='';
+  pvRenderPickList();
+  openMod('mPvPickListino');
+}
+
+function pvPkRenderRighe(){
+  const el=$('pvpkRighe');
+  if(!pvpkRigheCorrenti.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--tx3);padding:10px 0">Nessuna voce — aggiungi dal listino o una riga libera.</div>';
+    return;
+  }
+  el.innerHTML=pvpkRigheCorrenti.map((r,i)=>`
+    <div style="display:grid;grid-template-columns:1fr 50px 70px 28px;gap:6px;align-items:center;margin-bottom:6px">
+      <input type="text" value="${(r.nome||'').replace(/"/g,'&quot;')}" placeholder="Descrizione" oninput="pvpkRigheCorrenti[${i}].nome=this.value" style="padding:8px;font-size:12px">
+      <input type="number" value="${r.qty}" min="0" step="1" oninput="pvpkRigheCorrenti[${i}].qty=parseFloat(this.value)||0" style="padding:8px;font-size:12px;text-align:center">
+      <input type="number" value="${r.prezzo}" min="0" step="0.01" oninput="pvpkRigheCorrenti[${i}].prezzo=parseFloat(this.value)||0" style="padding:8px;font-size:12px;text-align:right">
+      <button onclick="pvpkRigheCorrenti.splice(${i},1);pvPkRenderRighe()" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">✕</button>
+    </div>`).join('');
+}
+
+async function pvSavePacchetto(){
+  const nome=val('pvpkNome');
+  if(!nome){toast('Inserisci un nome per il pacchetto','r');return;}
+  const righeValide=pvpkRigheCorrenti.filter(r=>r.nome&&r.nome.trim());
+  if(!righeValide.length){toast('Aggiungi almeno una voce','r');return;}
+  const id=val('pvpkId');
+  const now=new Date().toISOString();
+  const data={nome,righe:righeValide,updatedAt:now};
+  try{
+    if(id){
+      await DB.collection('pacchetti').doc(id).update(data);
+      toast('✓ Pacchetto aggiornato');
+    } else {
+      data.createdAt=now;
+      await DB.collection('pacchetti').add(data);
+      toast('✓ Pacchetto salvato');
+    }
+    closeMod('mPvPacchetto');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function pvDeletePacchetto(pkId){
+  if(!confirm('Eliminare questo pacchetto?'))return;
+  try{
+    await DB.collection('pacchetti').doc(pkId).delete();
+    toast('Pacchetto eliminato');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+function renderPvPacchetti(){
+  const list=$('pvPacchettiList');if(!list)return;
+  if(!cachePvPacchetti.length){list.innerHTML='<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessun pacchetto — creane uno per velocizzare i preventivi futuri!</div>';return;}
+  list.innerHTML=cachePvPacchetti.map(p=>{
+    const tot=(p.righe||[]).reduce((s,r)=>s+(r.qty*r.prezzo),0);
+    return `<div class="row" style="align-items:center;padding:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px">
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="pvOpenPacchettoForm('${p.id}')">
+        <div style="font-size:13px;font-weight:600">${p.nome}</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${(p.righe||[]).length} voci · ${fmtEuro(tot)}</div>
+      </div>
+      <button onclick="pvDeletePacchetto('${p.id}')" style="flex-shrink:0;width:32px;height:32px;border-radius:var(--rs);border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:13px;cursor:pointer">🗑</button>
+    </div>`;
+  }).join('');
+}
+
+// Applica pacchetto a un preventivo in editing
+function pvOpenPickPacchetto(){
+  if(!cachePvPacchetti.length){toast('Nessun pacchetto disponibile — creane uno dalla tab Pacchetti','a');return;}
+  const list=$('pvPickPacchettoList');
+  list.innerHTML=cachePvPacchetti.map(p=>{
+    const tot=(p.righe||[]).reduce((s,r)=>s+(r.qty*r.prezzo),0);
+    return `<div onclick="pvApplyPacchetto('${p.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid var(--b);cursor:pointer">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500">${p.nome}</div>
+        <div style="font-size:11px;color:var(--tx2)">${(p.righe||[]).length} voci</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--ac2);white-space:nowrap;margin-left:10px">${fmtEuro(tot)}</div>
+    </div>`;
+  }).join('');
+  openMod('mPvPickPacchetto');
+}
+
+function pvApplyPacchetto(pkId){
+  const p=cachePvPacchetti.find(x=>x.id===pkId);if(!p)return;
+  const righeDaAggiungere=JSON.parse(JSON.stringify(p.righe||[]));
+  pvRigheCorrenti=pvRigheCorrenti.concat(righeDaAggiungere);
+  pvRenderRighe();
+  closeMod('mPvPickPacchetto');
+  toast('✓ Pacchetto "'+p.nome+'" aggiunto al preventivo');
+}
+
+// Salva le righe correnti del preventivo come nuovo pacchetto riutilizzabile
+function pvOpenSaveAsPacchetto(){
+  const righeValide=pvRigheCorrenti.filter(r=>r.nome&&r.nome.trim());
+  if(!righeValide.length){toast('Aggiungi almeno una riga al preventivo prima di salvarla come pacchetto','r');return;}
+  $('pvSaveAsPkNome').value='';
+  openMod('mPvSaveAsPacchetto');
+}
+
+async function pvConfirmSaveAsPacchetto(){
+  const nome=val('pvSaveAsPkNome');
+  if(!nome){toast('Inserisci un nome per il pacchetto','r');return;}
+  const righeValide=pvRigheCorrenti.filter(r=>r.nome&&r.nome.trim());
+  if(!righeValide.length){toast('Nessuna riga valida da salvare','r');return;}
+  const now=new Date().toISOString();
+  try{
+    await DB.collection('pacchetti').add({
+      nome,
+      righe:JSON.parse(JSON.stringify(righeValide)),
+      createdAt:now,updatedAt:now
+    });
+    toast('✓ Pacchetto "'+nome+'" salvato — disponibile nella tab Pacchetti');
+    closeMod('mPvSaveAsPacchetto');
+  }catch(e){toast('Errore: '+e.message,'r');}
 }
 
 // ── LISTINO ──
@@ -4231,6 +4570,7 @@ function pvAddRigaLibera(){
 
 function pvAddRigaFromListino(){
   if(!cachePvListino.length){toast('Il listino è vuoto — aggiungi voci o importa da Excel','a');return;}
+  pvPickTarget='preventivo';
   $('pvPickSearch').value='';
   pvRenderPickList();
   openMod('mPvPickListino');
@@ -4253,8 +4593,14 @@ function pvRenderPickList(){
 
 function pvPickListinoVoce(voceId){
   const v=cachePvListino.find(x=>x.id===voceId);if(!v)return;
-  pvRigheCorrenti.push({nome:v.nome,um:v.um,qty:1,prezzo:v.prezzo,fonte:'listino',listinoId:v.id});
-  pvRenderRighe();
+  const riga={nome:v.nome,um:v.um,qty:1,prezzo:v.prezzo,fonte:'listino',listinoId:v.id};
+  if(pvPickTarget==='pacchetto'){
+    pvpkRigheCorrenti.push(riga);
+    pvPkRenderRighe();
+  } else {
+    pvRigheCorrenti.push(riga);
+    pvRenderRighe();
+  }
   closeMod('mPvPickListino');
 }
 
@@ -4546,9 +4892,7 @@ function pvViewDoc(docId){
   openMod('mPvDocView');
 }
 
-function pvGeneraPDF(docId){
-  const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
-  const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+function pvBuildPreventivoPDF(d,cliente){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
   let y=20;
@@ -4603,8 +4947,49 @@ function pvGeneraPDF(docId){
   doc.setFontSize(8);doc.setTextColor(150);
   doc.text('Preventivo valido '+(d.validitaGiorni||30)+' giorni dalla data di emissione.',14,285);
 
+  return doc;
+}
+
+function pvGeneraPDF(docId){
+  const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
+  const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+  const doc=pvBuildPreventivoPDF(d,cliente);
   doc.save('Preventivo_'+(d.numero||'').replace('/','-')+'.pdf');
   toast('📄 PDF generato');
+}
+
+// ── ESPORTA ARCHIVIO PREVENTIVI (ZIP) ──
+async function pvExportArchivioZip(){
+  if(!cachePvDoc.length){toast('Nessun preventivo da esportare','a');return;}
+  const btn=$('pvExportZipBtn');
+  if(btn){btn.textContent='⏳ Genero ZIP...';btn.disabled=true;}
+  try{
+    const zip=new JSZip();
+    const usedNames={};
+    cachePvDoc.forEach(d=>{
+      const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+      const doc=pvBuildPreventivoPDF(d,cliente);
+      const blob=doc.output('blob');
+      let nomeBase=(d.numero||d.id).replace('/','-')+(cliente?'_'+cliente.nome.replace(/[^a-zA-Z0-9]/g,'_').substring(0,30):'');
+      let nomeFile=nomeBase+'.pdf';
+      let n=2;
+      while(usedNames[nomeFile]){nomeFile=nomeBase+'_'+n+'.pdf';n++;}
+      usedNames[nomeFile]=true;
+      zip.file(nomeFile,blob);
+    });
+    const zipBlob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(zipBlob);
+    a.download='Preventivi_Archivio_'+new Date().toISOString().slice(0,10)+'.zip';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('✓ ZIP scaricato — '+cachePvDoc.length+' preventivi');
+  }catch(e){
+    console.error('Export ZIP error:',e);
+    toast('Errore generazione ZIP: '+e.message,'r');
+  }finally{
+    if(btn){btn.textContent='📦 Scarica archivio ZIP';btn.disabled=false;}
+  }
 }
 
 // ── PREPARA LAVORO ──
