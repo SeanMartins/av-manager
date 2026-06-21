@@ -5770,12 +5770,15 @@ async function doExport(){
       const rowNum=g+2;
       const d=new Date(anno,mese,g);
       const isWeekend=d.getDay()===0||d.getDay()===6;
+      const dataISO=`${anno}-${String(mese+1).padStart(2,'0')}-${pad(g)}`;
+      const festivita=getFestivitaItaliane(anno).find(f=>f.data===dataISO);
+      const isFestivo=!!festivita;
       const p=byDay[g];
-      const fillColor=isWeekend?C_WEEKEND:C_WHITE;
-      const fontColor=isWeekend?F_GREY:F_BLACK;
+      const fillColor=isFestivo?{argb:'FFFDE0E0'}:isWeekend?C_WEEKEND:C_WHITE;
+      const fontColor=isFestivo?{argb:'FFCC0000'}:isWeekend?F_GREY:F_BLACK;
 
       let luogo='',entr='',usc='',p1i='',p1o='',p2i='',p2o='',oreLav='',oreStr='';
-      const oreStd=isWeekend?0:8;
+      const oreStd=(isWeekend||isFestivo)?0:8;
 
       if(p){
         // Rimuovi emoji dalla location per Excel
@@ -5793,8 +5796,10 @@ async function doExport(){
           totLav+=nette;
           totStr+=(nette-oreStd);
         }
+      } else if(isFestivo){
+        luogo=festivita.nome;
       }
-      if(!isWeekend)totStd+=oreStd;
+      totStd+=oreStd;
 
       const rowData=[`${pad(g)} ${GG[d.getDay()]}`,luogo,entr,usc,p1i,p1o,p2i,p2o,oreStd||'',oreLav||'',oreStr||'',''];
       rowData.forEach((val,i)=>{
