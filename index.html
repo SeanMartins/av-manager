@@ -11056,21 +11056,26 @@ function schedMidnightReset(){
 schedMidnightReset();
 AUTH.onAuthStateChanged(async (authUser)=>{
   if(authUser){
-    // Sessione Firebase Auth valida — carica/aggiorna i dati del profilo da Firestore
+    // Sessione Firebase Auth valida — verifica SEMPRE approvazione prima di avviare l'app,
+    // anche quando si riparte da cache locale (un account non approvato non deve mai
+    // entrare, neanche su un refresh di pagina o un riavvio dell'app)
     try{
-      const saved=localStorage.getItem('av_user');
-      const cached=saved?JSON.parse(saved):null;
-      if(cached&&cached.id===authUser.uid&&cached.nome&&cached.cognome){
-        USER=cached; // avvio rapido con dati in cache, poi aggiornati dai listener live
-        startApp();
-      } else {
-        const docSnap=await DB.collection('team').doc(authUser.uid).get();
-        if(docSnap.exists){
-          USER={id:authUser.uid,...docSnap.data()};
-          localStorage.setItem('av_user',JSON.stringify(USER));
-          startApp();
-        }
+      const docSnap=await DB.collection('team').doc(authUser.uid).get();
+      if(!docSnap.exists){
+        await AUTH.signOut();
+        localStorage.removeItem('av_user');
+        return;
       }
+      const freshData={id:authUser.uid,...docSnap.data()};
+      if(!freshData.approvato){
+        await AUTH.signOut();
+        localStorage.removeItem('av_user');
+        toast('Account in attesa di approvazione dal Responsabile','a');
+        return;
+      }
+      USER=freshData;
+      localStorage.setItem('av_user',JSON.stringify(USER));
+      startApp();
     }catch(e){console.warn('Session restore error:',e);}
   } else {
     // Nessuna sessione Firebase Auth valida: non mostrare un'app "loggata" con dati stantii
