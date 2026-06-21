@@ -5014,7 +5014,7 @@ function pvGeneraSchedaLavoroPDF(d,cliente){
   doc.text('SCHEDA LAVORO',14,y);
   y+=6;
   doc.setFontSize(9);doc.setTextColor(120);
-  doc.text('MMG Logistics · Martins Osemwengie',14,y);
+  doc.text('MULTIMEDIA MEETING GROUP',14,y);
   doc.text('Rif. preventivo: '+(d.numero||'—'),196,y,{align:'right'});
   y+=12;
   doc.setTextColor(0);doc.setFontSize(10);doc.setFont(undefined,'bold');
@@ -5191,7 +5191,7 @@ function pvBuildPreventivoPDF(d,cliente){
   doc.text(d.numero||'',196,y,{align:'right'});
   y+=6;
   doc.setFontSize(9);doc.setTextColor(120);
-  doc.text('MMG Logistics · Martins Osemwengie',14,y);
+  doc.text('MULTIMEDIA MEETING GROUP',14,y);
   doc.text('Data: '+new Date(d.createdAt).toLocaleDateString('it-IT'),196,y,{align:'right'});
   y+=12;
   doc.setTextColor(0);doc.setFontSize(10);doc.setFont(undefined,'bold');
@@ -7109,6 +7109,8 @@ async function perRicalcolaStraordinari(){
 }
 
 // ── Vista lista (riepilogo per dipendente) ──
+function isCollabEsterno(m){return m&&m.ruolo==='Collaboratore esterno';}
+
 function renderPersonaleList(){
   const list=$('personaleList');if(!list)return;
   const anno=parseInt($('perAnnoSel')?.value)||perAnnoCorrente;
@@ -7122,21 +7124,21 @@ function renderPersonaleList(){
   }
 
   h+=membri.map(m=>{
-    const goduti=perGiorniFerieGoduti(m.id,anno);
-    const rimanenti=FERIE_GIORNI_ANNO-goduti;
+    const esterno=isCollabEsterno(m);
     const permessi=perGetPermessiPerUid(m.id,anno).length;
     const straordOre=perOreStraordinarioTotali(m.id,anno);
     const oreSett=perGetOreSettimanali(m);
+    const ferieBlock=esterno
+      ?`<div><div style="font-size:13px;font-weight:700;color:var(--tx3)">N/A</div><div style="font-size:9px;color:var(--tx3);text-transform:uppercase">Ferie</div></div>`
+      :(()=>{const goduti=perGiorniFerieGoduti(m.id,anno);const rimanenti=FERIE_GIORNI_ANNO-goduti;
+        return`<div><div style="font-size:13px;font-weight:700;color:${rimanenti<5?'var(--am)':'var(--ac2)'}">${rimanenti}</div><div style="font-size:9px;color:var(--tx3);text-transform:uppercase">Ferie rim.</div></div>`;})();
     return `<div onclick="apriPersonaleDettaglio('${m.id}')" class="row" style="align-items:center;padding:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px;cursor:pointer">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600">${m.nome} ${m.cognome}</div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${m.ruolo} · ${oreSett}h/sett</div>
+        <div style="font-size:13px;font-weight:600">${m.nome} ${m.cognome}${esterno?' <span style="font-size:9px;background:rgba(168,85,247,.15);color:#c084fc;padding:1px 6px;border-radius:8px">ext</span>':''}</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${m.ruolo}${esterno?'':' · '+oreSett+'h/sett'}</div>
       </div>
       <div style="text-align:right;flex-shrink:0;display:flex;gap:14px;align-items:center">
-        <div>
-          <div style="font-size:13px;font-weight:700;color:${rimanenti<5?'var(--am)':'var(--ac2)'}">${rimanenti}</div>
-          <div style="font-size:9px;color:var(--tx3);text-transform:uppercase">Ferie rim.</div>
-        </div>
+        ${ferieBlock}
         <div>
           <div style="font-size:13px;font-weight:700">${permessi}</div>
           <div style="font-size:9px;color:var(--tx3);text-transform:uppercase">Permessi</div>
@@ -7163,6 +7165,7 @@ function renderPersonaleDettaglio(uid){
   const body=$('perDettBody');if(!body)return;
   const m=cacheTeam.find(x=>x.id===uid);if(!m){body.innerHTML='<div class="empty">Dipendente non trovato</div>';return;}
   const anno=parseInt($('perAnnoSel')?.value)||perAnnoCorrente;
+  const esterno=isCollabEsterno(m);
   const oreSett=perGetOreSettimanali(m);
   const goduti=perGiorniFerieGoduti(uid,anno);
   const rimanenti=FERIE_GIORNI_ANNO-goduti;
@@ -7190,24 +7193,25 @@ function renderPersonaleDettaglio(uid){
     <button onclick="perDeleteStraordinario('${s.id}')" style="flex-shrink:0;width:30px;height:30px;border-radius:var(--rs);border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">🗑</button>
   </div>`;
 
+  const ferieBoxRimanenti=esterno
+    ?`<div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--tx3)">N/A</div><div style="font-size:9px;color:var(--tx2);text-transform:uppercase">Ferie</div></div>`
+    :`<div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:${rimanenti<5?'var(--am)':'var(--ac2)'}">${rimanenti}</div><div style="font-size:9px;color:var(--tx2);text-transform:uppercase">Ferie rimanenti</div></div>`;
+  const ferieBoxGodute=esterno
+    ?`<div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--tx3)">—</div><div style="font-size:9px;color:var(--tx2);text-transform:uppercase">Non applicabile</div></div>`
+    :`<div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:18px;font-weight:800">${goduti}/${FERIE_GIORNI_ANNO}</div><div style="font-size:9px;color:var(--tx2);text-transform:uppercase">Ferie godute</div></div>`;
+
   body.innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
       <div>
-        <div class="stl">${m.nome} ${m.cognome}</div>
-        <div style="font-size:12px;color:var(--tx2);margin-top:2px">${m.ruolo} · ${oreSett}h/settimana</div>
+        <div class="stl">${m.nome} ${m.cognome}${esterno?' <span style="font-size:10px;background:rgba(168,85,247,.15);color:#c084fc;padding:1px 7px;border-radius:10px;vertical-align:middle">esterno</span>':''}</div>
+        <div style="font-size:12px;color:var(--tx2);margin-top:2px">${m.ruolo}${esterno?'':' · '+oreSett+'h/settimana'}</div>
       </div>
-      <button class="btn btn-f" style="width:auto;padding:6px 10px;font-size:11px" onclick="perOpenOreContratto('${m.id}','${(m.nome+' '+m.cognome).replace(/'/g,"\\'")}',${oreSett})">⚙️ Orario</button>
+      ${esterno?'':`<button class="btn btn-f" style="width:auto;padding:6px 10px;font-size:11px" onclick="perOpenOreContratto('${m.id}','${(m.nome+' '+m.cognome).replace(/'/g,"\\'")}',${oreSett})">⚙️ Orario</button>`}
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
-      <div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">
-        <div style="font-size:18px;font-weight:800;color:${rimanenti<5?'var(--am)':'var(--ac2)'}">${rimanenti}</div>
-        <div style="font-size:9px;color:var(--tx2);text-transform:uppercase">Ferie rimanenti</div>
-      </div>
-      <div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">
-        <div style="font-size:18px;font-weight:800">${goduti}/${FERIE_GIORNI_ANNO}</div>
-        <div style="font-size:9px;color:var(--tx2);text-transform:uppercase">Ferie godute</div>
-      </div>
+      ${ferieBoxRimanenti}
+      ${ferieBoxGodute}
       <div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">
         <div style="font-size:18px;font-weight:800;color:var(--gn)">${straordTot}h</div>
         <div style="font-size:9px;color:var(--tx2);text-transform:uppercase">Straordinari</div>
@@ -7215,11 +7219,13 @@ function renderPersonaleDettaglio(uid){
     </div>
     <div style="font-size:11px;color:var(--tx2);margin-bottom:16px;text-align:center">di cui ${straordPagate}h pagate · ${straordRecupero}h da recuperare</div>
 
-    <button class="btn btn-p btn-f" style="margin-bottom:8px" onclick="perOpenFeriePermesso('${m.id}','${(m.nome+' '+m.cognome).replace(/'/g,"\\'")}')">+ Aggiungi ferie/permesso/malattia</button>
+    <button class="btn btn-p btn-f" style="margin-bottom:8px" onclick="perOpenFeriePermesso('${m.id}','${(m.nome+' '+m.cognome).replace(/'/g,"\\'")}')">+ Aggiungi ${esterno?'permesso/malattia':'ferie/permesso/malattia'}</button>
     <button class="btn btn-f" style="margin-bottom:18px" onclick="perOpenStraordinario('${m.id}','${(m.nome+' '+m.cognome).replace(/'/g,"\\'")}')">+ Aggiungi straordinario manuale</button>
 
+    ${esterno?'':`
     <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">🏖 Ferie (${ferie.length})</div>
     ${ferie.length?ferie.map(rigaAssenza).join(''):'<div style="font-size:12px;color:var(--tx3);padding:6px 0 14px">Nessuna ferie registrata</div>'}
+    `}
 
     <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin:16px 0 8px">📋 Permessi (${permessi.length})</div>
     ${permessi.length?permessi.map(rigaAssenza).join(''):'<div style="font-size:12px;color:var(--tx3);padding:6px 0 14px">Nessun permesso registrato</div>'}
