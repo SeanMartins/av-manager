@@ -1402,6 +1402,20 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
   </div>
 </div>
 
+<!-- QR INSTALLAZIONE APP (solo Admin/Responsabile) -->
+<div class="mol" id="mQrInstall" onclick="if(event.target===this)closeMod('mQrInstall')">
+  <div class="msh" style="text-align:center">
+    <div class="mhd"></div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px">📲 Installa l'app</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:16px">Fai scansionare questo codice ai nuovi colleghi</div>
+    <div style="display:flex;justify-content:center;margin-bottom:16px">
+      <div id="qrInstallCanvas" style="background:#fff;padding:16px;border-radius:12px;display:inline-block"></div>
+    </div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:16px">Si aprirà una pagina con le istruzioni per salvare l'app sulla schermata Home</div>
+    <button class="btn btn-f btn-f" style="width:100%" onclick="closeMod('mQrInstall')">Chiudi</button>
+  </div>
+</div>
+
 <!-- NUOVO TURNO -->
 <div class="mol" id="mNewTurno" onclick="if(event.target===this)closeMod('mNewTurno')">
   <div class="msh">
@@ -1461,6 +1475,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <div id="btnGestUtenti" style="display:none;margin-top:8px">
       <button class="btn btn-f btn-p" style="width:100%" onclick="apriGestioneUtenti()">👥 Gestione utenti</button>
+      <button class="btn btn-f" style="width:100%;margin-top:8px" onclick="mostraQrInstallazione()">📲 QR Installazione app</button>
     </div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('calendario')">📅 Calendario lavori</button>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile');goPage('tools')">🔧 Tools tecnici AV</button>
@@ -2334,6 +2349,66 @@ function mostraAttesaApprovazione(nome){
       </div>
     </div>`;
 }
+
+// ── PAGINA INSTALLAZIONE PWA (raggiunta da QR code, ?installa nell'URL) ──
+function isIOSDevice(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+}
+function isAndroidDevice(){
+  return /Android/.test(navigator.userAgent);
+}
+function mostraPaginaInstallazione(){
+  const regEl=$('reg');
+  if(!regEl)return;
+  const ios=isIOSDevice();
+  const android=isAndroidDevice();
+
+  const stepsIOS=`
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;text-align:left">
+      <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:var(--acb);color:var(--ac2);display:flex;align-items:center;justify-content:center;font-weight:700">1</div>
+      <div style="font-size:14px;line-height:1.4">Tocca il pulsante <strong>Condividi</strong> 📤 in basso (o in alto) nella barra di Safari</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;text-align:left">
+      <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:var(--acb);color:var(--ac2);display:flex;align-items:center;justify-content:center;font-weight:700">2</div>
+      <div style="font-size:14px;line-height:1.4">Scorri e tocca <strong>"Aggiungi alla schermata Home"</strong> ➕</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:4px;text-align:left">
+      <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:var(--acb);color:var(--ac2);display:flex;align-items:center;justify-content:center;font-weight:700">3</div>
+      <div style="font-size:14px;line-height:1.4">Tocca <strong>"Aggiungi"</strong> in alto a destra — fatto! 🎉</div>
+    </div>`;
+
+  const stepsAndroid=`
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;text-align:left">
+      <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:var(--acb);color:var(--ac2);display:flex;align-items:center;justify-content:center;font-weight:700">1</div>
+      <div style="font-size:14px;line-height:1.4">Se vedi un banner <strong>"Installa app"</strong> in basso, toccalo direttamente</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;text-align:left">
+      <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:var(--acb);color:var(--ac2);display:flex;align-items:center;justify-content:center;font-weight:700">2</div>
+      <div style="font-size:14px;line-height:1.4">In alternativa: tocca i <strong>tre puntini ⋮</strong> in alto a destra di Chrome</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:4px;text-align:left">
+      <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:var(--acb);color:var(--ac2);display:flex;align-items:center;justify-content:center;font-weight:700">3</div>
+      <div style="font-size:14px;line-height:1.4">Tocca <strong>"Installa app"</strong> o <strong>"Aggiungi a schermata Home"</strong> 🎉</div>
+    </div>`;
+
+  const stepsGenerico=`
+    <div style="font-size:14px;line-height:1.6;text-align:left;color:var(--tx2)">
+      Apri questo link dal browser del telefono (Safari su iPhone, Chrome su Android) e cerca l'opzione <strong>"Aggiungi a schermata Home"</strong> o <strong>"Installa app"</strong> nel menu del browser.
+    </div>`;
+
+  regEl.innerHTML=`
+    <div style="min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div style="text-align:center;max-width:380px;width:100%">
+        <img src="logo.png" style="width:64px;height:64px;border-radius:16px;margin-bottom:14px" onerror="this.style.display='none'">
+        <div style="font-size:22px;font-weight:700;margin-bottom:6px">Installa AV Manager</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:24px">Aggiungi l'app alla schermata Home per accedervi come una vera app, senza passare dal browser ogni volta</div>
+        <div style="background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);padding:20px;margin-bottom:20px">
+          ${ios?stepsIOS:android?stepsAndroid:stepsGenerico}
+        </div>
+        <button class="btn btn-p btn-f" onclick="window.location.href=window.location.pathname">Vai all'app →</button>
+      </div>
+    </div>`;
+}
 async function doLogin(){
   const email=val('loginEmail');
   if(!email){toast('Inserisci la tua email','r');return;}
@@ -2352,7 +2427,7 @@ async function doLogin(){
     const userData={id:uid,...docSnap.data()};
     if(!userData.approvato){
       await AUTH.signOut();
-      toast('Account in attesa di approvazione dal Responsabile','a');
+      mostraAttesaApprovazione(userData.nome||'utente');
       btn.textContent='Accedi →';btn.disabled=false;return;
     }
     // sessionToken: meccanismo "un dispositivo alla volta", indipendente da Firebase Auth
@@ -10816,6 +10891,22 @@ function confermaPDF(){
 // ── QR CODE MAGAZZINO ──
 let qrInstance=null;
 
+// ── QR CODE INSTALLAZIONE APP ──
+let qrInstallInstance=null;
+function mostraQrInstallazione(){
+  closeMod('mProfile');
+  const canvas=$('qrInstallCanvas');canvas.innerHTML='';
+  const url=`${location.origin}${location.pathname}?installa`;
+  try{
+    qrInstallInstance=new QRCode(canvas,{
+      text:url,width:220,height:220,
+      colorDark:'#1a1a2e',colorLight:'#ffffff',
+      correctLevel:QRCode.CorrectLevel.M
+    });
+  }catch(e){canvas.innerHTML='<div style="padding:20px;color:red">Errore generazione QR</div>';}
+  openMod('mQrInstall');
+}
+
 function mostraQR(artId){
   const m=cacheMag.find(x=>x.id===artId);if(!m)return;
   $('qrNome').textContent=m.nome;
@@ -11053,8 +11144,13 @@ function schedMidnightReset(){
     schedMidnightReset();
   },msToMidnight);
 }
-schedMidnightReset();
-AUTH.onAuthStateChanged(async (authUser)=>{
+// Se l'utente arriva dal QR code di installazione, mostra subito le istruzioni
+// e salta del tutto il flusso di login/avvio normale
+if(new URLSearchParams(location.search).has('installa')){
+  mostraPaginaInstallazione();
+} else {
+  schedMidnightReset();
+  AUTH.onAuthStateChanged(async (authUser)=>{
   if(authUser){
     // Sessione Firebase Auth valida — verifica SEMPRE approvazione prima di avviare l'app,
     // anche quando si riparte da cache locale (un account non approvato non deve mai
@@ -11070,7 +11166,7 @@ AUTH.onAuthStateChanged(async (authUser)=>{
       if(!freshData.approvato){
         await AUTH.signOut();
         localStorage.removeItem('av_user');
-        toast('Account in attesa di approvazione dal Responsabile','a');
+        mostraAttesaApprovazione(freshData.nome||'utente');
         return;
       }
       USER=freshData;
@@ -11081,7 +11177,8 @@ AUTH.onAuthStateChanged(async (authUser)=>{
     // Nessuna sessione Firebase Auth valida: non mostrare un'app "loggata" con dati stantii
     localStorage.removeItem('av_user');
   }
-});
+  });
+}
 
 // ── NO SERVICE WORKER — disabilitato per aggiornamenti immediati ──
 if('serviceWorker' in navigator){
