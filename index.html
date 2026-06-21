@@ -9905,6 +9905,9 @@ async function renderMieOre(){
     const key=data.toDateString();
     const gg=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][data.getDay()];
     const isWeekend=data.getDay()===0||data.getDay()===6;
+    const dataISOCheck=`${anno}-${pad(mese+1)}-${pad(g)}`;
+    const festivita=getFestivitaItaliane(anno).find(f=>f.data===dataISOCheck);
+    const isFestivo=!!festivita;
     const pList=byDay[key]||[];
     const confGiorno=conferme['g_'+g]||false;
 
@@ -9930,20 +9933,21 @@ async function renderMieOre(){
       }
     }
 
-    const stdMs=isWeekend?0:ORE_STD_GIORNO*3600000;
+    const stdMs=(isWeekend||isFestivo)?0:ORE_STD_GIORNO*3600000;
     const straordMs=Math.max(0,nette-stdMs);
     totStraord+=straordMs;
 
     const netteStr=nette>0?fmtH(nette):'—';
     const straordStr=straordMs>60000?'+'+fmtH(straordMs):'';
-    const rowBg=isWeekend?'background:rgba(255,255,255,.02)':pList.length>0?'':'background:rgba(239,68,68,.03)';
+    const rowBg=isFestivo?'background:rgba(239,68,68,.08)':isWeekend?'background:rgba(255,255,255,.02)':pList.length>0?'':'background:rgba(239,68,68,.03)';
     const okIcon=confGiorno?'<span style="color:var(--gn);font-size:14px">✅</span>':'';
 
     const presenzaId=pList.length>0?pList[0].id:'';
     const dataISO=`${anno}-${pad(mese+1)}-${pad(g)}`;
-    rows+=`<tr style="${rowBg};cursor:pointer" onclick="apriTimbRiga('${dataISO}','${presenzaId}')" title="Clicca per aggiungere/modificare">
-      <td style="padding:7px 8px;font-size:12px;color:${isWeekend?'var(--tx3)':'var(--tx)'}">
-        <div style="font-weight:500">${pad(g)} ${gg}</div>
+    rows+=`<tr style="${rowBg};cursor:pointer" onclick="apriTimbRiga('${dataISO}','${presenzaId}')" title="${isFestivo?festivita.nome:'Clicca per aggiungere/modificare'}">
+      <td style="padding:7px 8px;font-size:12px;color:${isFestivo?'var(--rd)':isWeekend?'var(--tx3)':'var(--tx)'}">
+        <div style="font-weight:${isFestivo?700:500}">${pad(g)} ${gg}${isFestivo?' 🎌':''}</div>
+        ${isFestivo?`<div style="font-size:9px;color:var(--rd);font-weight:600;margin-top:1px">${festivita.nome}</div>`:''}
       </td>
       <td style="padding:7px 4px;font-size:11px;color:var(--tx2)">${luogo==='—'?'':luogo.replace(/[🏢🔧✈️🃏🤒]/u,'').trim()}</td>
       <td style="padding:7px 4px;font-size:11px;text-align:center;color:${entrataStr==='—'?'var(--tx3)':'var(--gn)'}">${entrataStr}</td>
