@@ -2119,6 +2119,14 @@ let fotoBase64=[],lastForumCount=0,appStarted=false;
 
 // ── UTILS ──
 const $=id=>document.getElementById(id);
+function iniziali(p){
+  // Calcola le iniziali in modo sicuro, anche se nome/cognome mancano o sono vuoti
+  // (es. documento team incompleto) — evita crash a cascata in tutta l'app
+  if(!p)return'??';
+  const n=(p.nome||'').trim(),c=(p.cognome||'').trim();
+  const i1=n?n[0]:'?',i2=c?c[0]:'?';
+  return(i1+i2).toUpperCase();
+}
 const val=id=>$( id)?$( id).value.trim():'';
 function pad(n){return String(n).padStart(2,'0');}
 function toast(msg,t='g'){
@@ -2323,7 +2331,7 @@ function initDesktopLayout(){
   if(!isDesktopUser())return;
   document.body.classList.add('desktop-mode');
   // Popola avatar e nome
-  const ini=(USER.nome[0]+USER.cognome[0]).toUpperCase();
+  const ini=iniziali(USER);
   const av=$('deskAvatar');if(av)av.textContent=ini;
   const nm=$('deskNome');if(nm)nm.textContent=USER.nome+' '+USER.cognome;
   const rl=$('deskRuolo');if(rl)rl.textContent=USER.ruolo;
@@ -2411,7 +2419,7 @@ function doLogout(){
 // ── START APP ──
 function startApp(){
   $('reg').style.display='none';$('app').style.display='flex';
-  const ini=(USER.nome[0]+USER.cognome[0]).toUpperCase();
+  const ini=iniziali(USER);
   $('avbtn').textContent=ini;$('profAv').textContent=ini;
   $('profName').textContent=USER.nome+' '+USER.cognome;
   $('profRole').textContent=USER.ruolo;
@@ -2703,7 +2711,7 @@ function renderPresenze(){
   const teamVis=isEsterno()?cacheTeam.filter(m=>m.id===USER.id||m.ruolo!=='Collaboratore esterno'):cacheTeam;
   if(!teamVis.length)h='<div class="empty">Nessun dipendente registrato</div>';
   else teamVis.forEach((m,i)=>{
-    const ini=(m.nome[0]+m.cognome[0]).toUpperCase();
+    const ini=iniziali(m);
     const tp=todayP.find(p=>p.uid===m.id);
     const luogo=tp&&tp.luogo?tp.luogo:'';
     const bc=tp?(tp.uscita?'ba':'bg'):'bp';
@@ -2762,7 +2770,7 @@ function renderTeam(){
   let hm='';
   if(!cacheTeam.length)hm='<div class="empty">Nessun dipendente ancora</div>';
   else cacheTeam.forEach((m,i)=>{
-    const ini=(m.nome[0]+m.cognome[0]).toUpperCase();
+    const ini=iniziali(m);
     hm+='<div class="row"><div class="av '+avC[i%4]+'">'+ini+'</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">'+m.nome+' '+m.cognome+'</div><div style="font-size:11px;color:var(--tx2)">'+m.email+'</div></div><span class="bdg bp">'+m.ruolo+'</span></div>';
   });
   const tl=$('teamListMobile');if(tl)tl.innerHTML=hm;
@@ -2831,7 +2839,7 @@ function renderTeamDesktop(){
       </tr></thead><tbody>`;
 
     membri.forEach((m,i)=>{
-      const ini=(m.nome[0]+m.cognome[0]).toUpperCase();
+      const ini=iniziali(m);
       const pres=presenzeOggi[m.id];
       const isPresente=pres&&!pres.uscita;
       const isUscito=pres&&pres.uscita;
@@ -2891,7 +2899,7 @@ function renderForum(){
   if(!cacheForum.length)h='<div class="empty">Nessun post ancora — crea il primo! 💬</div>';
   else cacheForum.forEach(p=>{
     const m=cacheTeam.find(x=>x.id===p.uid);
-    const ini=m?(m.nome[0]+m.cognome[0]).toUpperCase():'??';
+    const ini=m?iniziali(m):'??';
     const avC=cacheTeam.findIndex(x=>x.id===p.uid)%4;
     const dt=p.createdAt?new Date(p.createdAt).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
     const imgs=(p.foto||[]).slice(0,3).map(f=>'<div class="pth"><img src="'+f+'" loading="lazy"></div>').join('');
@@ -2950,7 +2958,7 @@ async function savePost(){
 async function openThread(tid){
   const post=cacheForum.find(p=>p.id===tid);if(!post)return;
   const m=cacheTeam.find(x=>x.id===post.uid);
-  const ini=m?(m.nome[0]+m.cognome[0]).toUpperCase():'??';
+  const ini=m?iniziali(m):'??';
   const avIdx=cacheTeam.findIndex(x=>x.id===post.uid)%4;
   const dt=post.createdAt?new Date(post.createdAt).toLocaleDateString('it-IT',{day:'2-digit',month:'long',hour:'2-digit',minute:'2-digit'}):'';
   const imgs=(post.foto||[]).map(f=>'<div class="pth"><img src="'+f+'" loading="lazy"></div>').join('');
@@ -2986,7 +2994,7 @@ async function openThread(tid){
   let rh='';
   replies.forEach(r=>{
     const rm=cacheTeam.find(x=>x.id===r.uid);
-    const rini=rm?(rm.nome[0]+rm.cognome[0]).toUpperCase():'??';
+    const rini=iniziali(rm);
     const rdt=r.createdAt?new Date(r.createdAt).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
     const rimgs=(r.foto||[]).map(f=>'<div class="pth"><img src="'+f+'" loading="lazy"></div>').join('');
     rh+='<div class="ritem"><div class="rhead"><div class="rav">'+rini+'</div>'+
@@ -10737,7 +10745,7 @@ function renderChatTeam(){
   lista.sort((a,b)=>(a.nome+a.cognome).localeCompare(b.nome+b.cognome));
   let h='';
   lista.forEach((m,i)=>{
-    const ini=(m.nome[0]+m.cognome[0]).toUpperCase();
+    const ini=iniziali(m);
     const cid=chatConvId(USER.id,m.id);
     const conv=cacheConv[cid];
     const lk='letto_'+USER.id;
