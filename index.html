@@ -2269,10 +2269,10 @@ async function doReg(){
   if(pw!==pwConf){toast('Le password non coincidono','r');return;}
   const btn=$('regBtn');btn.textContent='Salvataggio...';btn.disabled=true;
   try{
-    const snap=await DB.collection('team').where('email','==',email.toLowerCase()).get();
-    if(!snap.empty){toast('Email già registrata — usa Accedi','a');btn.textContent='Inizia →';btn.disabled=false;return;}
-    // Crea l'account Firebase Auth: da qui in poi l'identità è verificata lato server,
-    // non più solo un hash salvato in un documento Firestore leggibile da chiunque.
+    // Il controllo "email già registrata" è demandato a Firebase Auth stesso
+    // (errore auth/email-already-in-use più sotto) — niente query Firestore qui,
+    // perché a questo punto l'utente non è ancora autenticato e le Security Rules
+    // richiedono il login per leggere la collezione team.
     const cred=await AUTH.createUserWithEmailAndPassword(email.toLowerCase(),pw);
     const uid=cred.user.uid;
     const m={id:uid,nome,cognome,email:email.toLowerCase(),tel:tel||'',ruolo:selRole,
