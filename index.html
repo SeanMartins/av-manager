@@ -740,7 +740,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
         <div id="pvStatsBar" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px"></div>
         <div style="display:flex;gap:8px;margin-bottom:12px">
           <button class="btn btn-p" style="flex:1" onclick="pvOpenNuovoPreventivo()">+ Nuovo preventivo</button>
-          <button id="pvExportZipBtn" class="btn btn-f" style="flex:1" onclick="pvExportArchivioZip()">📦 Scarica archivio ZIP</button>
+          <button id="pvExportZipBtn" class="btn btn-f" style="flex:1" onclick="pvOpenExportZip()">📦 Esporta ZIP</button>
         </div>
         <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto">
           <button class="chip on" onclick="pvFiltraStato('tutti',this)" data-stato="tutti">Tutti</button>
@@ -2019,6 +2019,30 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div style="display:flex;gap:8px">
       <button class="btn btn-f" onclick="closeMod('mPvSaveAsPacchetto')">Annulla</button>
       <button class="btn btn-p btn-f" onclick="pvConfirmSaveAsPacchetto()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- PV: ESPORTA ARCHIVIO ZIP PER PERIODO -->
+<div class="mol" id="mPvExportZip" onclick="if(event.target===this)closeMod('mPvExportZip')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px">📦 Esporta preventivi in ZIP</div>
+    <div class="ig"><label class="il">Periodo</label>
+      <select id="pvExpPeriodo" onchange="pvUpdateExportZipRange()">
+        <option value="tutti">📦 Tutti i preventivi</option>
+        <option value="mensile">📅 Mensile</option>
+        <option value="trimestrale">📅 Trimestrale</option>
+        <option value="semestrale">📅 Semestrale</option>
+        <option value="annuale">📅 Annuale</option>
+        <option value="custom">📅 Date personalizzate</option>
+      </select>
+    </div>
+    <div id="pvExpSelettori"></div>
+    <div id="pvExpRangePreview" style="font-size:11px;color:var(--tx2);margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mPvExportZip')">Annulla</button>
+      <button class="btn btn-p btn-f" id="pvExportZipConfirmBtn" onclick="pvExportArchivioZip()">📦 Scarica ZIP</button>
     </div>
   </div>
 </div>
@@ -5150,14 +5174,117 @@ function pvGeneraPDF(docId){
 }
 
 // ── ESPORTA ARCHIVIO PREVENTIVI (ZIP) ──
-async function pvExportArchivioZip(){
+function pvOpenExportZip(){
   if(!cachePvDoc.length){toast('Nessun preventivo da esportare','a');return;}
-  const btn=$('pvExportZipBtn');
+  $('pvExpPeriodo').value='tutti';
+  pvUpdateExportZipRange();
+  openMod('mPvExportZip');
+}
+
+function pvUpdateExportZipRange(){
+  const periodo=val('pvExpPeriodo');
+  const oggi=new Date();
+  const annoOggi=oggi.getFullYear();
+  const box=$('pvExpSelettori');
+  const MESI=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+  if(periodo==='tutti'){
+    box.innerHTML='';
+  } else if(periodo==='mensile'){
+    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Mese</label><select id="pvExpMese">${MESI.map((m,i)=>`<option value="${i}" ${i===oggi.getMonth()?'selected':''}>${m}</option>`).join('')}</select></div>
+      <div class="ig"><label class="il">Anno</label><select id="pvExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>
+    </div>`;
+  } else if(periodo==='trimestrale'){
+    const trimCorrente=Math.floor(oggi.getMonth()/3);
+    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Trimestre</label><select id="pvExpTrim">
+        <option value="0" ${trimCorrente===0?'selected':''}>T1 (Gen-Mar)</option>
+        <option value="1" ${trimCorrente===1?'selected':''}>T2 (Apr-Giu)</option>
+        <option value="2" ${trimCorrente===2?'selected':''}>T3 (Lug-Set)</option>
+        <option value="3" ${trimCorrente===3?'selected':''}>T4 (Ott-Dic)</option>
+      </select></div>
+      <div class="ig"><label class="il">Anno</label><select id="pvExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>
+    </div>`;
+  } else if(periodo==='semestrale'){
+    const semCorrente=oggi.getMonth()<6?0:1;
+    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Semestre</label><select id="pvExpSem">
+        <option value="0" ${semCorrente===0?'selected':''}>S1 (Gen-Giu)</option>
+        <option value="1" ${semCorrente===1?'selected':''}>S2 (Lug-Dic)</option>
+      </select></div>
+      <div class="ig"><label class="il">Anno</label><select id="pvExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>
+    </div>`;
+  } else if(periodo==='annuale'){
+    box.innerHTML=`<div class="ig"><label class="il">Anno</label><select id="pvExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>`;
+  } else {
+    const isoOggi=toLocalISO(oggi);
+    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Data inizio</label><input type="date" id="pvExpDataInizio" value="${isoOggi.slice(0,8)}01"></div>
+      <div class="ig"><label class="il">Data fine</label><input type="date" id="pvExpDataFine" value="${isoOggi}"></div>
+    </div>`;
+  }
+  ['pvExpMese','pvExpAnno','pvExpTrim','pvExpSem','pvExpDataInizio','pvExpDataFine'].forEach(id=>{
+    if($(id))$(id).onchange=pvRefreshExportZipPreview;
+  });
+  pvRefreshExportZipPreview();
+}
+
+function pvGetExportZipRange(){
+  const periodo=val('pvExpPeriodo');
+  const pad=n=>String(n).padStart(2,'0');
+  if(periodo==='tutti')return null; // nessun filtro, esporta tutto
+  if(periodo==='mensile'){
+    const anno=parseInt(val('pvExpAnno')),mese=parseInt(val('pvExpMese'));
+    const ultimoG=new Date(anno,mese+1,0).getDate();
+    return {inizio:`${anno}-${pad(mese+1)}-01`,fine:`${anno}-${pad(mese+1)}-${pad(ultimoG)}`};
+  }
+  if(periodo==='trimestrale'){
+    const anno=parseInt(val('pvExpAnno')),trim=parseInt(val('pvExpTrim'));
+    const meseInizio=trim*3,meseFine=meseInizio+2;
+    const ultimoG=new Date(anno,meseFine+1,0).getDate();
+    return {inizio:`${anno}-${pad(meseInizio+1)}-01`,fine:`${anno}-${pad(meseFine+1)}-${pad(ultimoG)}`};
+  }
+  if(periodo==='semestrale'){
+    const anno=parseInt(val('pvExpAnno')),sem=parseInt(val('pvExpSem'));
+    const meseInizio=sem*6,meseFine=meseInizio+5;
+    const ultimoG=new Date(anno,meseFine+1,0).getDate();
+    return {inizio:`${anno}-${pad(meseInizio+1)}-01`,fine:`${anno}-${pad(meseFine+1)}-${pad(ultimoG)}`};
+  }
+  if(periodo==='annuale'){
+    const anno=parseInt(val('pvExpAnno'));
+    return {inizio:`${anno}-01-01`,fine:`${anno}-12-31`};
+  }
+  return {inizio:val('pvExpDataInizio'),fine:val('pvExpDataFine')};
+}
+
+function pvRefreshExportZipPreview(){
+  const prev=$('pvExpRangePreview');if(!prev)return;
+  const r=pvGetExportZipRange();
+  if(!r){
+    prev.textContent=cachePvDoc.length+' preventivi totali in archivio';
+    return;
+  }
+  if(!r.inizio||!r.fine||r.fine<r.inizio){prev.innerHTML='<span style="color:var(--rd)">⚠️ Periodo non valido</span>';return;}
+  const count=cachePvDoc.filter(d=>{
+    const data=(d.createdAt||'').slice(0,10);
+    return data>=r.inizio&&data<=r.fine;
+  }).length;
+  prev.textContent=fmtDataIT(r.inizio)+' → '+fmtDataIT(r.fine)+' — '+count+' preventivi trovati';
+}
+
+async function pvExportArchivioZip(){
+  const r=pvGetExportZipRange();
+  const daEsportare=r
+    ? cachePvDoc.filter(d=>{const data=(d.createdAt||'').slice(0,10);return data>=r.inizio&&data<=r.fine;})
+    : cachePvDoc;
+  if(!daEsportare.length){toast('Nessun preventivo nel periodo selezionato','a');return;}
+  const btn=$('pvExportZipConfirmBtn');
   if(btn){btn.textContent='⏳ Genero ZIP...';btn.disabled=true;}
   try{
     const zip=new JSZip();
     const usedNames={};
-    cachePvDoc.forEach(d=>{
+    daEsportare.forEach(d=>{
       const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
       const doc=pvBuildPreventivoPDF(d,cliente);
       const blob=doc.output('blob');
@@ -5171,15 +5298,17 @@ async function pvExportArchivioZip(){
     const zipBlob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(zipBlob);
-    a.download='Preventivi_Archivio_'+new Date().toISOString().slice(0,10)+'.zip';
+    const periodoLabel=val('pvExpPeriodo')||'tutti';
+    a.download='Preventivi_'+periodoLabel+'_'+new Date().toISOString().slice(0,10)+'.zip';
     a.click();
     URL.revokeObjectURL(a.href);
-    toast('✓ ZIP scaricato — '+cachePvDoc.length+' preventivi');
+    toast('✓ ZIP scaricato — '+daEsportare.length+' preventivi');
+    closeMod('mPvExportZip');
   }catch(e){
     console.error('Export ZIP error:',e);
     toast('Errore generazione ZIP: '+e.message,'r');
   }finally{
-    if(btn){btn.textContent='📦 Scarica archivio ZIP';btn.disabled=false;}
+    if(btn){btn.textContent='📦 Scarica ZIP';btn.disabled=false;}
   }
 }
 
