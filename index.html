@@ -5687,7 +5687,12 @@ function openExport(){
 async function doExport(){
   const mese=parseInt(document.getElementById('expMese').value);
   const anno=parseInt(document.getElementById('expAnno').value);
-  const dipId=document.getElementById('expDip').value;
+  let dipId=document.getElementById('expDip').value;
+  // Blocco di sicurezza: un dipendente non Responsabile/Admin/PM può esportare SOLO i propri dati,
+  // indipendentemente da cosa contenga il valore del select (difesa anche da manomissioni lato client)
+  if(!pvCanAccess()&&!isResponsabile()&&!isAdmin()){
+    dipId=USER.id;
+  }
   const MESI_LONG=['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
   const MESI_SHORT=['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'];
   const GG=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
