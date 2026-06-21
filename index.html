@@ -5009,6 +5009,7 @@ function pvGeneraSchedaLavoroPDF(d,cliente){
   // Usata per il documento allegato al Calendario Lavori, visibile anche ai tecnici.
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
+  doc.setProperties({title:'Scheda lavoro',author:'MMG MULTIMEDIA MEETING GROUP',creator:'MMG MULTIMEDIA MEETING GROUP'});
   let y=20;
   doc.setFontSize(18);doc.setFont(undefined,'bold');
   doc.text('SCHEDA LAVORO',14,y);
@@ -5184,6 +5185,7 @@ function pvViewDoc(docId){
 function pvBuildPreventivoPDF(d,cliente){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF();
+  doc.setProperties({title:'Preventivo '+(d.numero||''),author:'MMG MULTIMEDIA MEETING GROUP',creator:'MMG MULTIMEDIA MEETING GROUP'});
   let y=20;
   doc.setFontSize(18);doc.setFont(undefined,'bold');
   doc.text('PREVENTIVO',14,y);
@@ -6004,7 +6006,7 @@ async function doExport(){
   const F_GREY={argb:'FF666666'};
 
   const wb=new ExcelJS.Workbook();
-  wb.creator='MMG Logistics';
+  wb.creator='MMG MULTIMEDIA MEETING GROUP';
   wb.created=new Date();
 
   for(const [uid,dip] of Object.entries(byDip)){
@@ -7511,6 +7513,7 @@ async function perExportPresenzeExcel(){
   if(btn){btn.textContent='⏳ Genero...';btn.disabled=true;}
   try{
     const wb=XLSX.utils.book_new();
+    wb.Props={Author:'MMG MULTIMEDIA MEETING GROUP',Company:'MMG MULTIMEDIA MEETING GROUP'};
     membri.forEach(m=>{
       const righe=perRaccoglPresenzePerExport(m.id,r.inizio,r.fine);
       const data=[['Data','Entrata','Uscita','Ore nette','Pausa (min)','Luogo/Note','Festività']];
@@ -7555,11 +7558,13 @@ async function perExportPresenzePdf(){
     const {jsPDF}=window.jspdf;
     if(membri.length===1){
       const doc=new jsPDF();
+      doc.setProperties({title:'Cartellino presenze',author:'MMG MULTIMEDIA MEETING GROUP',creator:'MMG MULTIMEDIA MEETING GROUP'});
       perDisegnaCartellinoSuDoc(doc,membri[0],perRaccoglPresenzePerExport(membri[0].id,r.inizio,r.fine),rangeLabel);
       doc.save('Cartellino_'+membri[0].nome+'_'+membri[0].cognome+'_'+r.inizio+'.pdf');
     } else {
       // Più dipendenti: un unico PDF, una pagina per persona
       const finale=new jsPDF();
+      finale.setProperties({title:'Cartellini presenze',author:'MMG MULTIMEDIA MEETING GROUP',creator:'MMG MULTIMEDIA MEETING GROUP'});
       membri.forEach((m,idx)=>{
         if(idx>0)finale.addPage();
         perDisegnaCartellinoSuDoc(finale,m,perRaccoglPresenzePerExport(m.id,r.inizio,r.fine),rangeLabel);
