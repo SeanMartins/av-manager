@@ -754,8 +754,36 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- PERSONALE (Ferie/Permessi/Straordinari) -->
     <div class="page" id="p-personale">
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">Anno di riferimento: <select id="perAnnoSel" onchange="renderPersonaleList()" style="display:inline-block;width:auto;padding:4px 8px;font-size:12px"></select></div>
-      <div id="personaleList"></div>
+      <div style="display:flex;gap:6px;margin-bottom:14px;background:var(--bg2);border-radius:var(--rs);padding:3px">
+        <button id="perTabBtn_riepilogo" onclick="perSwitchTab('riepilogo')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:var(--ac);color:#fff">👥 Riepilogo</button>
+        <button id="perTabBtn_export" onclick="perSwitchTab('export')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2)">📥 Esporta presenze</button>
+      </div>
+
+      <div id="perTab_riepilogo">
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">Anno di riferimento: <select id="perAnnoSel" onchange="renderPersonaleList()" style="display:inline-block;width:auto;padding:4px 8px;font-size:12px"></select></div>
+        <div id="personaleList"></div>
+      </div>
+
+      <div id="perTab_export" style="display:none">
+        <div class="ig"><label class="il">Dipendente</label>
+          <select id="perExpUid"><option value="all">👥 Tutto il team</option></select>
+        </div>
+        <div class="ig"><label class="il">Periodo</label>
+          <select id="perExpPeriodo" onchange="perUpdateExportRange()">
+            <option value="mensile">📅 Mensile</option>
+            <option value="trimestrale">📅 Trimestrale</option>
+            <option value="semestrale">📅 Semestrale</option>
+            <option value="annuale">📅 Annuale</option>
+            <option value="custom">📅 Date personalizzate</option>
+          </select>
+        </div>
+        <div id="perExpSelettori"></div>
+        <div id="perExpRangePreview" style="font-size:11px;color:var(--tx2);margin-bottom:14px"></div>
+        <div style="display:flex;gap:8px">
+          <button id="perExpExcelBtn" class="btn btn-f" style="flex:1" onclick="perExportPresenzeExcel()">📊 Scarica Excel</button>
+          <button id="perExpPdfBtn" class="btn btn-f" style="flex:1" onclick="perExportPresenzePdf()">📄 Scarica PDF</button>
+        </div>
+      </div>
     </div>
 
     <!-- DETTAGLIO PERSONALE -->
@@ -7017,7 +7045,265 @@ async function perSaveOreContratto(){
   }catch(e){toast('Errore: '+e.message,'r');}
 }
 
+// ══════════════════════════════════════════
+// ── ESPORTA ARCHIVIO PRESENZE ──
+// ══════════════════════════════════════════
+function perSwitchTab(tab){
+  ['riepilogo','export'].forEach(t=>{
+    $('perTab_'+t).style.display=t===tab?'block':'none';
+    $('perTabBtn_'+t).style.background=t===tab?'var(--ac)':'transparent';
+    $('perTabBtn_'+t).style.color=t===tab?'#fff':'var(--tx2)';
+  });
+  if(tab==='export')perInitExportTab();
+}
 
+function perInitExportTab(){
+  const sel=$('perExpUid');
+  if(sel&&sel.options.length<=1){
+    cacheTeam.filter(m=>m.approvato).sort((a,b)=>(a.cognome||'').localeCompare(b.cognome||'')).forEach(m=>{
+      const o=document.createElement('option');o.value=m.id;o.textContent=m.nome+' '+m.cognome;
+      sel.appendChild(o);
+    });
+  }
+  perUpdateExportRange();
+}
+
+function perUpdateExportRange(){
+  const periodo=val('perExpPeriodo');
+  const oggi=new Date();
+  const annoOggi=oggi.getFullYear();
+  const box=$('perExpSelettori');
+  const MESI=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+  if(periodo==='mensile'){
+    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Mese</label><select id="perExpMese">${MESI.map((m,i)=>`<option value="${i}" ${i===oggi.getMonth()?'selected':''}>${m}</option>`).join('')}</select></div>
+      <div class="ig"><label class="il">Anno</label><select id="perExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>
+    </div>`;
+  } else if(periodo==='trimestrale'){
+    const trimCorrente=Math.floor(oggi.getMonth()/3);
+    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Trimestre</label><select id="perExpTrim">
+        <option value="0" ${trimCorrente===0?'selected':''}>T1 (Gen-Mar)</option>
+        <option value="1" ${trimCorrente===1?'selected':''}>T2 (Apr-Giu)</option>
+        <option value="2" ${trimCorrente===2?'selected':''}>T3 (Lug-Set)</option>
+        <option value="3" ${trimCorrente===3?'selected':''}>T4 (Ott-Dic)</option>
+      </select></div>
+      <div class="ig"><label class="il">Anno</label><select id="perExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>
+    </div>`;
+  } else if(periodo==='semestrale'){
+    const semCorrente=oggi.getMonth()<6?0:1;
+    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Semestre</label><select id="perExpSem">
+        <option value="0" ${semCorrente===0?'selected':''}>S1 (Gen-Giu)</option>
+        <option value="1" ${semCorrente===1?'selected':''}>S2 (Lug-Dic)</option>
+      </select></div>
+      <div class="ig"><label class="il">Anno</label><select id="perExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>
+    </div>`;
+  } else if(periodo==='annuale'){
+    box.innerHTML=`<div class="ig"><label class="il">Anno</label><select id="perExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>`;
+  } else {
+    const isoOggi=toLocalISO(oggi);
+    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Data inizio</label><input type="date" id="perExpDataInizio" value="${isoOggi.slice(0,8)}01"></div>
+      <div class="ig"><label class="il">Data fine</label><input type="date" id="perExpDataFine" value="${isoOggi}"></div>
+    </div>`;
+  }
+  ['perExpMese','perExpAnno','perExpTrim','perExpSem','perExpDataInizio','perExpDataFine'].forEach(id=>{
+    if($(id))$(id).onchange=perRefreshExportPreview;
+  });
+  perRefreshExportPreview();
+}
+
+function perGetExportRange(){
+  const periodo=val('perExpPeriodo');
+  const pad=n=>String(n).padStart(2,'0');
+  if(periodo==='mensile'){
+    const anno=parseInt(val('perExpAnno')),mese=parseInt(val('perExpMese'));
+    const ultimoG=new Date(anno,mese+1,0).getDate();
+    return {inizio:`${anno}-${pad(mese+1)}-01`,fine:`${anno}-${pad(mese+1)}-${pad(ultimoG)}`};
+  }
+  if(periodo==='trimestrale'){
+    const anno=parseInt(val('perExpAnno')),trim=parseInt(val('perExpTrim'));
+    const meseInizio=trim*3,meseFine=meseInizio+2;
+    const ultimoG=new Date(anno,meseFine+1,0).getDate();
+    return {inizio:`${anno}-${pad(meseInizio+1)}-01`,fine:`${anno}-${pad(meseFine+1)}-${pad(ultimoG)}`};
+  }
+  if(periodo==='semestrale'){
+    const anno=parseInt(val('perExpAnno')),sem=parseInt(val('perExpSem'));
+    const meseInizio=sem*6,meseFine=meseInizio+5;
+    const ultimoG=new Date(anno,meseFine+1,0).getDate();
+    return {inizio:`${anno}-${pad(meseInizio+1)}-01`,fine:`${anno}-${pad(meseFine+1)}-${pad(ultimoG)}`};
+  }
+  if(periodo==='annuale'){
+    const anno=parseInt(val('perExpAnno'));
+    return {inizio:`${anno}-01-01`,fine:`${anno}-12-31`};
+  }
+  return {inizio:val('perExpDataInizio'),fine:val('perExpDataFine')};
+}
+
+function perRefreshExportPreview(){
+  const r=perGetExportRange();
+  const prev=$('perExpRangePreview');if(!prev)return;
+  if(!r.inizio||!r.fine||r.fine<r.inizio){prev.innerHTML='<span style="color:var(--rd)">⚠️ Periodo non valido</span>';return;}
+  const giorniLav=contaGiorniLavorativi(r.inizio,r.fine);
+  prev.textContent='Periodo: '+fmtDataIT(r.inizio)+' → '+fmtDataIT(r.fine)+' ('+giorniLav+' giorni lavorativi)';
+}
+
+// Raccoglie e struttura le timbrature di un dipendente in un range, una riga per giorno
+function perRaccoglPresenzePerExport(uid,inizio,fine){
+  const startISO=inizio+'T00:00:00.000Z',endISO=fine+'T23:59:59.999Z';
+  const presenzeUid=cachePresenze.filter(p=>p.uid===uid&&p.entrata&&p.entrata>=startISO&&p.entrata<=endISO);
+  const righe=[];
+  let cur=new Date(inizio+'T12:00:00');
+  const fineD=new Date(fine+'T12:00:00');
+  while(cur<=fineD){
+    const giornoISO=toLocalISO(cur);
+    const presenzeG=presenzeUid.filter(p=>p.entrata.slice(0,10)===giornoISO);
+    const festivita=getFestivitaItaliane(cur.getFullYear()).find(f=>f.data===giornoISO);
+    const isWeekend=cur.getDay()===0||cur.getDay()===6;
+    if(presenzeG.length){
+      presenzeG.forEach(p=>{
+        const ent=new Date(p.entrata);
+        const usc=p.uscita?new Date(p.uscita):null;
+        const pauseMin=(p.pause||[]).reduce((s,pa)=>{if(pa.inizio&&pa.fine)return s+(new Date(pa.fine)-new Date(pa.inizio))/60000;return s;},0);
+        const oreNette=usc?Math.max(0,(usc-ent)/3600000-pauseMin/60):null;
+        righe.push({
+          data:giornoISO,
+          entrata:pad(ent.getHours())+':'+pad(ent.getMinutes()),
+          uscita:usc?pad(usc.getHours())+':'+pad(usc.getMinutes()):'—',
+          oreNette:oreNette!==null?Math.round(oreNette*100)/100:null,
+          pauseMin:Math.round(pauseMin),
+          luogo:p.luogo||'',
+          festivo:festivita?festivita.nome:'',
+          weekend:isWeekend
+        });
+      });
+    } else {
+      // Giorno senza timbrature: includi comunque la riga se è giorno lavorativo, per completezza dell'archivio
+      if(!isWeekend){
+        const assenza=cacheFeriePermessi.find(f=>f.uid===uid&&giornoISO>=f.dataInizio&&giornoISO<=f.dataFine);
+        righe.push({
+          data:giornoISO,entrata:'—',uscita:'—',oreNette:null,pauseMin:0,
+          luogo:assenza?('🏷 '+(assenza.tipo==='ferie'?'Ferie':assenza.tipo==='permesso'?'Permesso':'Malattia')):'',
+          festivo:festivita?festivita.nome:'',weekend:false
+        });
+      }
+    }
+    cur.setDate(cur.getDate()+1);
+  }
+  return righe;
+}
+
+async function perExportPresenzeExcel(){
+  const r=perGetExportRange();
+  if(!r.inizio||!r.fine||r.fine<r.inizio){toast('Seleziona un periodo valido','r');return;}
+  const uidSel=val('perExpUid');
+  const membri=uidSel==='all'?cacheTeam.filter(m=>m.approvato):cacheTeam.filter(m=>m.id===uidSel);
+  if(!membri.length){toast('Nessun dipendente selezionato','r');return;}
+  const btn=$('perExpExcelBtn');
+  if(btn){btn.textContent='⏳ Genero...';btn.disabled=true;}
+  try{
+    const wb=XLSX.utils.book_new();
+    membri.forEach(m=>{
+      const righe=perRaccoglPresenzePerExport(m.id,r.inizio,r.fine);
+      const data=[['Data','Entrata','Uscita','Ore nette','Pausa (min)','Luogo/Note','Festività']];
+      righe.forEach(rg=>{
+        data.push([
+          fmtDataIT(rg.data),rg.entrata,rg.uscita,
+          rg.oreNette!==null?rg.oreNette:'',
+          rg.pauseMin||'',
+          rg.luogo,
+          rg.festivo
+        ]);
+      });
+      const totOre=righe.reduce((s,rg)=>s+(rg.oreNette||0),0);
+      data.push([]);
+      data.push(['Totale ore nette periodo',Math.round(totOre*100)/100]);
+      const ws=XLSX.utils.aoa_to_sheet(data);
+      ws['!cols']=[{wch:12},{wch:9},{wch:9},{wch:11},{wch:12},{wch:24},{wch:22}];
+      let nomeFoglio=(m.nome+'_'+m.cognome).substring(0,28).replace(/[\\/?*[\]:]/g,'');
+      XLSX.utils.book_append_sheet(wb,ws,nomeFoglio||m.id.substring(0,28));
+    });
+    const periodoLabel=val('perExpPeriodo');
+    XLSX.writeFile(wb,'Presenze_'+periodoLabel+'_'+r.inizio+'_'+r.fine+'.xlsx');
+    toast('✓ Excel scaricato — '+membri.length+' dipendente/i');
+  }catch(e){
+    console.error('Export Excel presenze error:',e);
+    toast('Errore generazione Excel: '+e.message,'r');
+  }finally{
+    if(btn){btn.textContent='📊 Scarica Excel';btn.disabled=false;}
+  }
+}
+
+async function perExportPresenzePdf(){
+  const r=perGetExportRange();
+  if(!r.inizio||!r.fine||r.fine<r.inizio){toast('Seleziona un periodo valido','r');return;}
+  const uidSel=val('perExpUid');
+  const membri=uidSel==='all'?cacheTeam.filter(m=>m.approvato):cacheTeam.filter(m=>m.id===uidSel);
+  if(!membri.length){toast('Nessun dipendente selezionato','r');return;}
+  const btn=$('perExpPdfBtn');
+  if(btn){btn.textContent='⏳ Genero...';btn.disabled=true;}
+  try{
+    const rangeLabel=fmtDataIT(r.inizio)+' — '+fmtDataIT(r.fine);
+    const {jsPDF}=window.jspdf;
+    if(membri.length===1){
+      const doc=new jsPDF();
+      perDisegnaCartellinoSuDoc(doc,membri[0],perRaccoglPresenzePerExport(membri[0].id,r.inizio,r.fine),rangeLabel);
+      doc.save('Cartellino_'+membri[0].nome+'_'+membri[0].cognome+'_'+r.inizio+'.pdf');
+    } else {
+      // Più dipendenti: un unico PDF, una pagina per persona
+      const finale=new jsPDF();
+      membri.forEach((m,idx)=>{
+        if(idx>0)finale.addPage();
+        perDisegnaCartellinoSuDoc(finale,m,perRaccoglPresenzePerExport(m.id,r.inizio,r.fine),rangeLabel);
+      });
+      finale.save('Cartellini_Presenze_'+r.inizio+'_'+r.fine+'.pdf');
+    }
+    toast('✓ PDF scaricato — '+membri.length+' dipendente/i');
+  }catch(e){
+    console.error('Export PDF presenze error:',e);
+    toast('Errore generazione PDF: '+e.message,'r');
+  }finally{
+    if(btn){btn.textContent='📄 Scarica PDF';btn.disabled=false;}
+  }
+}
+
+function perDisegnaCartellinoSuDoc(doc,membro,righe,rangeLabel){
+  let y=20;
+  doc.setFontSize(16);doc.setFont(undefined,'bold');doc.setTextColor(0);
+  doc.text('CARTELLINO PRESENZE',14,y);y+=7;
+  doc.setFontSize(10);doc.setFont(undefined,'normal');doc.setTextColor(100);
+  doc.text(membro.nome+' '+membro.cognome+' · '+membro.ruolo,14,y);y+=5;
+  doc.text('Periodo: '+rangeLabel,14,y);y+=10;
+
+  doc.setFillColor(240,240,245);
+  doc.rect(14,y,182,7,'F');
+  doc.setFontSize(8);doc.setFont(undefined,'bold');doc.setTextColor(0);
+  doc.text('Data',16,y+5);doc.text('Entrata',55,y+5);doc.text('Uscita',80,y+5);doc.text('Ore nette',105,y+5);doc.text('Pausa',135,y+5);doc.text('Note',155,y+5);
+  y+=10;
+  doc.setFont(undefined,'normal');doc.setFontSize(8);
+  let totOre=0;
+  righe.forEach(rg=>{
+    if(y>275){doc.addPage();y=20;}
+    if(rg.festivo)doc.setTextColor(180,0,0);
+    else if(rg.weekend)doc.setTextColor(150);
+    else doc.setTextColor(0);
+    doc.text(fmtDataIT(rg.data),16,y);
+    doc.text(rg.entrata,55,y);
+    doc.text(rg.uscita,80,y);
+    doc.text(rg.oreNette!==null?String(rg.oreNette):'',105,y);
+    doc.text(rg.pauseMin?String(rg.pauseMin)+'m':'',135,y);
+    const nota=rg.festivo||rg.luogo||'';
+    doc.text(doc.splitTextToSize(nota,40),155,y);
+    if(rg.oreNette)totOre+=rg.oreNette;
+    y+=6;
+  });
+  doc.setTextColor(0);
+  y+=4;doc.setDrawColor(220);doc.line(14,y,196,y);y+=8;
+  doc.setFont(undefined,'bold');doc.setFontSize(11);
+  doc.text('Totale ore nette: '+(Math.round(totOre*100)/100)+'h',14,y);
+}
 
 function getWeekDates(offset){
   const now=new Date();
