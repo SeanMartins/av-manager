@@ -14,6 +14,7 @@
 <link rel="manifest" href="manifest.json">
 <title>MMG — Multimedia Meeting Group</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
@@ -239,15 +240,15 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
           <span class="chip" onclick="pickChip(this,'role')">Collaboratore esterno</span>
         </div>
       </div>
-      <!-- PIN per tutti incluso Responsabile -->
+      <!-- Password per tutti incluso Responsabile -->
       <div class="ig">
-        <label class="il">🔑 PIN personale (6 cifre)</label>
-        <input type="password" id="rPin" placeholder="Es: 123456" maxlength="6" inputmode="numeric" pattern="[0-9]*">
-        <div style="font-size:11px;color:var(--tx3);margin-top:4px">Il tuo PIN personale per accedere all'app</div>
+        <label class="il">🔑 Password</label>
+        <input type="password" id="rPin" placeholder="Almeno 6 caratteri" minlength="6" autocomplete="new-password">
+        <div style="font-size:11px;color:var(--tx3);margin-top:4px">La tua password personale per accedere all'app (min. 6 caratteri)</div>
       </div>
       <div class="ig">
-        <label class="il">Conferma PIN</label>
-        <input type="password" id="rPinConf" placeholder="Ripeti il PIN" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+        <label class="il">Conferma password</label>
+        <input type="password" id="rPinConf" placeholder="Ripeti la password" minlength="6" autocomplete="new-password">
       </div>
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
         <div id="privBox" class="cbox" onclick="togglePriv()"></div>
@@ -256,10 +257,10 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <button class="btn btn-p btn-f" id="regBtn" onclick="doReg()" style="padding:13px;font-size:15px;font-weight:600">Inizia →</button>
     </div>
     <div id="formLogin" style="display:none">
-      <div class="ig"><label class="il">La tua email</label><input type="email" id="loginEmail" placeholder="mario@azienda.it"></div>
+      <div class="ig"><label class="il">La tua email</label><input type="email" id="loginEmail" placeholder="mario@azienda.it" autocomplete="username"></div>
       <div class="ig">
-        <label class="il">🔑 PIN personale</label>
-        <input type="password" id="loginPin" placeholder="Il tuo PIN a 6 cifre" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+        <label class="il">🔑 Password</label>
+        <input type="password" id="loginPin" placeholder="La tua password" autocomplete="current-password">
       </div>
       <button class="btn btn-p btn-f" id="loginBtn" onclick="doLogin()" style="padding:13px;font-size:15px;font-weight:600">Accedi →</button>
       <div style="font-size:12px;color:var(--tx2);text-align:center;margin-top:10px">Inserisci l'email con cui ti sei registrato</div>
@@ -1465,7 +1466,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div id="btnExportConfermato" style="display:none;margin-top:8px">
       <button class="btn btn-f" style="width:100%;color:var(--gn)" onclick="openExportConfermato()">✅ Esporta ore confermate</button>
     </div>
-    <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia PIN</button>
+    <button class="btn btn-f" style="margin-top:8px" onclick="cambiaPin()">🔑 Cambia password</button>
     <button class="btn btn-f" style="margin-top:8px;color:var(--rd)" onclick="doLogout()">Esci</button>
     <div style="text-align:center;font-size:10px;color:var(--tx3);margin-top:12px">v2026.05.20.37</div>
     <button class="btn btn-f" style="margin-top:8px" onclick="closeMod('mProfile')">Chiudi</button>
@@ -2107,6 +2108,7 @@ firebase.initializeApp({
   appId:"1:1047072296195:web:d220ed9c196b185d016d36"
 });
 const DB = firebase.firestore();
+const AUTH = firebase.auth();
 
 // ── STATE ──
 let USER=null,punchedIn=false,punchStart=null,punchDocId=null;
@@ -2206,24 +2208,29 @@ async function doReg(){
   const nome=val('rNome'),cognome=val('rCognome'),email=val('rEmail'),tel=val('rTel');
   if(!nome||!cognome||!email){toast('Compila nome, cognome ed email','r');return;}
   if(!privOk){toast('Accetta la privacy policy','r');return;}
-  const pin=val('rPin');const pinConf=val('rPinConf');
-  if(!pin||pin.length<4){toast('Inserisci un PIN di almeno 4 cifre','r');return;}
-  if(!/^\d+$/.test(pin)){toast('Il PIN deve contenere solo numeri','r');return;}
-  if(pin!==pinConf){toast('I PIN non coincidono','r');return;}
+  const pw=val('rPin');const pwConf=val('rPinConf');
+  if(!pw||pw.length<6){toast('La password deve avere almeno 6 caratteri','r');return;}
+  if(pw!==pwConf){toast('Le password non coincidono','r');return;}
   const btn=$('regBtn');btn.textContent='Salvataggio...';btn.disabled=true;
   try{
     const snap=await DB.collection('team').where('email','==',email.toLowerCase()).get();
     if(!snap.empty){toast('Email già registrata — usa Accedi','a');btn.textContent='Inizia →';btn.disabled=false;return;}
-    const uid='u'+Date.now();
-    const pinBuf=new TextEncoder().encode(pin+'mmg_pin_'+uid);
-    const pinHashBuf=await crypto.subtle.digest('SHA-256',pinBuf);
-    const pinHash=Array.from(new Uint8Array(pinHashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-    const m={id:uid,nome,cognome,email:email.toLowerCase(),tel:tel||'',ruolo:selRole,pinHash,
+    // Crea l'account Firebase Auth: da qui in poi l'identità è verificata lato server,
+    // non più solo un hash salvato in un documento Firestore leggibile da chiunque.
+    const cred=await AUTH.createUserWithEmailAndPassword(email.toLowerCase(),pw);
+    const uid=cred.user.uid;
+    const m={id:uid,nome,cognome,email:email.toLowerCase(),tel:tel||'',ruolo:selRole,
       approvato:false,createdAt:new Date().toISOString()
     };
     await DB.collection('team').doc(uid).set(m);
+    await AUTH.signOut(); // resta in attesa di approvazione, non deve entrare subito
     mostraAttesaApprovazione(nome);
-  }catch(e){alert('Errore: '+e.message);}
+  }catch(e){
+    if(e.code==='auth/email-already-in-use')toast('Email già registrata — usa Accedi','a');
+    else if(e.code==='auth/weak-password')toast('Password troppo debole — usa almeno 6 caratteri','r');
+    else if(e.code==='auth/invalid-email')toast('Email non valida','r');
+    else alert('Errore: '+e.message);
+  }
   btn.textContent='Inizia →';btn.disabled=false;
 }
 
@@ -2250,25 +2257,27 @@ function mostraAttesaApprovazione(nome){
 async function doLogin(){
   const email=val('loginEmail');
   if(!email){toast('Inserisci la tua email','r');return;}
-  const pin=val('loginPin');
-  if(!pin){toast('Inserisci il tuo PIN','r');return;}
+  const pw=val('loginPin');
+  if(!pw){toast('Inserisci la tua password','r');return;}
   const btn=$('loginBtn');btn.textContent='Accesso...';btn.disabled=true;
   try{
-    const snap=await DB.collection('team').where('email','==',email.toLowerCase()).get();
-    if(snap.empty){toast('Email non trovata','r');btn.textContent='Accedi →';btn.disabled=false;return;}
-    const userData={id:snap.docs[0].id,...snap.docs[0].data()};
+    const cred=await AUTH.signInWithEmailAndPassword(email.toLowerCase(),pw);
+    const uid=cred.user.uid;
+    const docSnap=await DB.collection('team').doc(uid).get();
+    if(!docSnap.exists){
+      await AUTH.signOut();
+      toast('Account non trovato — contatta il Responsabile','r');
+      btn.textContent='Accedi →';btn.disabled=false;return;
+    }
+    const userData={id:uid,...docSnap.data()};
     if(!userData.approvato){
+      await AUTH.signOut();
       toast('Account in attesa di approvazione dal Responsabile','a');
       btn.textContent='Accedi →';btn.disabled=false;return;
     }
-    if(userData.pinHash){
-      const pinBuf=new TextEncoder().encode(pin+'mmg_pin_'+userData.id);
-      const pinHashBuf=await crypto.subtle.digest('SHA-256',pinBuf);
-      const pinHash=Array.from(new Uint8Array(pinHashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-      if(pinHash!==userData.pinHash){toast('PIN errato','r');btn.textContent='Accedi →';btn.disabled=false;return;}
-    }
+    // sessionToken: meccanismo "un dispositivo alla volta", indipendente da Firebase Auth
     const sessionToken=Date.now().toString(36)+Math.random().toString(36).slice(2);
-    await DB.collection('team').doc(userData.id).update({
+    await DB.collection('team').doc(uid).update({
       sessionToken,sessionAt:new Date().toISOString(),
       sessionDevice:navigator.userAgent.slice(0,100)
     });
@@ -2276,27 +2285,32 @@ async function doLogin(){
     USER=userData;
     localStorage.setItem('av_user',JSON.stringify(USER));
     startApp();
-  }catch(e){alert('Errore: '+e.message);}
+  }catch(e){
+    if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')toast('Password errata','r');
+    else if(e.code==='auth/user-not-found')toast('Email non trovata','r');
+    else if(e.code==='auth/too-many-requests')toast('Troppi tentativi — riprova tra qualche minuto','r');
+    else alert('Errore: '+e.message);
+  }
   btn.textContent='Accedi →';btn.disabled=false;
 }
 async function cambiaPin(){
   closeMod('mProfile');
-  const vecchio=prompt('Inserisci il PIN attuale:');
-  if(!vecchio)return;
-  // Verifica PIN attuale
-  const pinBufOld=new TextEncoder().encode(vecchio+'mmg_pin_'+USER.id);
-  const pinHashOld=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',pinBufOld))).map(b=>b.toString(16).padStart(2,'0')).join('');
-  if(pinHashOld!==USER.pinHash){toast('PIN attuale errato','r');return;}
-  const nuovo=prompt('Nuovo PIN (4-6 cifre):');
-  if(!nuovo||!/^\d{4,6}$/.test(nuovo)){toast('PIN non valido','r');return;}
-  const conf=prompt('Conferma nuovo PIN:');
-  if(nuovo!==conf){toast('I PIN non coincidono','r');return;}
-  const pinBuf=new TextEncoder().encode(nuovo+'mmg_pin_'+USER.id);
-  const pinHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',pinBuf))).map(b=>b.toString(16).padStart(2,'0')).join('');
-  await DB.collection('team').doc(USER.id).update({pinHash});
-  USER.pinHash=pinHash;
-  localStorage.setItem('av_user',JSON.stringify(USER));
-  toast('✅ PIN aggiornato!');
+  const vecchia=prompt('Inserisci la password attuale:');
+  if(!vecchia)return;
+  const nuova=prompt('Nuova password (almeno 6 caratteri):');
+  if(!nuova||nuova.length<6){toast('La password deve avere almeno 6 caratteri','r');return;}
+  const conf=prompt('Conferma nuova password:');
+  if(nuova!==conf){toast('Le password non coincidono','r');return;}
+  try{
+    // Firebase richiede una ri-autenticazione recente per operazioni sensibili come il cambio password
+    const cred=firebase.auth.EmailAuthProvider.credential(USER.email,vecchia);
+    await AUTH.currentUser.reauthenticateWithCredential(cred);
+    await AUTH.currentUser.updatePassword(nuova);
+    toast('✅ Password aggiornata!');
+  }catch(e){
+    if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')toast('Password attuale errata','r');
+    else toast('Errore: '+e.message,'r');
+  }
 }
 
 // ── DESKTOP LAYOUT (Blocco 1) ──
@@ -2388,6 +2402,7 @@ function chiudiSidebar(){
 }
 
 function doLogout(){
+  AUTH.signOut().catch(()=>{});
   localStorage.removeItem('av_user');
   localStorage.removeItem('av_punch');
   location.reload();
@@ -8020,10 +8035,10 @@ async function caricaUtentiPendenti(){
       h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--b)">'+
         '<div>'+
           '<div style="font-size:13px;font-weight:500">'+u.nome+' '+u.cognome+'</div>'+
-          '<div style="font-size:11px;color:var(--tx2)">'+u.ruolo+(u.sessionAt?' · Accesso: '+new Date(u.sessionAt).toLocaleDateString('it-IT'):'')+(u.pinHash?' · 🔑 PIN impostato':' · ⚠️ Nessun PIN')+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2)">'+u.ruolo+(u.sessionAt?' · Accesso: '+new Date(u.sessionAt).toLocaleDateString('it-IT'):'')+'</div>'+
         '</div>'+
         '<div style="display:flex;gap:5px">'+
-          '<button onclick="resetPin(\''+u.id+'\',\''+u.nome+'\')" class="btn" style="padding:5px 8px;font-size:11px;color:var(--am)">🔑 PIN</button>'+
+          '<button onclick="resetPin(\''+u.id+'\',\''+u.nome+'\',\''+u.email+'\')" class="btn" style="padding:5px 8px;font-size:11px;color:var(--am)">🔑 Reset pwd</button>'+
           '<button onclick="revocaSessione(\''+u.id+'\')" class="btn" style="padding:5px 8px;font-size:11px;color:var(--rd)">🔒</button>'+
         '</div>'+
       '</div>';
@@ -8046,16 +8061,16 @@ async function rifiutaUtente(uid,nome){
   caricaUtentiPendenti();
 }
 
-async function resetPin(uid, nome){
-  const nuovoPin=prompt('Nuovo PIN per '+nome+' (4-6 cifre numeriche):');
-  if(!nuovoPin)return;
-  if(!/^\d{4,6}$/.test(nuovoPin)){toast('PIN non valido — inserisci 4-6 cifre','r');return;}
-  const pinBuf=new TextEncoder().encode(nuovoPin+'mmg_pin_'+uid);
-  const pinHashBuf=await crypto.subtle.digest('SHA-256',pinBuf);
-  const pinHash=Array.from(new Uint8Array(pinHashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-  await DB.collection('team').doc(uid).update({pinHash});
-  toast('✓ PIN di '+nome+' aggiornato');
-  caricaUtentiPendenti();
+async function resetPin(uid, nome, email){
+  if(!email){toast('Email mancante per questo utente','r');return;}
+  if(!confirm('Inviare a '+nome+' ('+email+') una email per reimpostare la password?'))return;
+  try{
+    await AUTH.sendPasswordResetEmail(email);
+    toast('✓ Email di reset inviata a '+nome);
+  }catch(e){
+    if(e.code==='auth/user-not-found')toast('Nessun account Auth trovato per questa email','r');
+    else toast('Errore: '+e.message,'r');
+  }
 }
 
 async function revocaSessione(uid){
@@ -10856,14 +10871,29 @@ function schedMidnightReset(){
   },msToMidnight);
 }
 schedMidnightReset();
-try{
-  const saved=localStorage.getItem('av_user');
-  if(saved){
-    const u=JSON.parse(saved);
-    if(u&&u.nome&&u.cognome&&u.email){USER=u;startApp();}
-    else localStorage.removeItem('av_user');
+AUTH.onAuthStateChanged(async (authUser)=>{
+  if(authUser){
+    // Sessione Firebase Auth valida — carica/aggiorna i dati del profilo da Firestore
+    try{
+      const saved=localStorage.getItem('av_user');
+      const cached=saved?JSON.parse(saved):null;
+      if(cached&&cached.id===authUser.uid&&cached.nome&&cached.cognome){
+        USER=cached; // avvio rapido con dati in cache, poi aggiornati dai listener live
+        startApp();
+      } else {
+        const docSnap=await DB.collection('team').doc(authUser.uid).get();
+        if(docSnap.exists){
+          USER={id:authUser.uid,...docSnap.data()};
+          localStorage.setItem('av_user',JSON.stringify(USER));
+          startApp();
+        }
+      }
+    }catch(e){console.warn('Session restore error:',e);}
+  } else {
+    // Nessuna sessione Firebase Auth valida: non mostrare un'app "loggata" con dati stantii
+    localStorage.removeItem('av_user');
   }
-}catch(e){localStorage.removeItem('av_user');}
+});
 
 // ── NO SERVICE WORKER — disabilitato per aggiornamenti immediati ──
 if('serviceWorker' in navigator){
