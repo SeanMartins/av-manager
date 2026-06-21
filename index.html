@@ -5760,9 +5760,15 @@ async function doExport(){
     });
     ws.getRow(2).height=30;
 
-    // Mappa giorno→presenza
+    // Mappa giorno→presenze (data ISO completa, non solo numero giorno — evita collisioni tra mesi
+    // e aggrega TUTTE le timbrature dello stesso giorno, non solo la prima)
     const byDay={};
-    dip.rows.forEach(p=>{const g=new Date(p.entrata).getDate();if(!byDay[g])byDay[g]=p;});
+    dip.rows.forEach(p=>{
+      if(!p.entrata)return;
+      const giornoISO=p.entrata.slice(0,10);
+      if(!byDay[giornoISO])byDay[giornoISO]=[];
+      byDay[giornoISO].push(p);
+    });
 
     let totStd=0,totLav=0,totStr=0;
 
@@ -5773,28 +5779,39 @@ async function doExport(){
       const dataISO=`${anno}-${String(mese+1).padStart(2,'0')}-${pad(g)}`;
       const festivita=getFestivitaItaliane(anno).find(f=>f.data===dataISO);
       const isFestivo=!!festivita;
-      const p=byDay[g];
+      const pList=(byDay[dataISO]||[]).slice().sort((a,b)=>a.entrata.localeCompare(b.entrata));
       const fillColor=isFestivo?{argb:'FFFDE0E0'}:isWeekend?C_WEEKEND:C_WHITE;
       const fontColor=isFestivo?{argb:'FFCC0000'}:isWeekend?F_GREY:F_BLACK;
 
       let luogo='',entr='',usc='',p1i='',p1o='',p2i='',p2o='',oreLav='',oreStr='';
       const oreStd=(isWeekend||isFestivo)?0:8;
 
-      if(p){
+      if(pList.length){
+        const primo=pList[0],ultimo=pList[pList.length-1];
         // Rimuovi emoji dalla location per Excel
-        luogo=(p.luogo||'').replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|🏢|🔧|✈️|📍|🤒/gu,'').trim();
-        entr=fmtT(p.entrata);
-        usc=fmtT(p.uscita);
-        const pauses=p.pause||[];
-        if(pauses[0]){p1i=fmtT(pauses[0].inizio);p1o=fmtT(pauses[0].fine);}
-        if(pauses[1]){p2i=fmtT(pauses[1].inizio);p2o=fmtT(pauses[1].fine);}
-        if(p.uscita&&p.entrata){
-          const pauseMs=pauses.reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
-          const nette=Math.max(0,(new Date(p.uscita)-new Date(p.entrata)-pauseMs)/3600000);
-          oreLav=parseFloat(nette.toFixed(2));
-          oreStr=parseFloat((nette-oreStd).toFixed(2));
-          totLav+=nette;
-          totStr+=(nette-oreStd);
+        luogo=(primo.luogo||'').replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|🏢|🔧|✈️|📍|🤒/gu,'').trim();
+        entr=fmtT(primo.entrata);
+        usc=fmtT(ultimo.uscita);
+        // Tutte le pause registrate nella giornata (su tutte le sessioni), in ordine
+        const tutteLePause=pList.flatMap(p=>p.pause||[]).filter(px=>px.inizio&&px.fine);
+        if(tutteLePause[0]){p1i=fmtT(tutteLePause[0].inizio);p1o=fmtT(tutteLePause[0].fine);}
+        if(tutteLePause[1]){p2i=fmtT(tutteLePause[1].inizio);p2o=fmtT(tutteLePause[1].fine);}
+        // Ore nette: somma di ogni sessione individuale (entrata→uscita meno le sue pause),
+        // così un eventuale buco tra due turni separati non viene contato come lavoro
+        let netteGiorno=0,sessioniComplete=true;
+        pList.forEach(p=>{
+          if(p.entrata&&p.uscita){
+            const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+            netteGiorno+=Math.max(0,(new Date(p.uscita)-new Date(p.entrata)-pauseMs)/3600000);
+          } else {
+            sessioniComplete=false; // turno ancora aperto (mai timbrata l'uscita)
+          }
+        });
+        if(sessioniComplete&&netteGiorno>0){
+          oreLav=parseFloat(netteGiorno.toFixed(2));
+          oreStr=parseFloat((netteGiorno-oreStd).toFixed(2));
+          totLav+=netteGiorno;
+          totStr+=(netteGiorno-oreStd);
         }
       } else if(isFestivo){
         luogo=festivita.nome;
