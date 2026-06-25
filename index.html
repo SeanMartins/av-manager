@@ -1952,7 +1952,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="ig"><label class="il">Validità offerta (giorni)</label><input type="number" id="pvdValidita" value="30" min="1"></div>
       <div class="ig"><label class="il">🌐 Lingua preventivo</label>
-        <select id="pvdLingua" onchange="pvUpdateDocPreview()">
+        <select id="pvdLingua" onchange="pvOnLinguaChange(this.value)">
           <option value="it">🇮🇹 Italiano</option>
           <option value="en">🇬🇧 English</option>
         </select>
@@ -4930,6 +4930,31 @@ function pvOpenModificaPreventivo(docId){
   pvRenderRighe();
   closeMod('mPvDocView');
   openMod('mPvDoc');
+}
+
+function pvOnLinguaChange(lingua){
+  // Aggiorna le righe che vengono dal listino con nome/desc nella lingua scelta
+  let aggiornate=0;
+  pvRigheCorrenti.forEach(r=>{
+    if(!r.listinoId)return; // righe libere: non toccarle
+    const v=cachePvListino.find(x=>x.id===r.listinoId);
+    if(!v)return;
+    if(lingua==='en'){
+      if(v.nomeEn){r.nome=v.nomeEn;aggiornate++;}
+      if(v.descEn)r.desc=v.descEn; else if(v.desc)r.desc=v.desc;
+    } else {
+      r.nome=v.nome;
+      r.desc=v.desc||'';
+      aggiornate++;
+    }
+  });
+  if(aggiornate>0){
+    pvRenderRighe();
+    toast(lingua==='en'
+      ?'🇬🇧 '+aggiornate+' voc'+(aggiornate===1?'e':'i')+' tradott'+(aggiornate===1?'a':'e')+' in inglese'
+      :'🇮🇹 '+aggiornate+' voc'+(aggiornate===1?'e':'i')+' ripristinat'+(aggiornate===1?'a':'e')+' in italiano','a');
+  }
+  pvUpdateDocPreview();
 }
 
 function pvOnSezChange(i,val){
