@@ -2626,7 +2626,7 @@ function startApp(){
   setTimeout(()=>checkSessionValid(),5000);
   setInterval(()=>checkSessionValid(),120000);
   // Configura UI in base al ruolo
-  if(isResponsabile()){
+  if(isResponsabile()||isAdmin()){
     const rs=$('magRespSection');if(rs)rs.style.display='block';
     startMatRespListeners();
     const ec=$('btnExportConfermato');if(ec)ec.style.display='block';
