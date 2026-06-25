@@ -4910,6 +4910,17 @@ function pvOpenModificaPreventivo(docId){
   openMod('mPvDoc');
 }
 
+function pvOnSezChange(i,val){
+  if(val==='__libera__'){
+    pvRigheCorrenti[i].sezLibera=pvRigheCorrenti[i].sezLibera||'';
+    pvRigheCorrenti[i].sezione='altro';
+  } else {
+    pvRigheCorrenti[i].sezione=val;
+    pvRigheCorrenti[i].sezLibera='';
+  }
+  pvRenderRighe();
+}
+
 function pvAddRigaLibera(){
   pvRigheCorrenti.push({nome:'',desc:'',um:'pezzo',qty:1,prezzo:0,opzionale:false,fonte:'libera'});
   pvRenderRighe();
@@ -4987,9 +4998,11 @@ function pvRenderRighe(){
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx2)">
           <span>Sezione:</span>
-          <select onchange="pvRigheCorrenti[${i}].sezione=this.value" style="padding:3px 6px;font-size:11px">
-            ${Object.entries(PV_CAT_LABEL).map(([k,v])=>`<option value="${k}" ${(r.sezione||'altro')===k?'selected':''}>${v}</option>`).join('')}
+          <select id="pvSezSel_${i}" onchange="pvOnSezChange(${i},this.value)" style="padding:3px 6px;font-size:11px">
+            ${Object.entries(PV_CAT_LABEL).map(([k,v])=>`<option value="${k}" ${(r.sezione||'altro')===k&&!r.sezLibera?'selected':''}>${v}</option>`).join('')}
+            <option value="__libera__" ${r.sezLibera?'selected':''}>✏️ Personalizzata...</option>
           </select>
+          ${r.sezLibera?`<input type="text" value="${(r.sezLibera||'').replace(/"/g,'&quot;')}" placeholder="Nome sezione personalizzato" oninput="pvRigheCorrenti[${i}].sezLibera=this.value" style="padding:3px 6px;font-size:11px;min-width:160px">`:''}
         </div>
         <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--am);cursor:pointer">
           <input type="checkbox" ${r.opzionale?'checked':''} onchange="pvRigheCorrenti[${i}].opzionale=this.checked;pvRenderRighe()">
@@ -5413,16 +5426,26 @@ function pvBuildPreventivoPDF(d,cliente){
 
   const sezioniOrdinate=['audio','traduzione','video','ledwall','luci','strutture','manodopera','altro'];
   const bySezione={};
-  righeNormali.forEach(r=>{const s=r.sezione||'altro';if(!bySezione[s])bySezione[s]=[];bySezione[s].push(r);});
+  const sezLabelsCustom={}; // titoli personalizzati per sezioni libere
+  righeNormali.forEach(r=>{
+    // Usa sezLibera come chiave unica se impostata, altrimenti usa sezione normale
+    const s=r.sezLibera?('__libera__:'+r.sezLibera):(r.sezione||'altro');
+    if(!bySezione[s])bySezione[s]=[];
+    bySezione[s].push(r);
+    if(r.sezLibera)sezLabelsCustom[s]=r.sezLibera.toUpperCase();
+  });
+  // Aggiunge sezioni libere alla lista di rendering (non in quella predefinita)
+  const sezioniLibere=Object.keys(bySezione).filter(s=>s.startsWith('__libera__:'));
+  const tutteSezioni=[...sezioniOrdinate,...sezioniLibere];
 
-  sezioniOrdinate.forEach(sez=>{
+  tutteSezioni.forEach(sez=>{
     const righe=bySezione[sez];
     if(!righe||!righe.length)return;
 
     y=checkY(y,28);
 
     // Titolo sezione: centrato, sottolineato, corsivo grassetto (come nel modello)
-    const sezLabel=catLabels[sez]||sez.toUpperCase();
+    const sezLabel=sezLabelsCustom[sez]||(catLabels[sez]||sez.toUpperCase());
     doc.setFont('helvetica','bolditalic');doc.setFontSize(11);doc.setTextColor(0);
     doc.text(sezLabel,PW/2,y,{align:'center'});
     const lw=doc.getTextWidth(sezLabel);
@@ -5434,32 +5457,46 @@ function pvBuildPreventivoPDF(d,cliente){
     doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(0);
     righe.forEach(r=>{
       const qty=pvSafeNum(r.qty),prezzo=pvSafeNum(r.prezzo);
-      // Nome voce: prima parte in grassetto (numero + nome), poi descrizione normale
-      const nomeLines=doc.splitTextToSize(r.nome||'',BW-8);
-      nomeLines.forEach((line,li)=>{
-        y=checkY(y,7);
-        if(li===0){
-          doc.setFont('helvetica','normal');
-          doc.text('•',ML,y);
+      y=checkY(y,8);
+      // Bullet
+      doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(0);
+      doc.text('•',ML,y);
+      // Nome in grassetto + descrizione inline sulla stessa riga, come nel modello originale
+      const nomeText=(r.nome||'').trim();
+      const descText=(r.desc||'').trim();
+      const fullText=descText?nomeText+' '+descText:nomeText;
+      // Misura la larghezza del nome per capire dove inizia la desc sulla prima riga
+      doc.setFont('helvetica','bold');
+      const nomeW=doc.getTextWidth(nomeText+' ');
+      const availFirst=BW-8; // spazio totale dopo bullet
+      if(!descText){
+        // Solo nome, tutto in grassetto
+        const lines=doc.splitTextToSize(nomeText,availFirst);
+        lines.forEach((line,li)=>{
+          y=checkY(y,6);
           doc.setFont('helvetica','bold');
           doc.text(line,ML+5,y);
-        } else {
-          doc.setFont('helvetica','bold');
-          doc.text(line,ML+5,y);
-        }
-        y+=5;
-      });
-      // Descrizione tecnica in normale sotto
-      if(r.desc&&r.desc.trim()){
-        const descLines=doc.splitTextToSize(r.desc,BW-8);
-        doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(60);
-        descLines.forEach(dl=>{
-          y=checkY(y,5);
-          doc.text(dl,ML+5,y);y+=4.5;
+          y+=5;
         });
+      } else if(nomeW<availFirst*0.7){
+        // Nome + descrizione: nome in bold sulla prima riga, poi desc normale a capo
+        // Prima riga: nome bold
+        doc.setFont('helvetica','bold');doc.text(nomeText,ML+5,y);y+=5;
+        // Righe successive: descrizione in normale
+        const descLines=doc.splitTextToSize(descText,availFirst);
+        doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(60);
+        descLines.forEach(dl=>{y=checkY(y,5);doc.text(dl,ML+5,y);y+=4.5;});
+        doc.setTextColor(0);doc.setFontSize(10);
+      } else {
+        // Nome lungo: va a capo in bold, poi desc in normale
+        const nomeLines=doc.splitTextToSize(nomeText,availFirst);
+        nomeLines.forEach(line=>{y=checkY(y,6);doc.setFont('helvetica','bold');doc.text(line,ML+5,y);y+=5;});
+        const descLines=doc.splitTextToSize(descText,availFirst);
+        doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(60);
+        descLines.forEach(dl=>{y=checkY(y,5);doc.text(dl,ML+5,y);y+=4.5;});
         doc.setTextColor(0);doc.setFontSize(10);
       }
-      y+=1;
+      y+=1.5;
     });
 
     // "Price:" centrato, sottolineato (come nel modello)
@@ -5487,19 +5524,19 @@ function pvBuildPreventivoPDF(d,cliente){
     doc.rect(PW/2-lw/2-1,y-4.5,lw+2,5.5);
     y+=8;
     righeOpz.forEach(r=>{
-      const nomeLines=doc.splitTextToSize(r.nome||'',BW-8);
-      nomeLines.forEach((line,li)=>{
-        y=checkY(y,7);
-        doc.setFont('helvetica','normal');if(li===0)doc.text('•',ML,y);
-        doc.setFont('helvetica','bold');doc.text(line,ML+5,y);y+=5;
-      });
-      if(r.desc&&r.desc.trim()){
-        const dl=doc.splitTextToSize(r.desc,BW-8);
+      y=checkY(y,8);
+      doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(0);
+      doc.text('•',ML,y);
+      const nomeText=(r.nome||'').trim();
+      const descText=(r.desc||'').trim();
+      doc.setFont('helvetica','bold');doc.text(nomeText,ML+5,y);y+=5;
+      if(descText){
+        const dl=doc.splitTextToSize(descText,BW-8);
         doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(60);
         dl.forEach(l=>{y=checkY(y,5);doc.text(l,ML+5,y);y+=4.5;});
         doc.setTextColor(0);doc.setFontSize(10);
       }
-      y+=1;
+      y+=1.5;
     });
     const subtotOpz=righeOpz.reduce((s,r)=>s+pvSafeNum(r.qty)*pvSafeNum(r.prezzo),0);
     y=checkY(y,14);y+=4;
