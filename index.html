@@ -5489,43 +5489,71 @@ function pvBuildPreventivoPDF(d,cliente){
     righe.forEach(r=>{
       const qty=pvSafeNum(r.qty),prezzo=pvSafeNum(r.prezzo);
       y=checkY(y,8);
-      // Bullet
       doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(0);
       doc.text('•',ML,y);
-      // Nome in grassetto + descrizione inline sulla stessa riga, come nel modello originale
+
       const nomeText=(r.nome||'').trim();
       const descText=(r.desc||'').trim();
-      const fullText=descText?nomeText+' '+descText:nomeText;
-      // Misura la larghezza del nome per capire dove inizia la desc sulla prima riga
-      doc.setFont('helvetica','bold');
-      const nomeW=doc.getTextWidth(nomeText+' ');
-      const availFirst=BW-8; // spazio totale dopo bullet
+      const xStart=ML+5;
+      const available=BW-5; // larghezza totale testo dopo bullet
+
       if(!descText){
         // Solo nome, tutto in grassetto
-        const lines=doc.splitTextToSize(nomeText,availFirst);
-        lines.forEach((line,li)=>{
-          y=checkY(y,6);
-          doc.setFont('helvetica','bold');
-          doc.text(line,ML+5,y);
-          y+=5;
-        });
-      } else if(nomeW<availFirst*0.7){
-        // Nome + descrizione: nome in bold sulla prima riga, poi desc normale a capo
-        // Prima riga: nome bold
-        doc.setFont('helvetica','bold');doc.text(nomeText,ML+5,y);y+=5;
-        // Righe successive: descrizione in normale
-        const descLines=doc.splitTextToSize(descText,availFirst);
-        doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(60);
-        descLines.forEach(dl=>{y=checkY(y,5);doc.text(dl,ML+5,y);y+=4.5;});
-        doc.setTextColor(0);doc.setFontSize(10);
+        doc.setFont('helvetica','bold');doc.setFontSize(10);
+        const lines=doc.splitTextToSize(nomeText,available);
+        lines.forEach(line=>{y=checkY(y,6);doc.text(line,xStart,y);y+=5;});
       } else {
-        // Nome lungo: va a capo in bold, poi desc in normale
-        const nomeLines=doc.splitTextToSize(nomeText,availFirst);
-        nomeLines.forEach(line=>{y=checkY(y,6);doc.setFont('helvetica','bold');doc.text(line,ML+5,y);y+=5;});
-        const descLines=doc.splitTextToSize(descText,availFirst);
-        doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(60);
-        descLines.forEach(dl=>{y=checkY(y,5);doc.text(dl,ML+5,y);y+=4.5;});
-        doc.setTextColor(0);doc.setFontSize(10);
+        // Nome bold + descrizione normale sulla stessa riga
+        // Prima riga: "**Nome**  descrizione che continua..."
+        doc.setFont('helvetica','bold');doc.setFontSize(10);
+        const nomeW=doc.getTextWidth(nomeText+'  ');
+
+        if(nomeW>=available){
+          // Nome troppo lungo per stare su una riga — va a capo da solo
+          const nomeLines=doc.splitTextToSize(nomeText,available);
+          nomeLines.forEach(line=>{y=checkY(y,6);doc.text(line,xStart,y);y+=5;});
+          // Descrizione su righe successive
+          doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(60);
+          const descLines=doc.splitTextToSize(descText,available);
+          descLines.forEach(dl=>{y=checkY(y,5);doc.text(dl,xStart,y);y+=4.5;});
+          doc.setTextColor(0);doc.setFontSize(10);
+        } else {
+          // Nome breve: scrivo bold a sinistra, poi desc in normale subito dopo, stesso y
+          doc.text(nomeText,xStart,y);
+          // Descrizione: calcola quanto spazio rimane sulla prima riga
+          const xAfterNome=xStart+nomeW;
+          const spazioRimasto=ML+available-xAfterNome;
+          doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(80);
+          // Prima riga: testo che sta nello spazio rimasto
+          const parole=descText.split(' ');
+          let rigaCorrente='';
+          let primaRiga=true;
+          let xDesc=xAfterNome;
+          let spazioDesc=spazioRimasto;
+          const righeDesc=[];
+          parole.forEach(parola=>{
+            const prova=rigaCorrente?rigaCorrente+' '+parola:parola;
+            if(doc.getTextWidth(prova)<=spazioDesc){
+              rigaCorrente=prova;
+            } else {
+              righeDesc.push({testo:rigaCorrente,primo:primaRiga,x:xDesc});
+              rigaCorrente=parola;
+              primaRiga=false;
+              xDesc=xStart;
+              spazioDesc=available;
+            }
+          });
+          if(rigaCorrente)righeDesc.push({testo:rigaCorrente,primo:primaRiga,x:xDesc});
+          righeDesc.forEach((rl,ri)=>{
+            if(ri===0){
+              doc.text(rl.testo,rl.x,y); // stessa y del nome
+            } else {
+              y+=5;y=checkY(y,5);doc.text(rl.testo,rl.x,y);
+            }
+          });
+          doc.setTextColor(0);doc.setFontSize(10);
+          y+=5; // avanza dopo l'ultima riga della voce
+        }
       }
       y+=1.5;
     });
