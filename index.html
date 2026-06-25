@@ -455,7 +455,27 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       </div>
     </div>
 
-    <!-- CHAT -->
+    <!-- CESPITI (solo Admin/Responsabile) -->
+    <div class="page" id="p-cespiti">
+      <div style="display:flex;gap:6px;margin-bottom:14px;background:var(--bg2);border-radius:var(--rs);padding:3px">
+        <button id="cesTabBtn_nuovi" onclick="cesTab('nuovi')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:var(--ac);color:#fff">🆕 Nuovi acquisti</button>
+        <button id="cesTabBtn_venduti" onclick="cesTab('venduti')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2)">💰 Venduti</button>
+        <button id="cesTabBtn_install" onclick="cesTab('install')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2)">🔧 Installati</button>
+      </div>
+      <div id="cesTab_nuovi">
+        <button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="openMod('mCesNuovo')">+ Aggiungi acquisto</button>
+        <div id="cesListNuovi"></div>
+      </div>
+      <div id="cesTab_venduti" style="display:none">
+        <button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="openMod('mCesVenduto')">+ Aggiungi vendita</button>
+        <div id="cesListVenduti"></div>
+      </div>
+      <div id="cesTab_install" style="display:none">
+        <button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="openMod('mCesInstall')">+ Aggiungi installazione</button>
+        <div id="cesListInstall"></div>
+      </div>
+    </div>
+
     <!-- CHAT -->
     <div class="page" id="p-chat">
       <!-- Lista colleghi -->
@@ -998,6 +1018,10 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div class="ni" id="n-magazzino" onclick="goPage('magazzino')">
       <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h5l2 3h9a2 2 0 0 1 2 2v2"/><path d="M19 21v-6"/><path d="M16 18h6"/></svg></div>
       <div class="lb">Magazz.</div>
+    </div>
+    <div class="ni" id="n-cespiti" onclick="goPage('cespiti')" style="display:none">
+      <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></div>
+      <div class="lb">Cespiti</div>
     </div>
     <div class="ni" id="n-agenda" onclick="goPage('agenda')" style="position:relative">
       <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
@@ -1782,6 +1806,91 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
   <div class="msh">
     <div class="mhd"></div>
     <div id="mDoveUsatoBody"></div>
+  </div>
+</div>
+
+<!-- CESPITI: NUOVO ACQUISTO -->
+<div class="mol" id="mCesNuovo" onclick="if(event.target===this)closeMod('mCesNuovo')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px">🆕 Nuovo acquisto</div>
+    <div class="ig"><label class="il">Nome bene / attrezzatura</label><input type="text" id="cesNNome" placeholder="Es: Videoproiettore Laser 15000 ANSI Lumen"></div>
+    <div class="ig"><label class="il">Marca / Modello</label><input type="text" id="cesNMarca" placeholder="Es: Panasonic PT-RZ15KE"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Data acquisto</label><input type="date" id="cesNDataAcq"></div>
+      <div class="ig"><label class="il">Prezzo acquisto (€)</label><input type="number" id="cesNPrezzo" min="0" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Fornitore</label><input type="text" id="cesNFornitore" placeholder="Es: Audiovisive srl"></div>
+      <div class="ig"><label class="il">Numero seriale</label><input type="text" id="cesNSeriale" placeholder="SN: ABC12345"></div>
+    </div>
+    <div class="ig"><label class="il">Categoria</label>
+      <select id="cesNCat">
+        <option value="audio">🎙 Audio</option>
+        <option value="video">📽 Video / Proiezione</option>
+        <option value="ledwall">🖥 LED wall</option>
+        <option value="luci">💡 Luci</option>
+        <option value="traduzione">🎧 Traduzione simultanea</option>
+        <option value="strutture">🏗 Strutture / Arredo</option>
+        <option value="informatica">💻 Informatica</option>
+        <option value="altro">📦 Altro</option>
+      </select>
+    </div>
+    <div class="ig"><label class="il">Note</label><textarea id="cesNNote" placeholder="Garanzia, accessori inclusi, stato..." style="min-height:60px"></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mCesNuovo')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="cesSalvaNuovo()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- CESPITI: VENDITA -->
+<div class="mol" id="mCesVenduto" onclick="if(event.target===this)closeMod('mCesVenduto')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px">💰 Registra vendita</div>
+    <div class="ig"><label class="il">Nome bene venduto</label><input type="text" id="cesVNome" placeholder="Es: Mixer digitale 32ch Yamaha CL5"></div>
+    <div class="ig"><label class="il">Marca / Modello</label><input type="text" id="cesVMarca" placeholder="Es: Yamaha CL5"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Data acquisto originale</label><input type="date" id="cesVDataAcq"></div>
+      <div class="ig"><label class="il">Data vendita</label><input type="date" id="cesVDataVend"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Prezzo acquisto (€)</label><input type="number" id="cesVPrezzoAcq" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="ig"><label class="il">Prezzo vendita (€)</label><input type="number" id="cesVPrezzoVend" min="0" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="ig"><label class="il">Venduto a</label><input type="text" id="cesVAcquirente" placeholder="Nome cliente / azienda acquirente"></div>
+    <div class="ig"><label class="il">Note</label><textarea id="cesVNote" placeholder="Condizioni di vendita, fattura n°..." style="min-height:60px"></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mCesVenduto')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="cesSalvaVenduto()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- CESPITI: INSTALLAZIONE -->
+<div class="mol" id="mCesInstall" onclick="if(event.target===this)closeMod('mCesInstall')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px">🔧 Registra installazione</div>
+    <div class="ig"><label class="il">Nome bene installato</label><input type="text" id="cesINome" placeholder="Es: Monitor LED 55'' Samsung"></div>
+    <div class="ig"><label class="il">Marca / Modello</label><input type="text" id="cesIMarca" placeholder="Es: Samsung QH55B"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Data acquisto</label><input type="date" id="cesIDataAcq"></div>
+      <div class="ig"><label class="il">Data installazione</label><input type="date" id="cesIDataInst"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Prezzo acquisto (€)</label><input type="number" id="cesIPrezzoAcq" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="ig"><label class="il">Quantità</label><input type="number" id="cesIQty" value="1" min="1"></div>
+    </div>
+    <div class="ig"><label class="il">Installato presso</label><input type="text" id="cesICliente" placeholder="Nome cliente / sede"></div>
+    <div class="ig"><label class="il">Ubicazione precisa</label><input type="text" id="cesIUbicazione" placeholder="Es: Sala conferenze piano 2, Palazzo Medici"></div>
+    <div class="ig"><label class="il">Riferimento lavoro / commessa</label><input type="text" id="cesILavoro" placeholder="Es: Commessa 2026/045 — Hotel Baglioni"></div>
+    <div class="ig"><label class="il">Note</label><textarea id="cesINote" placeholder="Condizioni installazione, garanzia post-vendita..." style="min-height:60px"></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mCesInstall')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="cesSalvaInstall()">Salva</button>
+    </div>
   </div>
 </div>
 
@@ -2628,7 +2737,9 @@ function startApp(){
   // Configura UI in base al ruolo
   if(isResponsabile()||isAdmin()){
     const rs=$('magRespSection');if(rs)rs.style.display='block';
+    const nc=$('n-cespiti');if(nc)nc.style.display='flex';
     startMatRespListeners();
+    startCespitiListeners();
     const ec=$('btnExportConfermato');if(ec)ec.style.display='block';
   }
   if(isResponsabile()||isAdmin()){
@@ -6585,6 +6696,174 @@ function startMatRespListeners(){
     cacheMatInstall=s.docs.map(d=>({id:d.id,...d.data()}));
     renderMatInstall();
   });
+}
+
+// ══════════════════════════════════════════
+// ── MODULO CESPITI ──
+// ══════════════════════════════════════════
+let cacheCesNuovi=[],cacheCesVenduti=[],cacheCesInstall=[];
+
+function startCespitiListeners(){
+  DB.collection('ces_nuovi').orderBy('createdAt','desc').onSnapshot(s=>{
+    cacheCesNuovi=s.docs.map(d=>({id:d.id,...d.data()}));
+    renderCesNuovi();
+  });
+  DB.collection('ces_venduti').orderBy('createdAt','desc').onSnapshot(s=>{
+    cacheCesVenduti=s.docs.map(d=>({id:d.id,...d.data()}));
+    renderCesVenduti();
+  });
+  DB.collection('ces_install').orderBy('createdAt','desc').onSnapshot(s=>{
+    cacheCesInstall=s.docs.map(d=>({id:d.id,...d.data()}));
+    renderCesInstall();
+  });
+}
+
+function cesTab(tab){
+  ['nuovi','venduti','install'].forEach(t=>{
+    $('cesTab_'+t).style.display=t===tab?'block':'none';
+    $('cesTabBtn_'+t).style.background=t===tab?'var(--ac)':'transparent';
+    $('cesTabBtn_'+t).style.color=t===tab?'#fff':'var(--tx2)';
+  });
+}
+
+const CES_CAT={audio:'🎙 Audio',video:'📽 Video',ledwall:'🖥 LED wall',luci:'💡 Luci',traduzione:'🎧 Traduzione',strutture:'🏗 Strutture',informatica:'💻 Informatica',altro:'📦 Altro'};
+
+function renderCesNuovi(){
+  const el=$('cesListNuovi');if(!el)return;
+  if(!cacheCesNuovi.length){el.innerHTML='<div class="empty">Nessun acquisto registrato</div>';return;}
+  el.innerHTML=cacheCesNuovi.map(m=>`
+    <div style="background:var(--bg2);border-radius:var(--rs);padding:12px;margin-bottom:8px;border-left:3px solid var(--gn)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600">${m.nome||'—'}</div>
+          ${m.marca?`<div style="font-size:12px;color:var(--tx2)">${m.marca}</div>`:''}
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+            ${m.dataAcq?`<span style="font-size:11px;color:var(--tx3)">📅 Acquistato: ${fmtDataIT(m.dataAcq)}</span>`:''}
+            ${m.prezzoAcq?`<span style="font-size:11px;color:var(--gn);font-weight:600">€ ${parseFloat(m.prezzoAcq).toLocaleString('it-IT',{minimumFractionDigits:2})}</span>`:''}
+            ${m.fornitore?`<span style="font-size:11px;color:var(--tx3)">🏢 ${m.fornitore}</span>`:''}
+          </div>
+          ${m.seriale?`<div style="font-size:10px;color:var(--tx3);margin-top:2px">S/N: ${m.seriale}</div>`:''}
+          ${m.note?`<div style="font-size:11px;color:var(--tx2);margin-top:4px">${m.note}</div>`:''}
+        </div>
+        <button onclick="cesDel('ces_nuovi','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer;flex-shrink:0;margin-left:8px">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderCesVenduti(){
+  const el=$('cesListVenduti');if(!el)return;
+  if(!cacheCesVenduti.length){el.innerHTML='<div class="empty">Nessuna vendita registrata</div>';return;}
+  el.innerHTML=cacheCesVenduti.map(m=>{
+    const acq=parseFloat(m.prezzoAcq)||0,vend=parseFloat(m.prezzoVend)||0;
+    const delta=vend-acq;
+    return `
+    <div style="background:var(--bg2);border-radius:var(--rs);padding:12px;margin-bottom:8px;border-left:3px solid var(--am)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600">${m.nome||'—'}</div>
+          ${m.marca?`<div style="font-size:12px;color:var(--tx2)">${m.marca}</div>`:''}
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+            ${m.dataAcq?`<span style="font-size:11px;color:var(--tx3)">📅 Acquisto: ${fmtDataIT(m.dataAcq)}</span>`:''}
+            ${m.dataVend?`<span style="font-size:11px;color:var(--tx3)">📅 Vendita: ${fmtDataIT(m.dataVend)}</span>`:''}
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+            ${acq?`<span style="font-size:11px;color:var(--tx3)">Costo: € ${acq.toLocaleString('it-IT',{minimumFractionDigits:2})}</span>`:''}
+            ${vend?`<span style="font-size:11px;color:var(--am);font-weight:600">Venduto: € ${vend.toLocaleString('it-IT',{minimumFractionDigits:2})}</span>`:''}
+            ${acq&&vend?`<span style="font-size:11px;font-weight:600;color:${delta>=0?'var(--gn)':'var(--rd)'}">${delta>=0?'+':''}€ ${delta.toLocaleString('it-IT',{minimumFractionDigits:2})}</span>`:''}
+          </div>
+          ${m.acquirente?`<div style="font-size:11px;color:var(--tx2);margin-top:4px">👤 Venduto a: ${m.acquirente}</div>`:''}
+          ${m.note?`<div style="font-size:11px;color:var(--tx2);margin-top:4px">${m.note}</div>`:''}
+        </div>
+        <button onclick="cesDel('ces_venduti','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer;flex-shrink:0;margin-left:8px">✕</button>
+      </div>
+    </div>`;}).join('');
+}
+
+function renderCesInstall(){
+  const el=$('cesListInstall');if(!el)return;
+  if(!cacheCesInstall.length){el.innerHTML='<div class="empty">Nessuna installazione registrata</div>';return;}
+  el.innerHTML=cacheCesInstall.map(m=>`
+    <div style="background:var(--bg2);border-radius:var(--rs);padding:12px;margin-bottom:8px;border-left:3px solid var(--ac)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600">${m.nome||'—'}</div>
+          ${m.marca?`<div style="font-size:12px;color:var(--tx2)">${m.marca}</div>`:''}
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+            ${m.dataAcq?`<span style="font-size:11px;color:var(--tx3)">📅 Acquisto: ${fmtDataIT(m.dataAcq)}</span>`:''}
+            ${m.dataInst?`<span style="font-size:11px;color:var(--ac2)">🔧 Installato: ${fmtDataIT(m.dataInst)}</span>`:''}
+            ${m.qty>1?`<span style="font-size:11px;color:var(--tx3)">× ${m.qty}</span>`:''}
+          </div>
+          ${m.cliente?`<div style="font-size:12px;font-weight:500;color:var(--tx);margin-top:4px">👤 ${m.cliente}</div>`:''}
+          ${m.ubicazione?`<div style="font-size:11px;color:var(--tx2)">📍 ${m.ubicazione}</div>`:''}
+          ${m.lavoro?`<div style="font-size:11px;color:var(--tx2)">📋 ${m.lavoro}</div>`:''}
+          ${m.note?`<div style="font-size:11px;color:var(--tx2);margin-top:4px">${m.note}</div>`:''}
+        </div>
+        <button onclick="cesDel('ces_install','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer;flex-shrink:0;margin-left:8px">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+async function cesSalvaNuovo(){
+  const nome=val('cesNNome');if(!nome){toast('Inserisci il nome del bene','r');return;}
+  const data={
+    nome,marca:val('cesNMarca'),dataAcq:val('cesNDataAcq'),
+    prezzoAcq:parseFloat(val('cesNPrezzo'))||0,
+    fornitore:val('cesNFornitore'),seriale:val('cesNSeriale'),
+    cat:val('cesNCat'),note:val('cesNNote'),
+    creatoDa:USER?USER.nome+' '+USER.cognome:'—',
+    createdAt:new Date().toISOString()
+  };
+  try{
+    await DB.collection('ces_nuovi').add(data);
+    toast('✓ Acquisto registrato');
+    closeMod('mCesNuovo');
+    ['cesNNome','cesNMarca','cesNDataAcq','cesNPrezzo','cesNFornitore','cesNSeriale','cesNNote'].forEach(id=>{if($(id))$(id).value='';});
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function cesSalvaVenduto(){
+  const nome=val('cesVNome');if(!nome){toast('Inserisci il nome del bene','r');return;}
+  const data={
+    nome,marca:val('cesVMarca'),dataAcq:val('cesVDataAcq'),
+    dataVend:val('cesVDataVend'),
+    prezzoAcq:parseFloat(val('cesVPrezzoAcq'))||0,
+    prezzoVend:parseFloat(val('cesVPrezzoVend'))||0,
+    acquirente:val('cesVAcquirente'),note:val('cesVNote'),
+    creatoDa:USER?USER.nome+' '+USER.cognome:'—',
+    createdAt:new Date().toISOString()
+  };
+  try{
+    await DB.collection('ces_venduti').add(data);
+    toast('✓ Vendita registrata');
+    closeMod('mCesVenduto');
+    ['cesVNome','cesVMarca','cesVDataAcq','cesVDataVend','cesVPrezzoAcq','cesVPrezzoVend','cesVAcquirente','cesVNote'].forEach(id=>{if($(id))$(id).value='';});
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function cesSalvaInstall(){
+  const nome=val('cesINome');if(!nome){toast('Inserisci il nome del bene','r');return;}
+  const data={
+    nome,marca:val('cesIMarca'),dataAcq:val('cesIDataAcq'),
+    dataInst:val('cesIDataInst'),
+    prezzoAcq:parseFloat(val('cesIPrezzoAcq'))||0,
+    qty:parseInt(val('cesIQty'))||1,
+    cliente:val('cesICliente'),ubicazione:val('cesIUbicazione'),
+    lavoro:val('cesILavoro'),note:val('cesINote'),
+    creatoDa:USER?USER.nome+' '+USER.cognome:'—',
+    createdAt:new Date().toISOString()
+  };
+  try{
+    await DB.collection('ces_install').add(data);
+    toast('✓ Installazione registrata');
+    closeMod('mCesInstall');
+    ['cesINome','cesIMarca','cesIDataAcq','cesIDataInst','cesIPrezzoAcq','cesIQty','cesICliente','cesIUbicazione','cesILavoro','cesINote'].forEach(id=>{if($(id))$(id).value='';});
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function cesDel(col,id){
+  if(!confirm('Eliminare questo record?'))return;
+  try{await DB.collection(col).doc(id).delete();toast('✓ Eliminato');}
+  catch(e){toast('Errore: '+e.message,'r');}
 }
 
 function popolaArtSel(selId){
