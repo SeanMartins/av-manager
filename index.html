@@ -5401,10 +5401,10 @@ function pvBuildPreventivoPDF(d,cliente){
     al.forEach(l=>{doc.text(l,MR,y,{align:'right'});y+=4;});
   }
 
-  // Data sotto logo, allineata a sinistra
-  y=Math.max(y,38);
+  // Data sotto logo, allineata a sinistra — più in basso e font leggermente più piccolo
+  y=Math.max(y,44);
   const dataFmt=d.createdAt?new Date(d.createdAt).toLocaleDateString(en?'en-GB':'it-IT',{day:'numeric',month:'long',year:'numeric'}):'';
-  doc.setFontSize(10);doc.setFont('helvetica','normal');doc.setTextColor(0);
+  doc.setFontSize(9.5);doc.setFont('helvetica','normal');doc.setTextColor(0);
   doc.text('Firenze'+(en?' – ':' , ')+dataFmt,ML,y);
   y+=10;
 
