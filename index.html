@@ -1928,13 +1928,22 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 </div>
 
 <!-- PV: EDITOR PREVENTIVO -->
-<div class="mol" id="mPvDoc" onclick="if(event.target===this)closeMod('mPvDoc')">
+<div class="mol" id="mPvDoc">
   <div class="msh" style="max-width:560px">
     <div class="mhd"></div>
     <div class="stl" style="margin-bottom:14px" id="mPvDocTitle">📋 Nuovo preventivo</div>
     <input type="hidden" id="pvdId">
     <div class="ig"><label class="il">Cliente</label>
-      <select id="pvdCliente" onchange="pvUpdateDocPreview()"></select>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="pvdCliente" onchange="pvOnClienteChange()" style="flex:1">
+          <option value="">— Seleziona cliente —</option>
+          <option value="__libero__">✏️ Scrivi nome cliente manualmente...</option>
+        </select>
+      </div>
+      <div id="pvdClienteLiberoWrap" style="display:none;margin-top:6px">
+        <input type="text" id="pvdClienteLibero" placeholder="Nome cliente / azienda (es. Hotel Baglioni)" oninput="pvUpdateDocPreview()" style="font-size:13px">
+        <div style="font-size:10px;color:var(--tx3);margin-top:3px">Il cliente verrà usato solo in questo preventivo, non salvato in rubrica</div>
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="ig"><label class="il">Oggetto / Evento</label><input type="text" id="pvdOggetto" placeholder="Service audio luci - Gala 14/09"></div>
@@ -4355,7 +4364,9 @@ function renderPvClienti(){
 function pvPopolaSelectClienti(){
   const sel=$('pvdCliente');if(!sel)return;
   const cur=sel.value;
-  sel.innerHTML='<option value="">— Seleziona cliente —</option>'+cachePvClienti.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
+  sel.innerHTML='<option value="">— Seleziona cliente —</option>'+
+    cachePvClienti.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')+
+    '<option value="__libero__">✏️ Scrivi nome cliente manualmente...</option>';
   if(cur)sel.value=cur;
 }
 
@@ -4830,7 +4841,8 @@ function renderPvDocList(){
   const filtered=pvFiltroStato==='tutti'?cachePvDoc:cachePvDoc.filter(d=>d.stato===pvFiltroStato);
   if(!filtered.length){list.innerHTML='<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessun preventivo'+(pvFiltroStato!=='tutti'?' in questo stato':' — creane uno!')+'</div>';return;}
   list.innerHTML=filtered.map(d=>{
-    const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+    const _cBase=cachePvClienti.find(c=>c.id===d.clienteId);
+    const cliente=_cBase||(d.clienteLibero?{nome:d.clienteLibero,piva:'',indirizzo:''}:null);
     const scaduto=pvIsScaduto(d);
     return `<div onclick="pvViewDoc('${d.id}')" class="row" style="align-items:center;padding:12px;background:var(--bg1);border:1px solid ${scaduto?'var(--am)':'var(--b)'};border-radius:var(--rs);margin-bottom:8px;cursor:pointer">
       <div style="flex:1;min-width:0">
@@ -4846,12 +4858,27 @@ function renderPvDocList(){
   }).join('');
 }
 
+function pvOnClienteChange(){
+  const v=$('pvdCliente').value;
+  const wrap=$('pvdClienteLiberoWrap');
+  if(v==='__libero__'){
+    wrap.style.display='block';
+    $('pvdClienteLibero').focus();
+  } else {
+    wrap.style.display='none';
+    if($('pvdClienteLibero'))$('pvdClienteLibero').value='';
+  }
+  pvUpdateDocPreview();
+}
+
 function pvOpenNuovoPreventivo(){
   ['pvdId','pvdOggetto','pvdDataEvento','pvdNote','pvdTimetable'].forEach(id=>$(id).value='');
   $('pvdValidita').value='30';$('pvdIva').value='22';$('pvdLingua').value='it';
   pvRigheCorrenti=[];
   pvPopolaSelectClienti();
   $('pvdCliente').value='';
+  $('pvdClienteLiberoWrap').style.display='none';
+  if($('pvdClienteLibero'))$('pvdClienteLibero').value='';
   $('mPvDocTitle').textContent='📋 Nuovo preventivo';
   pvRenderRighe();
   openMod('mPvDoc');
@@ -4860,7 +4887,18 @@ function pvOpenNuovoPreventivo(){
 function pvOpenModificaPreventivo(docId){
   const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
   pvPopolaSelectClienti();
-  $('pvdId').value=d.id;$('pvdCliente').value=d.clienteId||'';
+  $('pvdId').value=d.id;
+  if(d.clienteId){
+    $('pvdCliente').value=d.clienteId;
+    $('pvdClienteLiberoWrap').style.display='none';
+  } else if(d.clienteLibero){
+    $('pvdCliente').value='__libero__';
+    $('pvdClienteLiberoWrap').style.display='block';
+    $('pvdClienteLibero').value=d.clienteLibero||'';
+  } else {
+    $('pvdCliente').value='';
+    $('pvdClienteLiberoWrap').style.display='none';
+  }
   $('pvdOggetto').value=d.oggetto||'';$('pvdDataEvento').value=d.dataEvento||'';
   $('pvdValidita').value=d.validitaGiorni||30;$('pvdIva').value=d.ivaPct!=null?d.ivaPct:22;
   $('pvdNote').value=d.note||'';$('pvdTimetable').value=d.timetable||'';
@@ -5019,8 +5057,11 @@ function pvGeneraNumero(){
 }
 
 async function pvSaveDoc(){
-  const clienteId=val('pvdCliente');
-  if(!clienteId){toast('Seleziona un cliente','r');return;}
+  const clienteSelVal=val('pvdCliente');
+  const clienteLibero=val('pvdClienteLibero')||'';
+  const isLibero=clienteSelVal==='__libero__';
+  const clienteId=isLibero?'':clienteSelVal;
+  if(!clienteId&&!clienteLibero){toast('Seleziona o scrivi un cliente','r');return;}
   if(!pvRigheCorrenti.length){toast('Aggiungi almeno una riga','r');return;}
   const righeValide=pvRigheCorrenti.filter(r=>r.nome&&r.nome.trim());
   if(!righeValide.length){toast('Le righe devono avere una descrizione','r');return;}
@@ -5028,7 +5069,9 @@ async function pvSaveDoc(){
   const id=val('pvdId');
   const now=new Date().toISOString();
   const data={
-    clienteId,oggetto:val('pvdOggetto'),dataEvento:val('pvdDataEvento'),
+    clienteId:clienteId||'',
+    clienteLibero:isLibero?clienteLibero:'',
+    oggetto:val('pvdOggetto'),dataEvento:val('pvdDataEvento'),
     validitaGiorni:parseInt(val('pvdValidita'))||30,
     lingua:val('pvdLingua')||'it',
     timetable:val('pvdTimetable')||'',
@@ -5124,7 +5167,8 @@ function pvGeneraSchedaLavoroPDF(d,cliente){
 async function pvCreaLavoroDaPreventivo(docId){
   const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
   if(d.lavoroCalId){toast('Questo preventivo è già collegato a un lavoro in calendario','a');return;}
-  const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+  const _cBase=cachePvClienti.find(c=>c.id===d.clienteId);
+    const cliente=_cBase||(d.clienteLibero?{nome:d.clienteLibero,piva:'',indirizzo:''}:null);
   if(!d.dataEvento){toast('Aggiungi prima la data evento al preventivo (modifica preventivo)','r');return;}
   const nomeLavoro=(d.oggetto||'Lavoro')+(cliente?' — '+cliente.nome:'');
   const noteLavoro='Generato da preventivo '+(d.numero||'')+(cliente?' · Cliente: '+cliente.nome:'')+(d.note?'\n\n'+d.note:'');
@@ -5203,7 +5247,8 @@ async function pvDuplicaDoc(docId){
 
 function pvViewDoc(docId){
   const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
-  const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+  const _cBase=cachePvClienti.find(c=>c.id===d.clienteId);
+    const cliente=_cBase||(d.clienteLibero?{nome:d.clienteLibero,piva:'',indirizzo:''}:null);
   const scaduto=pvIsScaduto(d);
   const righeHtml=(d.righe||[]).map(r=>{
     const qty=pvSafeNum(r.qty),prezzo=pvSafeNum(r.prezzo);
@@ -5496,7 +5541,9 @@ function pvBuildPreventivoPDF(d,cliente){
 
 function pvGeneraPDF(docId){
   const d=cachePvDoc.find(x=>x.id===docId);if(!d)return;
-  const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+  let cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+  // Fallback: cliente scritto manualmente senza rubrica
+  if(!cliente&&d.clienteLibero){cliente={nome:d.clienteLibero,piva:'',indirizzo:''};}
   const doc=pvBuildPreventivoPDF(d,cliente);
   doc.save('Preventivo_'+(d.numero||'').replace('/','-')+'.pdf');
   toast('📄 PDF generato');
@@ -5614,7 +5661,8 @@ async function pvExportArchivioZip(){
     const zip=new JSZip();
     const usedNames={};
     daEsportare.forEach(d=>{
-      const cliente=cachePvClienti.find(c=>c.id===d.clienteId);
+      const _cBase=cachePvClienti.find(c=>c.id===d.clienteId);
+    const cliente=_cBase||(d.clienteLibero?{nome:d.clienteLibero,piva:'',indirizzo:''}:null);
       const doc=pvBuildPreventivoPDF(d,cliente);
       const blob=doc.output('blob');
       let nomeBase=(d.numero||d.id).replace('/','-')+(cliente?'_'+cliente.nome.replace(/[^a-zA-Z0-9]/g,'_').substring(0,30):'');
