@@ -4911,14 +4911,16 @@ function pvOpenModificaPreventivo(docId){
 }
 
 function pvOnSezChange(i,val){
+  const input=$('pvSezLibera_'+i);
   if(val==='__libera__'){
     pvRigheCorrenti[i].sezLibera=pvRigheCorrenti[i].sezLibera||'';
     pvRigheCorrenti[i].sezione='altro';
+    if(input){input.style.display='block';input.focus();}
   } else {
     pvRigheCorrenti[i].sezione=val;
     pvRigheCorrenti[i].sezLibera='';
+    if(input){input.style.display='none';input.value='';}
   }
-  pvRenderRighe();
 }
 
 function pvAddRigaLibera(){
@@ -5002,7 +5004,9 @@ function pvRenderRighe(){
             ${Object.entries(PV_CAT_LABEL).map(([k,v])=>`<option value="${k}" ${(r.sezione||'altro')===k&&!r.sezLibera?'selected':''}>${v}</option>`).join('')}
             <option value="__libera__" ${r.sezLibera?'selected':''}>✏️ Personalizzata...</option>
           </select>
-          ${r.sezLibera?`<input type="text" value="${(r.sezLibera||'').replace(/"/g,'&quot;')}" placeholder="Nome sezione personalizzato" oninput="pvRigheCorrenti[${i}].sezLibera=this.value" style="padding:3px 6px;font-size:11px;min-width:160px">`:''}
+          <input type="text" id="pvSezLibera_${i}" value="${(r.sezLibera||'').replace(/"/g,'&quot;')}" placeholder="Nome sezione personalizzato"
+            oninput="pvRigheCorrenti[${i}].sezLibera=this.value"
+            style="padding:3px 6px;font-size:11px;min-width:150px;display:${r.sezLibera?'block':'none'}">
         </div>
         <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--am);cursor:pointer">
           <input type="checkbox" ${r.opzionale?'checked':''} onchange="pvRigheCorrenti[${i}].opzionale=this.checked;pvRenderRighe()">
