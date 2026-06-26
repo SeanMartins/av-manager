@@ -469,29 +469,32 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
         <button id="cesTabBtn_install" onclick="cesTab('install')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2)">🔧 Installati</button>
       </div>
       <div id="cesTab_nuovi">
-        <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
           <button class="btn btn-p btn-f" onclick="openMod('mCesNuovo')">+ Aggiungi</button>
           <button class="btn btn-f btn-f" onclick="$('cesImportNuoviInput').click()">📥 Importa</button>
           <input type="file" id="cesImportNuoviInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="cesHandleImport(this,'nuovi')">
           <button class="btn btn-f btn-f" onclick="cesExportTemplate('nuovi')">📋 Template</button>
+          <button class="btn btn-f btn-f" onclick="cesQrBulkOpen('nuovi')">◼ QR Bulk</button>
         </div>
         <div id="cesListNuovi"></div>
       </div>
       <div id="cesTab_venduti" style="display:none">
-        <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
           <button class="btn btn-p btn-f" onclick="openMod('mCesVenduto')">+ Aggiungi</button>
           <button class="btn btn-f btn-f" onclick="$('cesImportVendutiInput').click()">📥 Importa</button>
           <input type="file" id="cesImportVendutiInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="cesHandleImport(this,'venduti')">
           <button class="btn btn-f btn-f" onclick="cesExportTemplate('venduti')">📋 Template</button>
+          <button class="btn btn-f btn-f" onclick="cesQrBulkOpen('venduti')">◼ QR Bulk</button>
         </div>
         <div id="cesListVenduti"></div>
       </div>
       <div id="cesTab_install" style="display:none">
-        <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
           <button class="btn btn-p btn-f" onclick="openMod('mCesInstall')">+ Aggiungi</button>
           <button class="btn btn-f btn-f" onclick="$('cesImportInstallInput').click()">📥 Importa</button>
           <input type="file" id="cesImportInstallInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="cesHandleImport(this,'install')">
           <button class="btn btn-f btn-f" onclick="cesExportTemplate('install')">📋 Template</button>
+          <button class="btn btn-f btn-f" onclick="cesQrBulkOpen('install')">◼ QR Bulk</button>
         </div>
         <div id="cesListInstall"></div>
       </div>
@@ -1980,6 +1983,40 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--b)">
       <button class="btn btn-f" style="width:100%;color:var(--rd);border-color:rgba(239,68,68,.3)" onclick="cesEditDelete()">🗑 Elimina questo cespite</button>
+    </div>
+  </div>
+</div>
+
+<!-- CESPITI: QR BULK -->
+<div class="mol" id="mCesQrBulk" onclick="if(event.target===this)closeMod('mCesQrBulk')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:6px">◼ QR Bulk — Cespiti</div>
+    <div id="mCesQrBulkTipo" style="font-size:12px;color:var(--tx3);margin-bottom:12px"></div>
+    <div class="ig"><label class="il">Categoria da stampare</label>
+      <select id="cesQrBulkCat" onchange="cesQrBulkUpdateCount()">
+        <option value="tutti">📦 Tutte le categorie</option>
+        <option value="audio">🎙 Audio</option>
+        <option value="video">📽 Video / Proiezione</option>
+        <option value="ledwall">🖥 LED wall</option>
+        <option value="luci">💡 Luci</option>
+        <option value="traduzione">🎧 Traduzione simultanea</option>
+        <option value="strutture">🏗 Strutture</option>
+        <option value="informatica">💻 Informatica</option>
+        <option value="altro">📦 Altro</option>
+      </select>
+    </div>
+    <div class="ig"><label class="il">Formato foglio</label>
+      <select id="cesQrBulkFmt" onchange="cesQrBulkUpdateCount()">
+        <option value="4">4 QR per pagina (2×2) — etichette grandi</option>
+        <option value="9" selected>9 QR per pagina (3×3) — standard</option>
+        <option value="16">16 QR per pagina (4×4) — etichette piccole</option>
+      </select>
+    </div>
+    <div id="cesQrBulkCount" style="font-size:12px;color:var(--tx3);margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f btn-f" onclick="closeMod('mCesQrBulk')">Annulla</button>
+      <button class="btn btn-p btn-f" id="cesQrBulkBtn" onclick="cesDownloadQrBulk()">📥 Genera PDF</button>
     </div>
   </div>
 </div>
@@ -7259,6 +7296,109 @@ function cesPrintQr(){
   <p>${$('cesQrLink').href}</p>
   <script>window.onload=()=>{window.print();}<\/script></body></html>`);
   win.document.close();
+}
+
+// ── QR BULK CESPITI ──────────────────────────────────────
+let cesQrBulkTipoCorrente='nuovi';
+
+const CES_TIPO_LABEL={nuovi:'Nuovi acquisti',venduti:'Venduti',install:'Installati'};
+
+function cesQrBulkOpen(tipo){
+  cesQrBulkTipoCorrente=tipo;
+  $('mCesQrBulkTipo').textContent='Tipo: '+CES_TIPO_LABEL[tipo];
+  cesQrBulkUpdateCount();
+  openMod('mCesQrBulk');
+}
+
+function cesQrBulkUpdateCount(){
+  const cat=val('cesQrBulkCat');
+  const cache={nuovi:cacheCesNuovi,venduti:cacheCesVenduti,install:cacheCesInstall}[cesQrBulkTipoCorrente]||[];
+  const items=cat==='tutti'?cache:cache.filter(m=>(m.cat||'altro')===cat);
+  const el=$('cesQrBulkCount');
+  if(el)el.textContent=items.length+' cespite'+(items.length===1?'':'i')+' da stampare';
+}
+
+function cesDownloadQrBulk(){
+  const cat=val('cesQrBulkCat');
+  const cols=parseInt(val('cesQrBulkFmt'))||9;
+  const tipo=cesQrBulkTipoCorrente;
+  const cache={nuovi:cacheCesNuovi,venduti:cacheCesVenduti,install:cacheCesInstall}[tipo]||[];
+  const items=(cat==='tutti'?cache:cache.filter(m=>(m.cat||'altro')===cat)).filter(m=>m.nome);
+  if(!items.length){toast('Nessun cespite trovato','r');return;}
+
+  const btn=$('cesQrBulkBtn');
+  btn.textContent='⏳ Generazione...';btn.disabled=true;
+
+  const results=[];
+  let pending=items.length;
+
+  items.forEach(m=>{
+    const div=document.createElement('div');
+    div.style.cssText='position:fixed;top:-9999px;left:-9999px;width:200px;height:200px';
+    document.body.appendChild(div);
+    // QR dei cespiti = URL scheda pubblica
+    const qrUrl=cesQrUrl('ces_'+tipo,m.id);
+    try{
+      new QRCode(div,{text:qrUrl,width:160,height:160,
+        colorDark:'#1a1a2e',colorLight:'#ffffff',
+        correctLevel:QRCode.CorrectLevel.H});
+    }catch(e){}
+    setTimeout(()=>{
+      const canvas=div.querySelector('canvas');
+      results.push({m,img:canvas?canvas.toDataURL('image/png'):null});
+      document.body.removeChild(div);
+      pending--;
+      if(pending===0)cesBuildQrPDF(results,cols,tipo,cat);
+    },100);
+  });
+}
+
+function cesBuildQrPDF(results,cols,tipo,cat){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  doc.setProperties({
+    title:'QR Cespiti MMG — '+CES_TIPO_LABEL[tipo],
+    author:'MMG MULTIMEDIA MEETING GROUP',creator:'MMG MULTIMEDIA MEETING GROUP'
+  });
+
+  const PW=210,PH=297,margin=10;
+  const dim=Math.sqrt(cols); // 2, 3 o 4
+  const cellW=(PW-margin*2)/dim;
+  const cellH=(PH-margin*2)/dim;
+  const qrSize=Math.min(cellW,cellH)*0.55;
+
+  let col=0,row=0;
+
+  results.forEach(({m,img},idx)=>{
+    if(idx>0&&col===0&&row===0)doc.addPage();
+    const x=margin+col*cellW;
+    const y=margin+row*cellH;
+    doc.setDrawColor(220);doc.setLineWidth(0.2);
+    doc.rect(x+1,y+1,cellW-2,cellH-2);
+    const qrX=x+(cellW-qrSize)/2;
+    const qrY=y+4;
+    if(img)try{doc.addImage(img,'PNG',qrX,qrY,qrSize,qrSize);}catch(e){}
+    // Nome
+    doc.setFont('helvetica','bold');doc.setFontSize(dim<=2?8:dim<=3?6.5:5.5);doc.setTextColor(20);
+    const nomeLines=doc.splitTextToSize(m.nome||'',cellW-4);
+    doc.text(nomeLines.slice(0,2),x+cellW/2,qrY+qrSize+4,{align:'center'});
+    // Marca / seriale
+    doc.setFont('helvetica','normal');doc.setFontSize(dim<=2?7:5.5);doc.setTextColor(100);
+    const sub=(m.marca||m.seriale)?((m.marca||'')+(m.seriale?' · S/N:'+m.seriale:'')):
+               (tipo==='venduti'&&m.acquirente?'→ '+m.acquirente:
+               tipo==='install'&&m.cliente?'📍 '+m.cliente:'');
+    if(sub)doc.text(doc.splitTextToSize(sub,cellW-4)[0],x+cellW/2,qrY+qrSize+4+(nomeLines.slice(0,2).length*3),{align:'center'});
+    col++;
+    if(col>=dim){col=0;row++;}
+    if(row>=dim){col=0;row=0;}
+  });
+
+  const catLabel={tutti:'Tutti',audio:'Audio',video:'Video',ledwall:'LEDwall',luci:'Luci',traduzione:'Traduzione',strutture:'Strutture',informatica:'Informatica',altro:'Altro'}[cat]||cat;
+  doc.save('QR_Cespiti_'+CES_TIPO_LABEL[tipo].replace(' ','_')+'_'+catLabel+'_'+results.length+'.pdf');
+  toast('✓ PDF con '+results.length+' QR scaricato');
+  const btn=$('cesQrBulkBtn');
+  btn.textContent='📥 Genera PDF';btn.disabled=false;
+  closeMod('mCesQrBulk');
 }
 
 // ── IMPORT MAGAZZINO ──────────────────────────────────────
