@@ -1124,6 +1124,22 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
       Materiali installati
     </button>
+    <!-- Cespiti — visibile solo Admin/Responsabile -->
+    <div id="sbCespitiSection" style="display:none">
+      <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Cespiti</div>
+      <button class="sidebar-btn" onclick="chiudiSidebar();goPage('cespiti');cesTab('nuovi')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+        Nuovi acquisti
+      </button>
+      <button class="sidebar-btn" onclick="chiudiSidebar();goPage('cespiti');cesTab('venduti')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Venduti
+      </button>
+      <button class="sidebar-btn" onclick="chiudiSidebar();goPage('cespiti');cesTab('install')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        Installati
+      </button>
+    </div>
     <!-- Agenda -->
     <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Agenda</div>
     <button class="sidebar-btn" onclick="chiudiSidebar();goPage('agenda')">
@@ -2803,6 +2819,7 @@ function startApp(){
   if(isResponsabile()||isAdmin()){
     const rs=$('magRespSection');if(rs)rs.style.display='block';
     const nc=$('n-cespiti');if(nc)nc.style.display='flex';
+    const sc=$('sbCespitiSection');if(sc)sc.style.display='block';
     startMatRespListeners();
     startCespitiListeners();
     const ec=$('btnExportConfermato');if(ec)ec.style.display='block';
@@ -6906,10 +6923,27 @@ const CES_LABELS = {
 };
 
 function cesExportTemplate(tipo){
-  const fields=CES_FIELDS[tipo];
-  const header=fields.map(f=>CES_LABELS[f]||f);
+  const defs={
+    nuovi:{
+      fields:['Categoria','Nome bene / attrezzatura','Marca / Modello','Numero seriale','Data acquisto (YYYY-MM-DD)','Prezzo acquisto €','Fornitore','Note'],
+      example:['audio','Videoproiettore Laser 15000 ANSI','Panasonic PT-RZ15KE','SN: ABC123','2026-01-15','12500','Audiovisive srl','Garanzia 3 anni'],
+      widths:[14,32,22,18,22,14,18,25]
+    },
+    venduti:{
+      fields:['Nome bene venduto','Marca / Modello','Numero seriale','Data acquisto (YYYY-MM-DD)','Data vendita (YYYY-MM-DD)','Prezzo acquisto €','Prezzo vendita €','Venduto a','Note'],
+      example:['Mixer digitale 32ch','Yamaha CL5','SN: XYZ789','2020-03-10','2026-05-20','8000','5500','Hotel Baglioni','Buone condizioni'],
+      widths:[30,22,18,22,22,14,14,22,25]
+    },
+    install:{
+      fields:['Nome bene installato','Marca / Modello','Numero seriale','Data acquisto (YYYY-MM-DD)','Data installazione (YYYY-MM-DD)','Prezzo acquisto €','Quantità','Installato presso','Ubicazione precisa','Riferimento lavoro','Note'],
+      example:['Monitor LED 55"','Samsung QH55B','SN: SAM001','2025-09-01','2026-01-10','1800','2','Hotel Minerva','Reception piano terra','Commessa 2026/012','Fissaggio a parete'],
+      widths:[28,22,18,22,24,14,10,22,25,22,25]
+    }
+  };
+  const def=defs[tipo];
   const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet([header,fields.map(f=>f==='qty'?1:f.startsWith('data')?new Date().toISOString().slice(0,10):'')]);
+  const ws=XLSX.utils.aoa_to_sheet([def.fields,def.example]);
+  ws['!cols']=def.widths.map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb,ws,'Cespiti_'+tipo);
   XLSX.writeFile(wb,'Template_Cespiti_'+tipo+'.xlsx');
   toast('📋 Template scaricato');
@@ -7072,10 +7106,13 @@ const MAG_CAT_MAP={audio:'audio',luci:'luci',ledwall:'ledwall',traduzione:'tradu
 let magImportRows=[];
 
 function magExportTemplate(){
-  const header=MAG_FIELDS.map(f=>MAG_LABELS[f]||f);
-  const example=['audio','Microfono radio palmare Sennheiser','10','10',''];
+  // Colonne base condivise con Cespiti + colonne specifiche magazzino
+  const header=['Categoria','Nome articolo','Marca / Modello','Numero seriale','Quantità totale','Disponibile','Note'];
+  const example=['audio','Microfono radio palmare','Sennheiser EW 135 G4','SN: ABC123','10','10','In magazzino Firenze'];
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet([header,example]);
+  // Larghezze colonne
+  ws['!cols']=[{wch:14},{wch:30},{wch:22},{wch:18},{wch:14},{wch:12},{wch:25}];
   XLSX.utils.book_append_sheet(wb,ws,'Magazzino');
   XLSX.writeFile(wb,'Template_Magazzino.xlsx');
   toast('📋 Template scaricato');
@@ -7093,24 +7130,24 @@ function magHandleImport(input){
       const headers=rows[0].map(h=>String(h||'').trim().toLowerCase());
       magImportRows=rows.slice(1).filter(r=>r.some(c=>String(c||'').trim()!==''));
       if(!magImportRows.length){toast('Nessuna riga dati trovata','r');return;}
-      // Auto-mappa colonne
       const findCol=(...keys)=>headers.findIndex(h=>keys.some(k=>h.includes(k)));
-      const mapped={
-        cat:findCol('cat','categoria','tipo'),
-        nome:findCol('nome','articolo','descrizione'),
-        quantita:findCol('quant','totale','qty'),
-        qDisponibile:findCol('disp','disponib'),
-        note:findCol('note','descr')
+      magImportMapped={
+        cat:   findCol('cat','categoria','tipo'),
+        nome:  findCol('nome','articolo','descrizione'),
+        marca: findCol('marca','modello','brand'),
+        seriale:findCol('serial','seriale','s/n','sn'),
+        quantita:findCol('quant','totale','qty','tot'),
+        qDisponibile:findCol('disp','disponib','avail'),
+        note:  findCol('note','descr','obs')
       };
-      magImportMapped=mapped;
       $('magImportRowCount').textContent=magImportRows.length;
       const preview=magImportRows.slice(0,3).map(r=>{
-        const nome=mapped.nome>=0?r[mapped.nome]:'—';
-        const cat=mapped.cat>=0?r[mapped.cat]:'';
-        const qty=mapped.quantita>=0?r[mapped.quantita]:'';
-        return `<div style="padding:4px 0;border-bottom:1px solid var(--b)"><b>${nome}</b> ${cat?'['+cat+']':''} ${qty?'× '+qty:''}</div>`;
+        const nome=magImportMapped.nome>=0?r[magImportMapped.nome]:'—';
+        const marca=magImportMapped.marca>=0?r[magImportMapped.marca]:'';
+        const qty=magImportMapped.quantita>=0?r[magImportMapped.quantita]:'';
+        return `<div style="padding:4px 0;border-bottom:1px solid var(--b)"><b>${nome}</b>${marca?' – '+marca:''} ${qty?'× '+qty:''}</div>`;
       }).join('');
-      $('magImportPreview').innerHTML=preview||'<div style="color:var(--tx3)">Verifica che il file abbia intestazioni riconoscibili — scarica il template</div>';
+      $('magImportPreview').innerHTML=preview||'<div style="color:var(--tx3)">Verifica le intestazioni — scarica il template per vedere il formato atteso</div>';
       openMod('mMagImport');
     }catch(err){toast('Errore lettura: '+err.message,'r');}
   };
@@ -7128,11 +7165,13 @@ async function magConfirmImport(){
   magImportRows.forEach(r=>{
     const nome=magImportMapped.nome>=0?String(r[magImportMapped.nome]||'').trim():'';
     if(!nome)return;
-    const qty=parseInt(r[magImportMapped.quantita>=0?magImportMapped.quantita:99])||0;
+    const qty=parseInt(r[magImportMapped.quantita>=0?magImportMapped.quantita:-1])||0;
     const catRaw=magImportMapped.cat>=0?String(r[magImportMapped.cat]||'').toLowerCase().trim():'altro';
     const cat=Object.keys(MAG_CAT_MAP).find(k=>catRaw.includes(k))||'altro';
     const data={
       cat,nome,
+      marca:magImportMapped.marca>=0?String(r[magImportMapped.marca]||'').trim():'',
+      seriale:magImportMapped.seriale>=0?String(r[magImportMapped.seriale]||'').trim():'',
       quantita:qty,
       qDisponibile:magImportMapped.qDisponibile>=0?parseInt(r[magImportMapped.qDisponibile])||qty:qty,
       note:magImportMapped.note>=0?String(r[magImportMapped.note]||'').trim():'',
