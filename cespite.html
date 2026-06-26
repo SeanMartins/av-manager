@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scheda Cespite — MMG</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f7;color:#1d1d1f;min-height:100vh}
+  .header{background:#1d1d1f;color:#fff;padding:16px 20px;display:flex;align-items:center;gap:12px}
+  .header img{height:32px;filter:brightness(0) invert(1)}
+  .header-text h1{font-size:16px;font-weight:700;color:#fff}
+  .header-text p{font-size:12px;color:rgba(255,255,255,.6);margin-top:2px}
+  .container{max-width:600px;margin:0 auto;padding:20px 16px}
+  .card{background:#fff;border-radius:14px;padding:20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#6e6e73;margin-bottom:12px}
+  .asset-name{font-size:22px;font-weight:700;color:#1d1d1f;margin-bottom:4px}
+  .asset-marca{font-size:15px;color:#6e6e73;margin-bottom:12px}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-right:6px;margin-bottom:6px}
+  .badge-green{background:#d1fae5;color:#065f46}
+  .badge-blue{background:#dbeafe;color:#1e40af}
+  .badge-amber{background:#fef3c7;color:#92400e}
+  .badge-red{background:#fee2e2;color:#991b1b}
+  .row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid #f0f0f0}
+  .row:last-child{border-bottom:none}
+  .row-label{font-size:13px;color:#6e6e73;flex-shrink:0;margin-right:12px}
+  .row-value{font-size:13px;font-weight:500;text-align:right;word-break:break-word}
+  .timeline{position:relative;padding-left:20px}
+  .timeline::before{content:'';position:absolute;left:6px;top:0;bottom:0;width:2px;background:#e5e5ea}
+  .tl-item{position:relative;margin-bottom:16px}
+  .tl-dot{position:absolute;left:-17px;top:4px;width:10px;height:10px;border-radius:50%;border:2px solid #fff;flex-shrink:0}
+  .tl-dot-green{background:#34c759}
+  .tl-dot-amber{background:#ff9500}
+  .tl-dot-blue{background:#007aff}
+  .tl-date{font-size:11px;color:#6e6e73;margin-bottom:2px}
+  .tl-title{font-size:13px;font-weight:600}
+  .tl-sub{font-size:12px;color:#6e6e73;margin-top:2px}
+  .delta-pos{color:#34c759;font-weight:700}
+  .delta-neg{color:#ff3b30;font-weight:700}
+  .loading{text-align:center;padding:60px 20px;color:#6e6e73}
+  .loading .spinner{width:32px;height:32px;border:3px solid #e5e5ea;border-top-color:#007aff;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+  .error-card{background:#fff2f2;border:1px solid #ffcdd2;border-radius:14px;padding:24px;text-align:center;margin:20px 0}
+  .error-card h2{color:#c62828;font-size:18px;margin-bottom:8px}
+  .error-card p{color:#6e6e73;font-size:13px}
+  .footer{text-align:center;padding:24px 16px;font-size:11px;color:#6e6e73}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media(prefers-color-scheme:dark){
+    body{background:#1c1c1e;color:#f5f5f7}
+    .card{background:#2c2c2e;box-shadow:none;border:1px solid rgba(255,255,255,.06)}
+    .row{border-bottom-color:rgba(255,255,255,.06)}
+    .asset-name{color:#f5f5f7}
+    .asset-marca{color:#aeaeb2}
+    .row-label{color:#aeaeb2}
+    .row-value{color:#f5f5f7}
+    .tl-date{color:#aeaeb2}
+    .tl-sub{color:#aeaeb2}
+    .card-title{color:#aeaeb2}
+    .footer{color:#aeaeb2}
+    .timeline::before{background:rgba(255,255,255,.1)}
+    .tl-dot{border-color:#1c1c1e}
+    .badge-green{background:rgba(52,199,89,.2);color:#34c759}
+    .badge-blue{background:rgba(0,122,255,.2);color:#007aff}
+    .badge-amber{background:rgba(255,149,0,.2);color:#ff9500}
+    .badge-red{background:rgba(255,59,48,.2);color:#ff3b30}
+    .error-card{background:rgba(255,59,48,.1);border-color:rgba(255,59,48,.3)}
+    .error-card h2{color:#ff3b30}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-text">
+    <h1>MMG — Scheda Cespite</h1>
+    <p>Multimedia Meeting Group s.n.c.</p>
+  </div>
+</div>
+
+<div class="container">
+  <div id="loadingState" class="loading">
+    <div class="spinner"></div>
+    <div>Caricamento scheda...</div>
+  </div>
+  <div id="mainContent" style="display:none"></div>
+  <div id="errorState" style="display:none" class="error-card">
+    <h2>⚠️ Cespite non trovato</h2>
+    <p id="errorMsg">Il QR code potrebbe essere danneggiato o il record è stato eliminato.</p>
+  </div>
+</div>
+
+<div class="footer" id="footerInfo" style="display:none">
+  MMG Multimedia Meeting Group s.n.c. · Via Frusa, 49 · 50131 Firenze<br>
+  Tel: 055/582929 · info@mm-group.it · www.mm-group.it
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const FB = {
+  apiKey:"AIzaSyDxxvnjtKdybQStd0yUT8xKE0MBgwYPZTo",
+  authDomain:"av-manager-41c40.firebaseapp.com",
+  projectId:"av-manager-41c40",
+  storageBucket:"av-manager-41c40.firebasestorage.app",
+  messagingSenderId:"1047072296195",
+  appId:"1:1047072296195:web:d220ed9c196b185d016d36"
+};
+
+const app = initializeApp(FB);
+const db  = getFirestore(app);
+
+const CAT_LABEL = {
+  audio:'🎙 Audio',video:'📽 Video',ledwall:'🖥 LED wall',
+  luci:'💡 Luci',traduzione:'🎧 Traduzione',strutture:'🏗 Strutture',
+  informatica:'💻 Informatica',altro:'📦 Altro'
+};
+
+function fmtData(iso){
+  if(!iso)return '—';
+  return new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'});
+}
+function fmtEuro(n){
+  if(!n&&n!==0)return '—';
+  return '€ '+parseFloat(n).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+async function load(){
+  const params = new URLSearchParams(location.search);
+  const col = params.get('col');
+  const id  = params.get('id');
+
+  if(!col||!id){showError('Parametri mancanti nel QR code.');return;}
+
+  try{
+    const snap = await getDoc(doc(db, col, id));
+    if(!snap.exists()){showError('Record non trovato nel database.');return;}
+    const d = snap.data();
+    render(col, d);
+  }catch(e){
+    showError('Errore di connessione: '+e.message);
+  }
+}
+
+function render(col, d){
+  const tipo = col==='ces_nuovi'?'nuovi': col==='ces_venduti'?'venduti':'install';
+
+  // Badge tipo
+  const tipoBadge = {
+    nuovi:  '<span class="badge badge-green">🆕 Acquisto</span>',
+    venduti:'<span class="badge badge-amber">💰 Venduto</span>',
+    install:'<span class="badge badge-blue">🔧 Installato</span>'
+  }[tipo];
+
+  const catLabel = CAT_LABEL[d.cat]||d.cat||'';
+
+  // Timeline eventi
+  let timeline = '';
+
+  // Acquisto
+  if(d.dataAcq||d.prezzoAcq){
+    timeline += `
+      <div class="tl-item">
+        <div class="tl-dot tl-dot-green"></div>
+        <div class="tl-date">${fmtData(d.dataAcq)}</div>
+        <div class="tl-title">Acquisto</div>
+        ${d.fornitore?`<div class="tl-sub">Fornitore: ${d.fornitore}</div>`:''}
+        ${d.prezzoAcq?`<div class="tl-sub">Prezzo: <strong>${fmtEuro(d.prezzoAcq)}</strong></div>`:''}
+      </div>`;
+  }
+
+  // Vendita
+  if(tipo==='venduti'&&(d.dataVend||d.prezzoVend)){
+    const acq=parseFloat(d.prezzoAcq)||0;
+    const vend=parseFloat(d.prezzoVend)||0;
+    const delta=vend-acq;
+    const deltaHtml=acq&&vend?`<span class="${delta>=0?'delta-pos':'delta-neg'}">${delta>=0?'+':''}${fmtEuro(delta)}</span>`:'';
+    timeline += `
+      <div class="tl-item">
+        <div class="tl-dot tl-dot-amber"></div>
+        <div class="tl-date">${fmtData(d.dataVend)}</div>
+        <div class="tl-title">Vendita</div>
+        ${d.acquirente?`<div class="tl-sub">Venduto a: <strong>${d.acquirente}</strong></div>`:''}
+        ${d.prezzoVend?`<div class="tl-sub">Prezzo: <strong>${fmtEuro(d.prezzoVend)}</strong> ${deltaHtml}</div>`:''}
+      </div>`;
+  }
+
+  // Installazione
+  if(tipo==='install'&&(d.dataInst||d.cliente)){
+    timeline += `
+      <div class="tl-item">
+        <div class="tl-dot tl-dot-blue"></div>
+        <div class="tl-date">${fmtData(d.dataInst)}</div>
+        <div class="tl-title">Installazione</div>
+        ${d.cliente?`<div class="tl-sub">Presso: <strong>${d.cliente}</strong></div>`:''}
+        ${d.ubicazione?`<div class="tl-sub">📍 ${d.ubicazione}</div>`:''}
+        ${d.lavoro?`<div class="tl-sub">📋 ${d.lavoro}</div>`:''}
+      </div>`;
+  }
+
+  // Dettagli tecnici
+  const dettagli = [
+    d.marca       && {label:'Marca / Modello', value:d.marca},
+    d.seriale     && {label:'Numero seriale',  value:d.seriale},
+    catLabel      && {label:'Categoria',        value:catLabel},
+    d.qty>1       && {label:'Quantità',         value:d.qty},
+    d.note        && {label:'Note',             value:d.note},
+    d.creatoDa    && {label:'Registrato da',    value:d.creatoDa},
+  ].filter(Boolean);
+
+  const html = `
+    <div class="card">
+      <div style="margin-bottom:10px">${tipoBadge}${catLabel?`<span class="badge badge-blue">${catLabel}</span>`:''}</div>
+      <div class="asset-name">${d.nome||'—'}</div>
+      ${d.marca?`<div class="asset-marca">${d.marca}</div>`:''}
+    </div>
+
+    ${timeline?`
+    <div class="card">
+      <div class="card-title">📅 Storia del bene</div>
+      <div class="timeline">${timeline}</div>
+    </div>`:''}
+
+    ${dettagli.length?`
+    <div class="card">
+      <div class="card-title">🔍 Dettagli tecnici</div>
+      ${dettagli.map(r=>`
+        <div class="row">
+          <span class="row-label">${r.label}</span>
+          <span class="row-value">${r.value}</span>
+        </div>`).join('')}
+    </div>`:''}
+  `;
+
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('mainContent').innerHTML = html;
+  document.getElementById('mainContent').style.display = 'block';
+  document.getElementById('footerInfo').style.display = 'block';
+  document.title = (d.nome||'Cespite') + ' — MMG';
+}
+
+function showError(msg){
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('errorState').style.display = 'block';
+}
+
+load();
+</script>
+</body>
+</html>
