@@ -2473,7 +2473,7 @@ function goPage(n){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(b=>b.classList.remove('on'));
   $('p-'+n)&&$('p-'+n).classList.add('on');$('n-'+n)&&$('n-'+n).classList.add('on');
-  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda',chat:'✉️ Messaggi',tools:'🔧 Tools Tecnici AV',calendario:'📅 Calendario Lavori','ai-preventivi':'🤖 AI Analisi Preventivi',preventivi:'📋 Preventivi',personale:'👥 Personale','personale-dett':'👤 Dettaglio dipendente',dashboard:'📊 Dashboard'};
+  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',cespiti:'Cespiti',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda',chat:'✉️ Messaggi',tools:'🔧 Tools Tecnici AV',calendario:'📅 Calendario Lavori','ai-preventivi':'🤖 AI Analisi Preventivi',preventivi:'📋 Preventivi',personale:'👥 Personale','personale-dett':'👤 Dettaglio dipendente',dashboard:'📊 Dashboard'};
   $('ptitle').textContent=t[n]||n;
   if(n==='agenda'){clearAgendaDot();renderAgenda();}
   if(n==='calendario'){renderCalendario();}
@@ -2755,6 +2755,10 @@ function renderDeskNav(){
   const canManage=USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager';
   if(canManage){
     h+='<div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px;margin-top:4px;border-top:1px solid var(--b)">Gestione</div>';
+    h+=`<button onclick="goPage('cespiti')" id="deskNav_cespiti" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:none;border:none;border-radius:var(--rs);color:var(--tx);font-size:13px;cursor:pointer;font-family:var(--font);text-align:left;margin-bottom:2px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+      Cespiti
+    </button>`;
     h+=`<button onclick="apriGestioneUtenti()" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:none;border:none;border-radius:var(--rs);color:var(--tx);font-size:13px;cursor:pointer;font-family:var(--font);text-align:left;margin-bottom:2px">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Utenti
