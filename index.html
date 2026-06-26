@@ -1930,11 +1930,61 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
   </div>
 </div>
 
+<!-- CESPITI: MODIFICA -->
+<div class="mol" id="mCesEdit" onclick="if(event.target===this)closeMod('mCesEdit')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px" id="mCesEditTitle">✏️ Modifica cespite</div>
+    <input type="hidden" id="cesEditCol">
+    <input type="hidden" id="cesEditId">
+    <!-- Campi comuni -->
+    <div class="ig"><label class="il">Nome bene</label><input type="text" id="cesEditNome"></div>
+    <div class="ig"><label class="il">Marca / Modello</label><input type="text" id="cesEditMarca"></div>
+    <div class="ig"><label class="il">Numero seriale</label><input type="text" id="cesEditSeriale"></div>
+    <div class="ig"><label class="il">Categoria</label>
+      <select id="cesEditCat">
+        <option value="audio">🎙 Audio</option><option value="video">📽 Video</option>
+        <option value="ledwall">🖥 LED wall</option><option value="luci">💡 Luci</option>
+        <option value="traduzione">🎧 Traduzione</option><option value="strutture">🏗 Strutture</option>
+        <option value="informatica">💻 Informatica</option><option value="altro">📦 Altro</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Data acquisto</label><input type="date" id="cesEditDataAcq"></div>
+      <div class="ig"><label class="il">Prezzo acquisto (€)</label><input type="number" id="cesEditPrezzoAcq" min="0" step="0.01"></div>
+    </div>
+    <div class="ig"><label class="il">Fornitore</label><input type="text" id="cesEditFornitore"></div>
+    <!-- Campi venduti -->
+    <div id="cesEditVendutiFields" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="ig"><label class="il">Data vendita</label><input type="date" id="cesEditDataVend"></div>
+        <div class="ig"><label class="il">Prezzo vendita (€)</label><input type="number" id="cesEditPrezzoVend" min="0" step="0.01"></div>
+      </div>
+      <div class="ig"><label class="il">Venduto a</label><input type="text" id="cesEditAcquirente"></div>
+    </div>
+    <!-- Campi installati -->
+    <div id="cesEditInstallFields" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="ig"><label class="il">Data installazione</label><input type="date" id="cesEditDataInst"></div>
+        <div class="ig"><label class="il">Quantità</label><input type="number" id="cesEditQty" min="1" value="1"></div>
+      </div>
+      <div class="ig"><label class="il">Installato presso</label><input type="text" id="cesEditCliente"></div>
+      <div class="ig"><label class="il">Ubicazione</label><input type="text" id="cesEditUbicazione"></div>
+      <div class="ig"><label class="il">Rif. lavoro</label><input type="text" id="cesEditLavoro"></div>
+    </div>
+    <div class="ig"><label class="il">Note</label><textarea id="cesEditNote" style="min-height:60px"></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mCesEdit')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="cesEditSave()">💾 Salva modifiche</button>
+    </div>
+  </div>
+</div>
+
 <!-- CESPITI: QR SCHEDA -->
 <div class="mol" id="mCesQr" onclick="if(event.target===this)closeMod('mCesQr')">
   <div class="msh" style="text-align:center">
     <div class="mhd"></div>
-    <div class="stl" style="margin-bottom:4px">◼ QR Scheda cespite</div>
+    <div class="stl" style="margin-bottom:4px">QR Scheda cespite</div>
     <div id="cesQrNome" style="font-size:13px;color:var(--tx2);margin-bottom:14px"></div>
     <div id="cesQrContainer" style="display:inline-block;padding:12px;background:#fff;border-radius:10px;margin-bottom:12px"></div>
     <div style="font-size:10px;color:var(--tx3);margin-bottom:14px;word-break:break-all">
@@ -6845,7 +6895,8 @@ function renderCesNuovi(){
           ${m.note?`<div style="font-size:11px;color:var(--tx2);margin-top:4px">${m.note}</div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;margin-left:8px">
-          <button onclick="cesShowQr('ces_nuovi','${m.id}','${(m.nome||'').replace(/'/g,'')}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);font-size:14px;cursor:pointer" title="QR scheda">◼</button>
+          <button onclick="cesEditOpen('ces_nuovi','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Modifica"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button onclick="cesShowQr('ces_nuovi','${m.id}','${(m.nome||'').replace(/'/g,'')}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Genera QR scheda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="7" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="18" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="7" y="18" width="3" height="3" fill="currentColor" stroke="none"/><line x1="14" y1="14" x2="14" y2="14"/><line x1="17" y1="14" x2="17" y2="14"/><line x1="20" y1="14" x2="20" y2="14"/><line x1="14" y1="17" x2="14" y2="17"/><line x1="17" y1="17" x2="20" y2="20"/></svg></button>
           <button onclick="cesDel('ces_nuovi','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">✕</button>
         </div>
       </div>
@@ -6877,7 +6928,8 @@ function renderCesVenduti(){
           ${m.note?`<div style="font-size:11px;color:var(--tx2);margin-top:4px">${m.note}</div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;margin-left:8px">
-          <button onclick="cesShowQr('ces_venduti','${m.id}','${(m.nome||'').replace(/'/g,'')}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);font-size:14px;cursor:pointer" title="QR scheda">◼</button>
+          <button onclick="cesEditOpen('ces_venduti','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Modifica"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button onclick="cesShowQr('ces_venduti','${m.id}','${(m.nome||'').replace(/'/g,'')}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Genera QR scheda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="7" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="18" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="7" y="18" width="3" height="3" fill="currentColor" stroke="none"/><line x1="14" y1="14" x2="14" y2="14"/><line x1="17" y1="14" x2="17" y2="14"/><line x1="20" y1="14" x2="20" y2="14"/><line x1="14" y1="17" x2="14" y2="17"/><line x1="17" y1="17" x2="20" y2="20"/></svg></button>
           <button onclick="cesDel('ces_venduti','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">✕</button>
         </div>
       </div>
@@ -6904,7 +6956,8 @@ function renderCesInstall(){
           ${m.note?`<div style="font-size:11px;color:var(--tx2);margin-top:4px">${m.note}</div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;margin-left:8px">
-          <button onclick="cesShowQr('ces_install','${m.id}','${(m.nome||'').replace(/'/g,'')}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);font-size:14px;cursor:pointer" title="QR scheda">◼</button>
+          <button onclick="cesEditOpen('ces_install','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Modifica"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button onclick="cesShowQr('ces_install','${m.id}','${(m.nome||'').replace(/'/g,'')}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Genera QR scheda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="7" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="18" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="7" y="18" width="3" height="3" fill="currentColor" stroke="none"/><line x1="14" y1="14" x2="14" y2="14"/><line x1="17" y1="14" x2="17" y2="14"/><line x1="20" y1="14" x2="20" y2="14"/><line x1="14" y1="17" x2="14" y2="17"/><line x1="17" y1="17" x2="20" y2="20"/></svg></button>
           <button onclick="cesDel('ces_install','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">✕</button>
         </div>
       </div>
@@ -7088,6 +7141,64 @@ async function cesDel(col,id){
   if(!confirm('Eliminare questo record?'))return;
   try{await DB.collection(col).doc(id).delete();toast('✓ Eliminato');}
   catch(e){toast('Errore: '+e.message,'r');}
+}
+
+function cesEditOpen(col,id){
+  // Solo admin/responsabile
+  if(!isAdmin()&&!isResponsabile()){toast('Permessi insufficienti','r');return;}
+  const cache={ces_nuovi:cacheCesNuovi,ces_venduti:cacheCesVenduti,ces_install:cacheCesInstall}[col];
+  const m=cache&&cache.find(x=>x.id===id);if(!m){toast('Record non trovato','r');return;}
+  // Imposta valori comuni
+  $('cesEditCol').value=col;$('cesEditId').value=id;
+  $('cesEditNome').value=m.nome||'';$('cesEditMarca').value=m.marca||'';
+  $('cesEditSeriale').value=m.seriale||'';$('cesEditCat').value=m.cat||'altro';
+  $('cesEditDataAcq').value=m.dataAcq||'';$('cesEditPrezzoAcq').value=m.prezzoAcq||'';
+  $('cesEditFornitore').value=m.fornitore||'';$('cesEditNote').value=m.note||'';
+  // Mostra/nascondi campi specifici
+  const tipo=col==='ces_venduti'?'venduti':col==='ces_install'?'install':'nuovi';
+  $('cesEditVendutiFields').style.display=tipo==='venduti'?'block':'none';
+  $('cesEditInstallFields').style.display=tipo==='install'?'block':'none';
+  if(tipo==='venduti'){
+    $('cesEditDataVend').value=m.dataVend||'';$('cesEditPrezzoVend').value=m.prezzoVend||'';
+    $('cesEditAcquirente').value=m.acquirente||'';
+  }
+  if(tipo==='install'){
+    $('cesEditDataInst').value=m.dataInst||'';$('cesEditQty').value=m.qty||1;
+    $('cesEditCliente').value=m.cliente||'';$('cesEditUbicazione').value=m.ubicazione||'';
+    $('cesEditLavoro').value=m.lavoro||'';
+  }
+  const tipoLabel={ces_nuovi:'Acquisto',ces_venduti:'Vendita',ces_install:'Installazione'}[col];
+  $('mCesEditTitle').textContent='✏️ Modifica — '+tipoLabel;
+  openMod('mCesEdit');
+}
+
+async function cesEditSave(){
+  const col=$('cesEditCol').value;
+  const id=$('cesEditId').value;
+  if(!col||!id){toast('Errore: dati mancanti','r');return;}
+  const tipo=col==='ces_venduti'?'venduti':col==='ces_install'?'install':'nuovi';
+  const data={
+    nome:val('cesEditNome'),marca:val('cesEditMarca'),seriale:val('cesEditSeriale'),
+    cat:val('cesEditCat'),dataAcq:val('cesEditDataAcq'),
+    prezzoAcq:parseFloat(val('cesEditPrezzoAcq'))||0,
+    fornitore:val('cesEditFornitore'),note:val('cesEditNote'),
+    updatedAt:new Date().toISOString(),updatedDa:USER?USER.nome+' '+USER.cognome:'—'
+  };
+  if(tipo==='venduti'){
+    data.dataVend=val('cesEditDataVend');
+    data.prezzoVend=parseFloat(val('cesEditPrezzoVend'))||0;
+    data.acquirente=val('cesEditAcquirente');
+  }
+  if(tipo==='install'){
+    data.dataInst=val('cesEditDataInst');data.qty=parseInt(val('cesEditQty'))||1;
+    data.cliente=val('cesEditCliente');data.ubicazione=val('cesEditUbicazione');
+    data.lavoro=val('cesEditLavoro');
+  }
+  try{
+    await DB.collection(col).doc(id).update(data);
+    toast('✓ Cespite aggiornato');
+    closeMod('mCesEdit');
+  }catch(e){toast('Errore: '+e.message,'r');}
 }
 
 function cesPrintQr(){
