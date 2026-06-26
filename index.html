@@ -425,7 +425,12 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
         </div>
         <div class="sec">
           <div class="stl">Inventario</div>
-          <button class="btn btn-p" style="padding:7px 14px;font-size:13px" onclick="openMod('mNewArt')">+ Articolo</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-p" style="padding:7px 14px;font-size:13px" onclick="openMod('mNewArt')">+ Articolo</button>
+            <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="$('magImportInput').click()">📥 Importa</button>
+            <input type="file" id="magImportInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="magHandleImport(this)">
+            <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="magExportTemplate()">📋 Template</button>
+          </div>
         </div>
         <input type="text" id="magSearch" placeholder="🔍 Cerca articolo..." oninput="renderMag()" style="margin-bottom:12px">
         <!-- Vista mobile (card) -->
@@ -463,15 +468,30 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
         <button id="cesTabBtn_install" onclick="cesTab('install')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2)">🔧 Installati</button>
       </div>
       <div id="cesTab_nuovi">
-        <button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="openMod('mCesNuovo')">+ Aggiungi acquisto</button>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="btn btn-p btn-f" onclick="openMod('mCesNuovo')">+ Aggiungi</button>
+          <button class="btn btn-f btn-f" onclick="$('cesImportNuoviInput').click()">📥 Importa</button>
+          <input type="file" id="cesImportNuoviInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="cesHandleImport(this,'nuovi')">
+          <button class="btn btn-f btn-f" onclick="cesExportTemplate('nuovi')">📋 Template</button>
+        </div>
         <div id="cesListNuovi"></div>
       </div>
       <div id="cesTab_venduti" style="display:none">
-        <button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="openMod('mCesVenduto')">+ Aggiungi vendita</button>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="btn btn-p btn-f" onclick="openMod('mCesVenduto')">+ Aggiungi</button>
+          <button class="btn btn-f btn-f" onclick="$('cesImportVendutiInput').click()">📥 Importa</button>
+          <input type="file" id="cesImportVendutiInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="cesHandleImport(this,'venduti')">
+          <button class="btn btn-f btn-f" onclick="cesExportTemplate('venduti')">📋 Template</button>
+        </div>
         <div id="cesListVenduti"></div>
       </div>
       <div id="cesTab_install" style="display:none">
-        <button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="openMod('mCesInstall')">+ Aggiungi installazione</button>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="btn btn-p btn-f" onclick="openMod('mCesInstall')">+ Aggiungi</button>
+          <button class="btn btn-f btn-f" onclick="$('cesImportInstallInput').click()">📥 Importa</button>
+          <input type="file" id="cesImportInstallInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="cesHandleImport(this,'install')">
+          <button class="btn btn-f btn-f" onclick="cesExportTemplate('install')">📋 Template</button>
+        </div>
         <div id="cesListInstall"></div>
       </div>
     </div>
@@ -1890,6 +1910,51 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div style="display:flex;gap:8px">
       <button class="btn btn-f" onclick="closeMod('mCesInstall')">Annulla</button>
       <button class="btn btn-p btn-f" onclick="cesSalvaInstall()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- CESPITI: QR SCHEDA -->
+<div class="mol" id="mCesQr" onclick="if(event.target===this)closeMod('mCesQr')">
+  <div class="msh" style="text-align:center">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:4px">◼ QR Scheda cespite</div>
+    <div id="cesQrNome" style="font-size:13px;color:var(--tx2);margin-bottom:14px"></div>
+    <div id="cesQrContainer" style="display:inline-block;padding:12px;background:#fff;border-radius:10px;margin-bottom:12px"></div>
+    <div style="font-size:10px;color:var(--tx3);margin-bottom:14px;word-break:break-all">
+      <a id="cesQrLink" target="_blank" style="color:var(--ac)"></a>
+    </div>
+    <button class="btn btn-p" style="width:100%;margin-bottom:8px" onclick="cesPrintQr()">🖨 Stampa QR</button>
+    <button class="btn btn-f" style="width:100%" onclick="closeMod('mCesQr')">Chiudi</button>
+  </div>
+</div>
+
+<!-- CESPITI: IMPORT PREVIEW -->
+<div class="mol" id="mCesImport" onclick="if(event.target===this)closeMod('mCesImport')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:6px">📥 Importa <span id="cesImportTipoLabel"></span></div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Trovate <strong id="cesImportRowCount">0</strong> righe. Anteprima prime 3 righe:</div>
+    <div id="cesImportPreview" style="background:var(--bg2);border-radius:var(--rs);padding:10px;font-size:11px;color:var(--tx2);margin-bottom:14px;max-height:180px;overflow-y:auto"></div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:14px">⚠️ I record verranno aggiunti senza sovrascrivere quelli esistenti.</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f btn-f" onclick="closeMod('mCesImport')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="cesConfirmImport()">✓ Importa tutto</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAGAZZINO: IMPORT PREVIEW -->
+<div class="mol" id="mMagImport" onclick="if(event.target===this)closeMod('mMagImport')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:6px">📥 Importa articoli magazzino</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Trovate <strong id="magImportRowCount">0</strong> righe. Anteprima prime 3:</div>
+    <div id="magImportPreview" style="background:var(--bg2);border-radius:var(--rs);padding:10px;font-size:11px;color:var(--tx2);margin-bottom:14px;max-height:180px;overflow-y:auto"></div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:14px">⚠️ I record verranno aggiunti senza sovrascrivere quelli esistenti.</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f btn-f" onclick="closeMod('mMagImport')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="magConfirmImport()">✓ Importa tutto</button>
     </div>
   </div>
 </div>
@@ -6728,6 +6793,19 @@ function cesTab(tab){
 
 const CES_CAT={audio:'🎙 Audio',video:'📽 Video',ledwall:'🖥 LED wall',luci:'💡 Luci',traduzione:'🎧 Traduzione',strutture:'🏗 Strutture',informatica:'💻 Informatica',altro:'📦 Altro'};
 
+function cesQrUrl(col,id){
+  return location.origin+location.pathname.replace('index.html','')+'cespite.html?col='+col+'&id='+id;
+}
+
+function cesShowQr(col,id,nome){
+  const url=cesQrUrl(col,id);
+  $('cesQrNome').textContent=nome||'Articolo';
+  $('cesQrContainer').innerHTML='';
+  new QRCode($('cesQrContainer'),{text:url,width:200,height:200,correctLevel:QRCode.CorrectLevel.H});
+  $('cesQrLink').href=url;$('cesQrLink').textContent=url;
+  openMod('mCesQr');
+}
+
 function renderCesNuovi(){
   const el=$('cesListNuovi');if(!el)return;
   if(!cacheCesNuovi.length){el.innerHTML='<div class="empty">Nessun acquisto registrato</div>';return;}
@@ -6745,7 +6823,10 @@ function renderCesNuovi(){
           ${m.seriale?`<div style="font-size:10px;color:var(--tx3);margin-top:2px">S/N: ${m.seriale}</div>`:''}
           ${m.note?`<div style="font-size:11px;color:var(--tx2);margin-top:4px">${m.note}</div>`:''}
         </div>
-        <button onclick="cesDel('ces_nuovi','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer;flex-shrink:0;margin-left:8px">✕</button>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-left:8px">
+          <button onclick="cesShowQr('ces_nuovi','${m.id}','${(m.nome||'').replace(/'/g,'')}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);font-size:14px;cursor:pointer" title="QR scheda">◼</button>
+          <button onclick="cesDel('ces_nuovi','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">✕</button>
+        </div>
       </div>
     </div>`).join('');
 }
@@ -6774,7 +6855,10 @@ function renderCesVenduti(){
           ${m.acquirente?`<div style="font-size:11px;color:var(--tx2);margin-top:4px">👤 Venduto a: ${m.acquirente}</div>`:''}
           ${m.note?`<div style="font-size:11px;color:var(--tx2);margin-top:4px">${m.note}</div>`:''}
         </div>
-        <button onclick="cesDel('ces_venduti','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer;flex-shrink:0;margin-left:8px">✕</button>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-left:8px">
+          <button onclick="cesShowQr('ces_venduti','${m.id}','${(m.nome||'').replace(/'/g,'')}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);font-size:14px;cursor:pointer" title="QR scheda">◼</button>
+          <button onclick="cesDel('ces_venduti','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">✕</button>
+        </div>
       </div>
     </div>`;}).join('');
 }
@@ -6798,10 +6882,112 @@ function renderCesInstall(){
           ${m.lavoro?`<div style="font-size:11px;color:var(--tx2)">📋 ${m.lavoro}</div>`:''}
           ${m.note?`<div style="font-size:11px;color:var(--tx2);margin-top:4px">${m.note}</div>`:''}
         </div>
-        <button onclick="cesDel('ces_install','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer;flex-shrink:0;margin-left:8px">✕</button>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-left:8px">
+          <button onclick="cesShowQr('ces_install','${m.id}','${(m.nome||'').replace(/'/g,'')}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);font-size:14px;cursor:pointer" title="QR scheda">◼</button>
+          <button onclick="cesDel('ces_install','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">✕</button>
+        </div>
       </div>
     </div>`).join('');
 }
+
+// ── IMPORT Excel/CSV per Cespiti ──────────────────────────
+const CES_FIELDS = {
+  nuovi:  ['nome','marca','dataAcq','prezzoAcq','fornitore','seriale','cat','note'],
+  venduti:['nome','marca','dataAcq','dataVend','prezzoAcq','prezzoVend','acquirente','note'],
+  install:['nome','marca','dataAcq','dataInst','prezzoAcq','qty','cliente','ubicazione','lavoro','note']
+};
+const CES_LABELS = {
+  nome:'Nome bene',marca:'Marca/Modello',dataAcq:'Data acquisto (YYYY-MM-DD)',
+  prezzoAcq:'Prezzo acquisto €',fornitore:'Fornitore',seriale:'Numero seriale',
+  cat:'Categoria',note:'Note',dataVend:'Data vendita (YYYY-MM-DD)',
+  prezzoVend:'Prezzo vendita €',acquirente:'Venduto a',
+  dataInst:'Data installazione (YYYY-MM-DD)',qty:'Quantità',
+  cliente:'Installato presso',ubicazione:'Ubicazione',lavoro:'Riferimento lavoro'
+};
+
+function cesExportTemplate(tipo){
+  const fields=CES_FIELDS[tipo];
+  const header=fields.map(f=>CES_LABELS[f]||f);
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([header,fields.map(f=>f==='qty'?1:f.startsWith('data')?new Date().toISOString().slice(0,10):'')]);
+  XLSX.utils.book_append_sheet(wb,ws,'Cespiti_'+tipo);
+  XLSX.writeFile(wb,'Template_Cespiti_'+tipo+'.xlsx');
+  toast('📋 Template scaricato');
+}
+
+let cesImportRows=[],cesImportTipo='';
+
+function cesHandleImport(input,tipo){
+  const file=input.files[0];if(!file)return;
+  cesImportTipo=tipo;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const sheet=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,defval:''});
+      if(!rows.length){toast('File vuoto','r');return;}
+      const headers=rows[0].map(h=>String(h||'').trim());
+      cesImportRows=rows.slice(1).filter(r=>r.some(c=>String(c||'').trim()!==''));
+      if(!cesImportRows.length){toast('Nessuna riga dati trovata','r');return;}
+      // Auto-mappa colonne per nome
+      const fields=CES_FIELDS[tipo];
+      const mapped={};
+      fields.forEach(f=>{
+        const label=(CES_LABELS[f]||f).toLowerCase();
+        const idx=headers.findIndex(h=>h.toLowerCase().includes(f)||h.toLowerCase().includes(label));
+        if(idx>=0)mapped[f]=idx;
+      });
+      $('cesImportTipoLabel').textContent={nuovi:'Nuovi acquisti',venduti:'Venduti',install:'Installati'}[tipo];
+      $('cesImportRowCount').textContent=cesImportRows.length;
+      // Genera preview
+      const preview=cesImportRows.slice(0,3).map(r=>{
+        const obj={};
+        fields.forEach(f=>{if(mapped[f]!==undefined)obj[f]=r[mapped[f]]||'';});
+        return Object.entries(obj).filter(([,v])=>v).map(([k,v])=>`<b>${CES_LABELS[k]||k}</b>: ${v}`).join(' · ');
+      }).map(r=>`<div style="padding:4px 0;border-bottom:1px solid var(--b)">${r}</div>`).join('');
+      $('cesImportPreview').innerHTML=preview||'<div style="color:var(--tx3)">Nessun campo riconosciuto — verifica il template</div>';
+      cesImportMapped=mapped;
+      openMod('mCesImport');
+    }catch(err){toast('Errore lettura file: '+err.message,'r');}
+  };
+  reader.readAsArrayBuffer(file);
+  input.value='';
+}
+
+let cesImportMapped={};
+
+async function cesConfirmImport(){
+  if(!cesImportRows.length){toast('Nessuna riga da importare','r');return;}
+  const fields=CES_FIELDS[cesImportTipo];
+  const col='ces_'+cesImportTipo;
+  let ok=0,err=0;
+  const now=new Date().toISOString();
+  const batch=DB.batch();
+  cesImportRows.forEach(r=>{
+    try{
+      const data={creatoDa:USER?USER.nome+' '+USER.cognome:'import',createdAt:now};
+      fields.forEach(f=>{
+        if(cesImportMapped[f]!==undefined){
+          let v=String(r[cesImportMapped[f]]||'').trim();
+          if(f.startsWith('prezzo')||f==='qty')v=parseFloat(v)||0;
+          data[f]=v;
+        }
+      });
+      if(!data.nome)return;
+      const ref=DB.collection(col).doc();
+      batch.set(ref,data);
+      ok++;
+    }catch(e){err++;}
+  });
+  try{
+    await batch.commit();
+    toast('✓ Importati '+ok+' record'+(err?' ('+err+' errori)':''));
+    closeMod('mCesImport');
+  }catch(e){toast('Errore salvataggio: '+e.message,'r');}
+}
+
 
 async function cesSalvaNuovo(){
   const nome=val('cesNNome');if(!nome){toast('Inserisci il nome del bene','r');return;}
@@ -6864,6 +7050,102 @@ async function cesDel(col,id){
   if(!confirm('Eliminare questo record?'))return;
   try{await DB.collection(col).doc(id).delete();toast('✓ Eliminato');}
   catch(e){toast('Errore: '+e.message,'r');}
+}
+
+function cesPrintQr(){
+  const qrEl=$('cesQrContainer');
+  const nome=$('cesQrNome').textContent||'Cespite';
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>QR ${nome}</title>
+  <style>body{font-family:sans-serif;text-align:center;padding:40px}h2{margin-bottom:20px}p{color:#666;font-size:12px;margin-top:16px;word-break:break-all}</style></head>
+  <body><h2>${nome}</h2>${qrEl.innerHTML}
+  <p>${$('cesQrLink').href}</p>
+  <script>window.onload=()=>{window.print();}<\/script></body></html>`);
+  win.document.close();
+}
+
+// ── IMPORT MAGAZZINO ──────────────────────────────────────
+const MAG_FIELDS=['cat','nome','quantita','qDisponibile','note'];
+const MAG_LABELS={cat:'Categoria',nome:'Nome articolo',quantita:'Quantità totale',qDisponibile:'Disponibile',note:'Note'};
+const MAG_CAT_MAP={audio:'audio',luci:'luci',ledwall:'ledwall',traduzione:'traduzione',video:'video',strutture:'strutture',altro:'altro'};
+
+let magImportRows=[];
+
+function magExportTemplate(){
+  const header=MAG_FIELDS.map(f=>MAG_LABELS[f]||f);
+  const example=['audio','Microfono radio palmare Sennheiser','10','10',''];
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([header,example]);
+  XLSX.utils.book_append_sheet(wb,ws,'Magazzino');
+  XLSX.writeFile(wb,'Template_Magazzino.xlsx');
+  toast('📋 Template scaricato');
+}
+
+function magHandleImport(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const sheet=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,defval:''});
+      if(!rows.length){toast('File vuoto','r');return;}
+      const headers=rows[0].map(h=>String(h||'').trim().toLowerCase());
+      magImportRows=rows.slice(1).filter(r=>r.some(c=>String(c||'').trim()!==''));
+      if(!magImportRows.length){toast('Nessuna riga dati trovata','r');return;}
+      // Auto-mappa colonne
+      const findCol=(...keys)=>headers.findIndex(h=>keys.some(k=>h.includes(k)));
+      const mapped={
+        cat:findCol('cat','categoria','tipo'),
+        nome:findCol('nome','articolo','descrizione'),
+        quantita:findCol('quant','totale','qty'),
+        qDisponibile:findCol('disp','disponib'),
+        note:findCol('note','descr')
+      };
+      magImportMapped=mapped;
+      $('magImportRowCount').textContent=magImportRows.length;
+      const preview=magImportRows.slice(0,3).map(r=>{
+        const nome=mapped.nome>=0?r[mapped.nome]:'—';
+        const cat=mapped.cat>=0?r[mapped.cat]:'';
+        const qty=mapped.quantita>=0?r[mapped.quantita]:'';
+        return `<div style="padding:4px 0;border-bottom:1px solid var(--b)"><b>${nome}</b> ${cat?'['+cat+']':''} ${qty?'× '+qty:''}</div>`;
+      }).join('');
+      $('magImportPreview').innerHTML=preview||'<div style="color:var(--tx3)">Verifica che il file abbia intestazioni riconoscibili — scarica il template</div>';
+      openMod('mMagImport');
+    }catch(err){toast('Errore lettura: '+err.message,'r');}
+  };
+  reader.readAsArrayBuffer(file);
+  input.value='';
+}
+
+let magImportMapped={};
+
+async function magConfirmImport(){
+  if(!magImportRows.length){toast('Nessuna riga','r');return;}
+  const now=new Date().toISOString();
+  const batch=DB.batch();
+  let ok=0;
+  magImportRows.forEach(r=>{
+    const nome=magImportMapped.nome>=0?String(r[magImportMapped.nome]||'').trim():'';
+    if(!nome)return;
+    const qty=parseInt(r[magImportMapped.quantita>=0?magImportMapped.quantita:99])||0;
+    const catRaw=magImportMapped.cat>=0?String(r[magImportMapped.cat]||'').toLowerCase().trim():'altro';
+    const cat=Object.keys(MAG_CAT_MAP).find(k=>catRaw.includes(k))||'altro';
+    const data={
+      cat,nome,
+      quantita:qty,
+      qDisponibile:magImportMapped.qDisponibile>=0?parseInt(r[magImportMapped.qDisponibile])||qty:qty,
+      note:magImportMapped.note>=0?String(r[magImportMapped.note]||'').trim():'',
+      createdAt:now,fonte:'import'
+    };
+    batch.set(DB.collection('magazzino').doc(),data);
+    ok++;
+  });
+  try{
+    await batch.commit();
+    toast('✓ Importati '+ok+' articoli');
+    closeMod('mMagImport');
+  }catch(e){toast('Errore: '+e.message,'r');}
 }
 
 function popolaArtSel(selId){
