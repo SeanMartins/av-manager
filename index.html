@@ -1978,6 +1978,9 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <button class="btn btn-f" onclick="closeMod('mCesEdit')">Annulla</button>
       <button class="btn btn-p btn-f" onclick="cesEditSave()">💾 Salva modifiche</button>
     </div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--b)">
+      <button class="btn btn-f" style="width:100%;color:var(--rd);border-color:rgba(239,68,68,.3)" onclick="cesEditDelete()">🗑 Elimina questo cespite</button>
+    </div>
   </div>
 </div>
 
@@ -6930,7 +6933,7 @@ function renderCesNuovi(){
         <div style="display:flex;flex-direction:column;gap:6px;margin-left:8px">
           <button onclick="cesEditOpen('ces_nuovi','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Modifica"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button onclick="cesShowQr('ces_nuovi','${m.id}','${(m.nome||'').replace(/'/g,'')}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Genera QR scheda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="7" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="18" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="7" y="18" width="3" height="3" fill="currentColor" stroke="none"/><line x1="14" y1="14" x2="14" y2="14"/><line x1="17" y1="14" x2="17" y2="14"/><line x1="20" y1="14" x2="20" y2="14"/><line x1="14" y1="17" x2="14" y2="17"/><line x1="17" y1="17" x2="20" y2="20"/></svg></button>
-          <button onclick="cesDel('ces_nuovi','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">✕</button>
+
         </div>
       </div>
     </div>`).join('');
@@ -6963,7 +6966,7 @@ function renderCesVenduti(){
         <div style="display:flex;flex-direction:column;gap:6px;margin-left:8px">
           <button onclick="cesEditOpen('ces_venduti','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Modifica"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button onclick="cesShowQr('ces_venduti','${m.id}','${(m.nome||'').replace(/'/g,'')}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Genera QR scheda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="7" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="18" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="7" y="18" width="3" height="3" fill="currentColor" stroke="none"/><line x1="14" y1="14" x2="14" y2="14"/><line x1="17" y1="14" x2="17" y2="14"/><line x1="20" y1="14" x2="20" y2="14"/><line x1="14" y1="17" x2="14" y2="17"/><line x1="17" y1="17" x2="20" y2="20"/></svg></button>
-          <button onclick="cesDel('ces_venduti','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">✕</button>
+
         </div>
       </div>
     </div>`;}).join('');
@@ -6991,7 +6994,7 @@ function renderCesInstall(){
         <div style="display:flex;flex-direction:column;gap:6px;margin-left:8px">
           <button onclick="cesEditOpen('ces_install','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Modifica"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button onclick="cesShowQr('ces_install','${m.id}','${(m.nome||'').replace(/'/g,'')}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center" title="Genera QR scheda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="7" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="18" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="7" y="18" width="3" height="3" fill="currentColor" stroke="none"/><line x1="14" y1="14" x2="14" y2="14"/><line x1="17" y1="14" x2="17" y2="14"/><line x1="20" y1="14" x2="20" y2="14"/><line x1="14" y1="17" x2="14" y2="17"/><line x1="17" y1="17" x2="20" y2="20"/></svg></button>
-          <button onclick="cesDel('ces_install','${m.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">✕</button>
+
         </div>
       </div>
     </div>`).join('');
@@ -7203,6 +7206,18 @@ function cesEditOpen(col,id){
   const tipoLabel={ces_nuovi:'Acquisto',ces_venduti:'Vendita',ces_install:'Installazione'}[col];
   $('mCesEditTitle').textContent='✏️ Modifica — '+tipoLabel;
   openMod('mCesEdit');
+}
+
+async function cesEditDelete(){
+  const col=$('cesEditCol').value;
+  const id=$('cesEditId').value;
+  const nome=$('cesEditNome').value||'questo cespite';
+  if(!confirm('Eliminare definitivamente "'+nome+'"?\nL\'operazione non è reversibile.'))return;
+  try{
+    await DB.collection(col).doc(id).delete();
+    toast('✓ Cespite eliminato');
+    closeMod('mCesEdit');
+  }catch(e){toast('Errore: '+e.message,'r');}
 }
 
 async function cesEditSave(){
