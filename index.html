@@ -7474,9 +7474,9 @@ async function magConfirmImport(){
     const data={
       cat,nome,
       marca:magImportMapped.marca>=0?String(r[magImportMapped.marca]||'').trim():'',
-      seriale:magImportMapped.seriale>=0?String(r[magImportMapped.seriale]||'').trim():'',
-      quantita:qty,
-      qDisponibile:magImportMapped.qDisponibile>=0?parseInt(r[magImportMapped.qDisponibile])||qty:qty,
+      ser:magImportMapped.seriale>=0?String(r[magImportMapped.seriale]||'').trim():'',
+      qty,
+      stato:'ok',
       note:magImportMapped.note>=0?String(r[magImportMapped.note]||'').trim():'',
       createdAt:now,fonte:'import'
     };
