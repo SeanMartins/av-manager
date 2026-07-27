@@ -447,9 +447,9 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
             <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="magQrBulkUpdateCount();openMod('mMagQrBulk')">◼ QR Bulk</button>
           </div>
         </div>
-        <div style="display:flex;gap:6px;margin-bottom:12px">
-          <input type="text" id="magSearch" placeholder="🔍 Cerca articolo..." oninput="renderMag()" style="margin:0;flex:1">
-          <button class="btn btn-f" style="padding:0 14px;font-size:16px" onclick="apriScanMag()" title="Scansiona QR">📷</button>
+        <div style="margin-bottom:12px">
+          <input type="text" id="magSearch" placeholder="🔍 Cerca articolo..." oninput="renderMag()" style="width:100%;margin:0;padding:14px 16px;font-size:15px;font-weight:500;border:2px solid var(--ac);border-radius:var(--r);background:var(--bg2);box-sizing:border-box">
+          <button class="btn btn-f" style="width:100%;margin-top:8px;padding:10px;font-size:13px;font-weight:600" onclick="apriScanMag()">📷 Scansiona QR</button>
         </div>
         <!-- Vista mobile (card) -->
         <div id="magList"><div class="empty">Caricamento...</div></div>
