@@ -7809,6 +7809,17 @@ function dichFilter(f){
   renderDich();
 }
 
+async function dichElimina(id,nomeEnc){
+  const nome=decodeURIComponent(nomeEnc||'');
+  if(!confirm('Eliminare definitivamente "'+nome+'" dall\'archivio? Questa azione non si può annullare.'))return;
+  try{
+    await DB.collection('lavori').doc(id).delete();
+    toast('✓ Eliminato dall\'archivio');
+  }catch(e){
+    toast('Errore: '+e.message,'r');
+  }
+}
+
 function renderDich(){
   const prep=cacheDich.filter(d=>!d.rientroData);
   const rient=cacheDich.filter(d=>!!d.rientroData);
@@ -7906,6 +7917,7 @@ function renderDichDesktop(list){
         <div style="display:flex;gap:4px;justify-content:center">
           <button onclick="dichOpenDoc('${d.id}')" title="Apri PDF" style="background:var(--acb);border:1px solid var(--ac);color:var(--ac2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">📄 PDF</button>
           ${!isRient&&canManage?`<button onclick="dichModifica('${d.id}')" title="Modifica" style="background:var(--bg3);border:1px solid var(--b);color:var(--tx2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✏️</button>`:''}
+          ${canManage?`<button onclick="dichElimina('${d.id}','${encodeURIComponent(d.nome||'')}')" title="Elimina" style="background:none;border:1px solid var(--rd);color:var(--rd);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">🗑️</button>`:''}
         </div>
       </td>
     </tr>`;
@@ -8000,6 +8012,11 @@ function dichCardHtml(d){
             '✏️ Modifica'+
           '</button>'+
         '</div>'
+      :'')+
+      (puoGestire?
+        '<button onclick="dichElimina(\''+d.id+'\',\''+encodeURIComponent(d.nome||'')+'\')" class="btn btn-f" style="font-size:12px;padding:9px;margin-top:8px;width:100%;border-color:var(--rd);color:var(--rd)">'+
+          '🗑️ Elimina'+
+        '</button>'
       :'')+
     '</div>'+
   '</div>';
