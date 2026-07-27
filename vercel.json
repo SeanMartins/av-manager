@@ -2,6 +2,18 @@
   "functions": {
     "api/ai-analyze.js": {
       "maxDuration": 120
+    },
+    "api/ff-sync.js": {
+      "maxDuration": 60
+    },
+    "api/ff-players.js": {
+      "maxDuration": 30
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/ff-sync",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

@@ -1042,6 +1042,50 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
 
   </div>
+
+  <!-- FANTACALCIO MMG -->
+  <div class="page" id="p-fantacalcio">
+    <div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto">
+      <button class="btn btn-p" id="ffTabBtn-squadra" style="white-space:nowrap" onclick="ffTab('squadra')">⚽ La mia squadra</button>
+      <button class="btn" id="ffTabBtn-classifica" style="white-space:nowrap" onclick="ffTab('classifica')">🏆 Classifica</button>
+      <button class="btn" id="ffTabBtn-giornata" style="white-space:nowrap" onclick="ffTab('giornata')">📅 Ultima giornata</button>
+    </div>
+
+    <!-- Admin: strumenti sincronizzazione -->
+    <div id="ffAdminTools" style="display:none;background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:12px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">🔧 Strumenti Admin/Responsabile</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" style="font-size:12px" onclick="ffAggiornaGiocatori()">🔄 Aggiorna elenco giocatori Serie A</button>
+        <button class="btn" style="font-size:12px" onclick="ffForzaSync()">⚡ Forza calcolo punteggi</button>
+      </div>
+      <div id="ffAdminMsg" style="font-size:11px;color:var(--tx3);margin-top:8px"></div>
+    </div>
+
+    <!-- TAB: La mia squadra -->
+    <div id="ffPageSquadra">
+      <div class="card" style="margin-bottom:14px">
+        <div class="ig"><label class="il">Nome squadra</label><input type="text" id="ffNomeSquadra" placeholder="Es: I Bomber di Firenze"></div>
+      </div>
+      <div id="ffFormazioneWrap"></div>
+      <div style="margin-top:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">🔍 Aggiungi giocatore</div>
+        <input type="text" id="ffSearchPlayer" placeholder="Cerca giocatore o squadra..." oninput="ffRenderRicercaGiocatori()">
+        <div id="ffRicercaGiocatori" style="max-height:260px;overflow-y:auto;margin-top:8px"></div>
+      </div>
+      <button class="btn btn-p btn-f" style="margin-top:16px" onclick="ffSalvaSquadra()">💾 Salva squadra</button>
+    </div>
+
+    <!-- TAB: Classifica -->
+    <div id="ffPageClassifica" style="display:none">
+      <div id="ffClassificaList"><div class="empty">Nessun punteggio calcolato ancora</div></div>
+    </div>
+
+    <!-- TAB: Ultima giornata -->
+    <div id="ffPageGiornata" style="display:none">
+      <div id="ffGiornataDettaglio"><div class="empty">Nessuna giornata sincronizzata ancora</div></div>
+    </div>
+  </div>
+
   <div id="nav">
     <div class="ni on" id="n-presenze" onclick="goPage('presenze')">
       <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
@@ -1161,6 +1205,12 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <button class="sidebar-btn" onclick="chiudiSidebar();goPage('agenda')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Gestione turni
+    </button>
+    <!-- Svago / Fantacalcio -->
+    <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Svago</div>
+    <button class="sidebar-btn" onclick="chiudiSidebar();goPage('fantacalcio')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/></svg>
+      ⚽ Fantacalcio MMG
     </button>
     <!-- AI Analisi -->
     <div id="sbPreventiviSection">
@@ -2610,7 +2660,7 @@ function goPage(n){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(b=>b.classList.remove('on'));
   $('p-'+n)&&$('p-'+n).classList.add('on');$('n-'+n)&&$('n-'+n).classList.add('on');
-  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',cespiti:'Cespiti',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda',chat:'✉️ Messaggi',tools:'🔧 Tools Tecnici AV',calendario:'📅 Calendario Lavori','ai-preventivi':'🤖 AI Analisi Preventivi',preventivi:'📋 Preventivi',personale:'👥 Personale','personale-dett':'👤 Dettaglio dipendente',dashboard:'📊 Dashboard'};
+  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',cespiti:'Cespiti',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda',chat:'✉️ Messaggi',tools:'🔧 Tools Tecnici AV',calendario:'📅 Calendario Lavori','ai-preventivi':'🤖 AI Analisi Preventivi',preventivi:'📋 Preventivi',personale:'👥 Personale','personale-dett':'👤 Dettaglio dipendente',dashboard:'📊 Dashboard',fantacalcio:'⚽ Fantacalcio MMG'};
   $('ptitle').textContent=t[n]||n;
   if(n==='agenda'){clearAgendaDot();renderAgenda();}
   if(n==='calendario'){renderCalendario();}
@@ -2618,6 +2668,7 @@ function goPage(n){
   if(n==='dashboard'){renderDashboard();}
   if(n==='preventivi'){initPreventiviPage();}
   if(n==='personale'){initPersonalePage();}
+  if(n==='fantacalcio'){initFantacalcioPage();}
   // Aggiorna sidebar desktop
   if(document.body.classList.contains('desktop-mode')) setTimeout(renderDeskNav,50);
 }
@@ -2871,6 +2922,7 @@ function renderDeskNav(){
     {id:'forum',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',label:'Forum'},
     {id:'chat',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9h8"/><path d="M8 13h6"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6l-4 4V7a3 3 0 0 1 3-3h13z"/></svg>',label:'Chat'},
     {id:'dichiarazione',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',label:'Archivio'},
+    {id:'fantacalcio',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>',label:'⚽ Fantacalcio'},
   ];
   if(pvCanAccess()){
     pages.push({id:'preventivi',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>',label:'Preventivi'});
@@ -2951,7 +3003,7 @@ function startApp(){
   startListeners();startLocListener();startMagListener();startDichListener();startAgendaListener();startChatListener();startCalListener();restorePunch();
   // Inizializza layout desktop se applicabile
   initDesktopLayout();
-  seedMagazzino();
+  // seedMagazzino() rimossa — inseriva dati demo fittizi ogni volta che la collezione era vuota
   setTimeout(()=>initFCM(),2000);
   // Verifica sessione periodicamente (ogni 2 minuti)
   setTimeout(()=>checkSessionValid(),5000);
@@ -7687,65 +7739,9 @@ function openMod(id){
 // camera cleanup handled in closeMod above
 
 // ── SEED MAGAZZINO DEMO ──
-async function seedMagazzino(){
-  const snap=await DB.collection('magazzino').limit(1).get();
-  if(!snap.empty)return; // già popolato
-  const articoli=[
-    // AUDIO
-    {cat:'audio',nome:'Shure QLX-D ricevitore wireless',marca:'Shure',ser:'SH-001',qty:4,stato:'ok'},
-    {cat:'audio',nome:'Shure QLX-D trasmettitore palmare',marca:'Shure',ser:'SH-002',qty:4,stato:'ok'},
-    {cat:'audio',nome:'Shure Beta 58A microfono',marca:'Shure',ser:'SH-003',qty:6,stato:'ok'},
-    {cat:'audio',nome:'Sennheiser EW 300 ricevitore IEM',marca:'Sennheiser',ser:'SE-001',qty:2,stato:'ok'},
-    {cat:'audio',nome:'Yamaha QL5 mixer digitale',marca:'Yamaha',ser:'YA-001',qty:1,stato:'ok'},
-    {cat:'audio',nome:'QSC K12.2 diffusore attivo',marca:'QSC',ser:'QS-001',qty:4,stato:'ok'},
-    {cat:'audio',nome:'QSC KSub subwoofer attivo',marca:'QSC',ser:'QS-002',qty:2,stato:'ok'},
-    {cat:'audio',nome:'Radial DI box passiva',marca:'Radial',ser:'RA-001',qty:8,stato:'ok'},
-    {cat:'audio',nome:'Cavo XLR 10m',marca:'Neutrik',ser:'CA-001',qty:20,stato:'ok'},
-    {cat:'audio',nome:'Cavo XLR 5m',marca:'Neutrik',ser:'CA-002',qty:15,stato:'ok'},
-    // LUCI
-    {cat:'luci',nome:'Robe BMFL Spot faro moving head',marca:'Robe',ser:'RO-001',qty:4,stato:'ok'},
-    {cat:'luci',nome:'Chauvet COLORdash Par H7X par LED',marca:'Chauvet',ser:'CH-001',qty:12,stato:'ok'},
-    {cat:'luci',nome:'Elation Cuepix Blinder WW2',marca:'Elation',ser:'EL-001',qty:8,stato:'ok'},
-    {cat:'luci',nome:'GrandMA2 Light console luci',marca:'MA Lighting',ser:'MA-001',qty:1,stato:'ok'},
-    {cat:'luci',nome:'Dimmer rack 12 canali',marca:'Zero88',ser:'ZE-001',qty:2,stato:'ok'},
-    {cat:'luci',nome:'Cavo DMX 3pin 10m',marca:'Vari',ser:'DM-001',qty:20,stato:'ok'},
-    {cat:'luci',nome:'Stativo per par LED 3m',marca:'Soundsation',ser:'ST-001',qty:8,stato:'ok'},
-    // LED WALL
-    {cat:'ledwall',nome:'Absen Acclaim 3.9 Pro modulo LED',marca:'Absen',ser:'LW-001',qty:48,stato:'ok'},
-    {cat:'ledwall',nome:'Novastar VX6s processore video',marca:'Novastar',ser:'LW-002',qty:2,stato:'ok'},
-    {cat:'ledwall',nome:'Cabinet strutturale alluminio 500x500',marca:'Absen',ser:'LW-003',qty:12,stato:'ok'},
-    {cat:'ledwall',nome:'Meanwell alimentatore 5V/60A',marca:'Meanwell',ser:'LW-004',qty:12,stato:'ok'},
-    {cat:'ledwall',nome:'Cavo fiber HDMI 30m',marca:'Lindy',ser:'LW-005',qty:4,stato:'ok'},
-    {cat:'ledwall',nome:'Cavo alimentazione LED link',marca:'Vari',ser:'LW-006',qty:30,stato:'ok'},
-    // TRADUZIONE SIMULTANEA
-    {cat:'traduzione',nome:'Bosch LBB 3422 ricevitore IR',marca:'Bosch',ser:'TR-001',qty:50,stato:'ok'},
-    {cat:'traduzione',nome:'Bosch LBB 3011 trasmettitore IR',marca:'Bosch',ser:'TR-002',qty:4,stato:'ok'},
-    {cat:'traduzione',nome:'Audipack Silent 9300 cabina regia',marca:'Audipack',ser:'TR-003',qty:2,stato:'ok'},
-    {cat:'traduzione',nome:'Bosch DCN-IDEQ centralina',marca:'Bosch',ser:'TR-004',qty:1,stato:'ok'},
-    {cat:'traduzione',nome:'Sennheiser HME 26 cuffie interprete',marca:'Sennheiser',ser:'TR-005',qty:8,stato:'ok'},
-    {cat:'traduzione',nome:'Microfono consolle interprete',marca:'Bosch',ser:'TR-006',qty:4,stato:'ok'},
-    // VIDEO / PROIEZIONE
-    {cat:'video',nome:'Panasonic PT-RZ21K proiettore laser 20k',marca:'Panasonic',ser:'VI-001',qty:2,stato:'ok'},
-    {cat:'video',nome:'Barco E2 screen management',marca:'Barco',ser:'VI-002',qty:1,stato:'ok'},
-    {cat:'video',nome:'Blackmagic ATEM 2 M/E switcher',marca:'Blackmagic',ser:'VI-003',qty:1,stato:'ok'},
-    {cat:'video',nome:'Schermo proiezione 4x3m',marca:'Stumpfl',ser:'VI-004',qty:2,stato:'ok'},
-    {cat:'video',nome:'Cavo HDMI 2.0 10m',marca:'Vari',ser:'VI-005',qty:8,stato:'ok'},
-    {cat:'video',nome:'Cavo SDI 3G 10m',marca:'Belden',ser:'VI-006',qty:10,stato:'ok'},
-    // STRUTTURE
-    {cat:'strutture',nome:'Truss Q30L sezione 1m',marca:'Global Truss',ser:'ST-001',qty:20,stato:'ok'},
-    {cat:'strutture',nome:'Truss Q30L sezione 2m',marca:'Global Truss',ser:'ST-002',qty:10,stato:'ok'},
-    {cat:'strutture',nome:'Stager 1x1m praticabile',marca:'Layher',ser:'ST-003',qty:16,stato:'ok'},
-    {cat:'strutture',nome:'Basamento per stager h50cm',marca:'Layher',ser:'ST-004',qty:16,stato:'ok'},
-    {cat:'strutture',nome:'Conficcatore base per truss',marca:'Global Truss',ser:'ST-005',qty:8,stato:'ok'},
-  ];
-  const batch=DB.batch();
-  articoli.forEach(a=>{
-    const ref=DB.collection('magazzino').doc();
-    batch.set(ref,{...a,createdAt:new Date().toISOString()});
-  });
-  await batch.commit();
-  toast('✓ Database demo caricato — '+articoli.length+' articoli');
-}
+// seedMagazzino() rimossa definitivamente — inseriva 41 articoli demo fittizi (Shure, Sennheiser,
+// Yamaha, QSC, Robe, Absen, Bosch, Panasonic, Global Truss...) ogni volta che la collezione
+// 'magazzino' risultava vuota, ad es. subito dopo uno svuotamento manuale.
 
 // ── DICHIARAZIONE / ARCHIVIO ──
 let cacheDich=[], dichCurrentFilter='all';
@@ -12718,6 +12714,236 @@ async function initFCM(){
       if(title)toast('🔔 '+title+(body?' — '+body:''));
     });
   }catch(e){console.warn('FCM:',e.message);}
+}
+
+// ══════════════════════════════════════════
+// ── FANTACALCIO MMG ──
+// ══════════════════════════════════════════
+let cacheFfGiocatori=[], cacheFfRosaMia=null, cacheFfPunteggi=[], cacheFfGiornate=[];
+let ffTeamNome={}; // uid -> nomeSquadra, popolato dalle rose per la classifica
+let ffFormazioneCorrente={P:[],D:[],C:[],A:[]};
+let _ffListenersStarted=false;
+const FF_SLOT={P:1,D:4,C:4,A:2}; // 11 titolari: 1 portiere, 4 difensori, 4 centrocampisti, 2 attaccanti
+
+function startFfListeners(){
+  if(_ffListenersStarted)return;
+  _ffListenersStarted=true;
+  DB.collection('ff_giocatori').onSnapshot(snap=>{
+    cacheFfGiocatori=snap.docs.map(d=>({id:d.id,...d.data()}));
+    ffRenderRicercaGiocatori();
+  },e=>console.error('ff_giocatori listener:',e));
+  if(USER){
+    DB.collection('ff_rose').doc(USER.id).onSnapshot(doc=>{
+      cacheFfRosaMia=doc.exists?doc.data():null;
+      if(cacheFfRosaMia){
+        ffFormazioneCorrente=cacheFfRosaMia.titolari||{P:[],D:[],C:[],A:[]};
+        const nome=$('ffNomeSquadra');if(nome)nome.value=cacheFfRosaMia.nomeSquadra||'';
+      }
+      ffRenderFormazione();
+    },e=>console.error('ff_rose mia listener:',e));
+  }
+  DB.collection('ff_rose').onSnapshot(snap=>{
+    ffTeamNome={};
+    snap.docs.forEach(d=>{ffTeamNome[d.id]=d.data().nomeSquadra||'Squadra senza nome';});
+    ffRenderClassifica();
+  },e=>console.error('ff_rose (tutte) listener:',e));
+  DB.collection('ff_punteggi_giornata').onSnapshot(snap=>{
+    cacheFfPunteggi=snap.docs.map(d=>({id:d.id,...d.data()}));
+    ffRenderClassifica();
+    ffRenderGiornata();
+  },e=>console.error('ff_punteggi listener:',e));
+  DB.collection('ff_giornate').orderBy('numero','desc').onSnapshot(snap=>{
+    cacheFfGiornate=snap.docs.map(d=>({id:d.id,...d.data()}));
+    ffRenderGiornata();
+  },e=>console.error('ff_giornate listener:',e));
+}
+
+function initFantacalcioPage(){
+  startFfListeners();
+  if(isResponsabile()||isAdmin()){
+    const at=$('ffAdminTools');if(at)at.style.display='block';
+  }
+  ffRenderFormazione();
+  ffRenderRicercaGiocatori();
+  ffTab('squadra');
+}
+
+function ffTab(tab){
+  ['squadra','classifica','giornata'].forEach(t=>{
+    const page=$('ffPage'+t.charAt(0).toUpperCase()+t.slice(1));
+    const btn=$('ffTabBtn-'+t);
+    if(page)page.style.display=(t===tab)?'block':'none';
+    if(btn)btn.className=(t===tab)?'btn btn-p':'btn';
+  });
+}
+
+function ffRenderFormazione(){
+  const wrap=$('ffFormazioneWrap');if(!wrap)return;
+  const ruoliLabel={P:'🧤 Portiere (1)',D:'🛡 Difensori (4)',C:'⚙️ Centrocampisti (4)',A:'⚔️ Attaccanti (2)'};
+  let h='';
+  ['P','D','C','A'].forEach(r=>{
+    h+='<div style="margin-bottom:14px">';
+    h+='<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">'+ruoliLabel[r]+'</div>';
+    const ids=ffFormazioneCorrente[r]||[];
+    if(!ids.length){
+      h+='<div class="empty" style="padding:10px">Nessun giocatore selezionato</div>';
+    } else {
+      ids.forEach(pid=>{
+        const g=cacheFfGiocatori.find(x=>x.id===pid);
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border-radius:var(--rs);padding:8px 10px;margin-bottom:6px">'+
+          '<div style="font-size:13px">'+(g?g.nome+' <span style="color:var(--tx3)">· '+g.squadra+'</span>':'⚠️ giocatore non trovato ('+pid+')')+'</div>'+
+          '<button style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:16px" onclick="ffRimuoviGiocatore(\''+r+'\',\''+pid+'\')">✕</button>'+
+        '</div>';
+      });
+    }
+    h+='</div>';
+  });
+  wrap.innerHTML=h;
+}
+
+function ffRimuoviGiocatore(ruolo,pid){
+  ffFormazioneCorrente[ruolo]=(ffFormazioneCorrente[ruolo]||[]).filter(x=>x!==pid);
+  ffRenderFormazione();
+  ffRenderRicercaGiocatori();
+}
+
+function ffAggiungiGiocatore(pid){
+  const g=cacheFfGiocatori.find(x=>x.id===pid);if(!g)return;
+  const ruolo=g.ruolo;
+  const attuali=ffFormazioneCorrente[ruolo]||[];
+  if(attuali.includes(pid))return;
+  if(attuali.length>=FF_SLOT[ruolo]){
+    toast('Hai già raggiunto il numero massimo per questo ruolo ('+FF_SLOT[ruolo]+')','r');
+    return;
+  }
+  // Evita che lo stesso giocatore sia in più ruoli/duplicati
+  const giaPresente=['P','D','C','A'].some(r=>(ffFormazioneCorrente[r]||[]).includes(pid));
+  if(giaPresente)return;
+  ffFormazioneCorrente[ruolo]=[...attuali,pid];
+  ffRenderFormazione();
+  ffRenderRicercaGiocatori();
+}
+
+function ffRenderRicercaGiocatori(){
+  const el=$('ffRicercaGiocatori');if(!el)return;
+  const q=(($('ffSearchPlayer')||{}).value||'').toLowerCase().trim();
+  const selezionati=new Set(['P','D','C','A'].flatMap(r=>ffFormazioneCorrente[r]||[]));
+  let lista=cacheFfGiocatori.filter(g=>!selezionati.has(g.id));
+  if(q)lista=lista.filter(g=>(g.nome||'').toLowerCase().includes(q)||(g.squadra||'').toLowerCase().includes(q));
+  lista=lista.slice(0,60); // limite per non appesantire il rendering
+  if(!cacheFfGiocatori.length){
+    el.innerHTML='<div class="empty">Elenco giocatori non ancora caricato — chiedi a un Admin di premere "Aggiorna elenco giocatori Serie A"</div>';
+    return;
+  }
+  if(!lista.length){el.innerHTML='<div class="empty">Nessun risultato</div>';return;}
+  const ruoloIcon={P:'🧤',D:'🛡',C:'⚙️',A:'⚔️'};
+  el.innerHTML=lista.map(g=>
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--b);cursor:pointer" onclick="ffAggiungiGiocatore(\''+g.id+'\')">'+
+      '<div style="font-size:13px">'+ruoloIcon[g.ruolo]+' '+g.nome+' <span style="color:var(--tx3);font-size:11px">· '+g.squadra+'</span></div>'+
+      '<span style="color:var(--ac2);font-size:16px">+</span>'+
+    '</div>'
+  ).join('');
+}
+
+async function ffSalvaSquadra(){
+  if(!USER){toast('Devi essere loggato','r');return;}
+  const nome=val('ffNomeSquadra')||(USER.nome+' Team');
+  const totale=['P','D','C','A'].reduce((s,r)=>s+(ffFormazioneCorrente[r]||[]).length,0);
+  if(totale!==11){
+    toast('La formazione deve avere esattamente 11 titolari (attualmente '+totale+')','r');
+    return;
+  }
+  if((ffFormazioneCorrente.P||[]).length!==1){
+    toast('Serve esattamente 1 portiere','r');
+    return;
+  }
+  await DB.collection('ff_rose').doc(USER.id).set({
+    uid:USER.id,nomeSquadra:nome,titolari:ffFormazioneCorrente,
+    updatedAt:new Date().toISOString()
+  },{merge:true});
+  toast('✓ Squadra salvata!');
+}
+
+function ffRenderClassifica(){
+  const el=$('ffClassificaList');if(!el)return;
+  const totali={}; // uid -> punti totali
+  cacheFfPunteggi.forEach(p=>{totali[p.uid]=(totali[p.uid]||0)+(p.punti||0);});
+  const righe=Object.entries(ffTeamNome).map(([uid,nomeSquadra])=>({
+    uid,nomeSquadra,punti:totali[uid]||0
+  })).sort((a,b)=>b.punti-a.punti);
+  if(!righe.length){el.innerHTML='<div class="empty">Nessuna squadra iscritta ancora</div>';return;}
+  el.innerHTML=righe.map((r,i)=>{
+    const medaglia=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'°';
+    const mia=USER&&r.uid===USER.id;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:'+(mia?'var(--acb)':'var(--bg2)')+';border-radius:var(--rs);margin-bottom:8px'+(mia?';border:1px solid var(--ac)':'')+'">'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
+        '<div style="font-size:16px;font-weight:700;min-width:28px">'+medaglia+'</div>'+
+        '<div style="font-size:13px;font-weight:600">'+r.nomeSquadra+(mia?' (tu)':'')+'</div>'+
+      '</div>'+
+      '<div style="font-size:16px;font-weight:800;color:var(--ac2)">'+r.punti+' pt</div>'+
+    '</div>';
+  }).join('');
+}
+
+function ffRenderGiornata(){
+  const el=$('ffGiornataDettaglio');if(!el)return;
+  const ultima=cacheFfGiornate.find(g=>g.sincronizzata);
+  if(!ultima){el.innerHTML='<div class="empty">Nessuna giornata sincronizzata ancora — la sincronizzazione avviene automaticamente ogni giorno</div>';return;}
+  const punteggiGiornata=cacheFfPunteggi.filter(p=>p.giornata===ultima.numero).sort((a,b)=>b.punti-a.punti);
+  let h='<div style="font-size:14px;font-weight:700;margin-bottom:12px">📅 Giornata '+ultima.numero+'</div>';
+  if(!punteggiGiornata.length){
+    h+='<div class="empty">Nessun punteggio calcolato per questa giornata</div>';
+  } else {
+    punteggiGiornata.forEach(p=>{
+      const nomeSquadra=ffTeamNome[p.uid]||'—';
+      h+='<div class="card" style="margin-bottom:10px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+          '<div style="font-size:13px;font-weight:700">'+nomeSquadra+'</div>'+
+          '<div style="font-size:15px;font-weight:800;color:var(--ac2)">'+p.punti+' pt</div>'+
+        '</div>'+
+        (p.dettaglio||[]).map(d=>'<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);padding:3px 0"><span>'+d.nome+'</span><span>'+d.punti+'</span></div>').join('')+
+      '</div>';
+    });
+  }
+  el.innerHTML=h;
+}
+
+async function ffAggiornaGiocatori(){
+  const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ Recupero rose Serie A in corso...';
+  try{
+    const resp=await fetch('/api/ff-players');
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error);
+    const batchSize=400;
+    for(let i=0;i<data.giocatori.length;i+=batchSize){
+      const batch=DB.batch();
+      data.giocatori.slice(i,i+batchSize).forEach(g=>{
+        batch.set(DB.collection('ff_giocatori').doc(g.id),g,{merge:true});
+      });
+      await batch.commit();
+    }
+    if(msg)msg.textContent='✓ '+data.totale+' giocatori aggiornati ('+new Date(data.aggiornatoAt).toLocaleString('it-IT')+')';
+    toast('✓ Elenco giocatori aggiornato');
+  }catch(e){
+    if(msg)msg.textContent='Errore: '+e.message;
+    toast('Errore: '+e.message,'r');
+  }
+}
+
+async function ffForzaSync(){
+  const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ Sincronizzazione punteggi in corso...';
+  try{
+    const key=prompt('Inserisci FF_SYNC_SECRET (configurato su Vercel):');
+    if(!key)return;
+    const resp=await fetch('/api/ff-sync?key='+encodeURIComponent(key));
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error);
+    if(msg)msg.textContent='✓ Sincronizzato — giornata attuale: '+data.giornataAttuale+' · '+(data.risultati||[]).length+' giornate elaborate';
+    toast('✓ Punteggi aggiornati');
+  }catch(e){
+    if(msg)msg.textContent='Errore: '+e.message;
+    toast('Errore: '+e.message,'r');
+  }
 }
 </script>
 <!-- COPYRIGHT -->
