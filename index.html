@@ -1043,6 +1043,8 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
   <!-- FANTACALCIO MMG -->
   <div class="page" id="p-fantacalcio">
+    <div id="ffDisabledMsg" class="empty" style="display:none;padding:40px 20px;text-align:center">😴 Il Fantacalcio è temporaneamente disattivato.<br>Chiedi a un Admin di riattivarlo.</div>
+    <div id="ffContentWrap">
     <div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto">
       <button class="btn btn-p" id="ffTabBtn-squadra" style="white-space:nowrap" onclick="ffTab('squadra')">⚽ La mia squadra</button>
       <button class="btn" id="ffTabBtn-classifica" style="white-space:nowrap" onclick="ffTab('classifica')">🏆 Classifica</button>
@@ -1053,6 +1055,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <!-- Admin: strumenti sincronizzazione -->
     <div id="ffAdminTools" style="display:none;background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:12px;margin-bottom:14px">
       <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">🔧 Strumenti Admin/Responsabile</div>
+      <div id="ffToggleStato" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--b)"></div>
       <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">📥 Il piano gratuito dell'API sportiva non include le rose giocatori: importale da Excel (un "listone" — se ne trovano di gratuiti online ogni stagione).</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <button class="btn" style="font-size:12px" onclick="ffExportTemplateGiocatori()">📋 Scarica template</button>
@@ -1098,6 +1101,8 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div id="ffPageGiornata" style="display:none">
       <div id="ffGiornataDettaglio"><div class="empty">Nessuna giornata sincronizzata ancora</div></div>
     </div>
+  </div>
+
   </div>
 
   </div>
@@ -1223,11 +1228,13 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       Gestione turni
     </button>
     <!-- Svago / Fantacalcio -->
-    <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Svago</div>
-    <button class="sidebar-btn" onclick="chiudiSidebar();goPage('fantacalcio')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/></svg>
-      ⚽ Fantacalcio MMG
-    </button>
+    <div id="sbFantacalcioSection">
+      <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Svago</div>
+      <button class="sidebar-btn" onclick="chiudiSidebar();goPage('fantacalcio')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/></svg>
+        ⚽ Fantacalcio MMG
+      </button>
+    </div>
     <!-- AI Analisi -->
     <div id="sbPreventiviSection">
     <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Intelligenza Artificiale</div>
@@ -2953,8 +2960,11 @@ function renderDeskNav(){
     {id:'forum',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',label:'Forum'},
     {id:'chat',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9h8"/><path d="M8 13h6"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6l-4 4V7a3 3 0 0 1 3-3h13z"/></svg>',label:'Chat'},
     {id:'dichiarazione',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',label:'Archivio'},
-    {id:'fantacalcio',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>',label:'⚽ Fantacalcio'},
   ];
+  const canManage=USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager';
+  if(ffFeatureEnabled||canManage){
+    pages.push({id:'fantacalcio',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>',label:'⚽ Fantacalcio'+(ffFeatureEnabled?'':' (disattivato)')});
+  }
   if(pvCanAccess()){
     pages.push({id:'preventivi',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>',label:'Preventivi'});
     pages.push({id:'ai-preventivi',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',label:'AI Preventivi',special:true});
@@ -2972,7 +2982,6 @@ function renderDeskNav(){
   });
 
   // Sezione gestione (solo resp/admin)
-  const canManage=USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager';
   if(canManage){
     h+='<div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px;margin-top:4px;border-top:1px solid var(--b)">Gestione</div>';
     h+=`<button onclick="goPage('cespiti')" id="deskNav_cespiti" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:none;border:none;border-radius:var(--rs);color:var(--tx);font-size:13px;cursor:pointer;font-family:var(--font);text-align:left;margin-bottom:2px">
@@ -3031,7 +3040,7 @@ function startApp(){
   $('profEmail').textContent=USER.email;
   $('profTel').textContent=USER.tel||'—';
   appStarted=true;
-  startListeners();startLocListener();startMagListener();startDichListener();startAgendaListener();startChatListener();startCalListener();restorePunch();
+  startListeners();startLocListener();startMagListener();startDichListener();startAgendaListener();startChatListener();startCalListener();startFfSettingsListener();restorePunch();
   // Inizializza layout desktop se applicabile
   initDesktopLayout();
   // seedMagazzino() rimossa — inseriva dati demo fittizi ogni volta che la collezione era vuota
@@ -12751,6 +12760,35 @@ async function initFCM(){
 // ── FANTACALCIO MMG ──
 // ══════════════════════════════════════════
 let cacheFfGiocatori=[], cacheFfRosaMia=null, cacheFfPunteggi=[], cacheFfGiornate=[], cacheFfCalendario=[];
+let ffFeatureEnabled=true; // stato "sezione Svago attiva", di default true finché non arriva il valore reale da Firestore
+let _ffSettingsListenerStarted=false;
+
+function startFfSettingsListener(){
+  if(_ffSettingsListenerStarted)return;
+  _ffSettingsListenerStarted=true;
+  DB.collection('settings').doc('app').onSnapshot(doc=>{
+    ffFeatureEnabled=doc.exists?(doc.data().fantacalcioEnabled!==false):true;
+    const sez=$('sbFantacalcioSection');
+    const canManage=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
+    if(sez)sez.style.display=(ffFeatureEnabled||canManage)?'block':'none';
+    if(typeof renderDeskNav==='function'&&document.body.classList.contains('desktop-mode'))renderDeskNav();
+    ffRenderToggleStato();
+  },e=>console.error('settings/app listener:',e));
+}
+
+async function ffToggleFeature(){
+  try{
+    await DB.collection('settings').doc('app').set({fantacalcioEnabled:!ffFeatureEnabled},{merge:true});
+    toast(ffFeatureEnabled?'Fantacalcio disattivato per tutti':'Fantacalcio riattivato per tutti');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+function ffRenderToggleStato(){
+  const el=$('ffToggleStato');if(!el)return;
+  el.innerHTML=ffFeatureEnabled
+    ? '<button class="btn" style="font-size:12px;border-color:var(--rd);color:var(--rd)" onclick="ffToggleFeature()">🔴 Disattiva Fantacalcio per tutti</button><span style="font-size:11px;color:var(--tx3);margin-left:8px">Attivo — visibile a tutti gli utenti</span>'
+    : '<button class="btn" style="font-size:12px;border-color:var(--gn);color:var(--gn)" onclick="ffToggleFeature()">🟢 Riattiva Fantacalcio per tutti</button><span style="font-size:11px;color:var(--tx3);margin-left:8px">Disattivato — visibile solo ad Admin/Responsabile</span>';
+}
 let ffTeamNome={}; // uid -> nomeSquadra, popolato dalle rose per la classifica
 let ffFormazioneCorrente={P:[],D:[],C:[],A:[]};
 let _ffListenersStarted=false;
@@ -12797,8 +12835,18 @@ function startFfListeners(){
 
 function initFantacalcioPage(){
   startFfListeners();
-  if(isResponsabile()||isAdmin()){
+  const canManage=isResponsabile()||isAdmin()||(USER&&USER.ruolo==='Project Manager');
+  const disabledMsg=$('ffDisabledMsg'), wrap=$('ffContentWrap');
+  if(!ffFeatureEnabled&&!canManage){
+    if(disabledMsg)disabledMsg.style.display='block';
+    if(wrap)wrap.style.display='none';
+    return;
+  }
+  if(disabledMsg)disabledMsg.style.display='none';
+  if(wrap)wrap.style.display='block';
+  if(canManage){
     const at=$('ffAdminTools');if(at)at.style.display='block';
+    ffRenderToggleStato();
   }
   ffRenderFormazione();
   ffRenderRicercaGiocatori();
