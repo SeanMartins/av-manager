@@ -469,6 +469,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       </div>
       <!-- Tab Lavori da preparare -->
       <div id="magTabLavori" style="display:none">
+        <div id="magLavCestinoBtn" style="display:none;margin-bottom:10px"></div>
         <div id="magLavoriContent"><div class="empty">Caricamento...</div></div>
       </div>
     </div>
@@ -946,6 +947,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
         <button class="btn" id="dfAll" onclick="dichFilter('all')" style="flex:1;font-size:12px;min-width:60px;background:var(--acb);border-color:var(--ac);color:var(--ac2)">Tutti</button>
         <button class="btn" id="dfPrep" onclick="dichFilter('prep')" style="flex:1;font-size:12px;min-width:60px">📋 Preparazioni</button>
         <button class="btn" id="dfRient" onclick="dichFilter('rient')" style="flex:1;font-size:12px;min-width:60px">✅ Rientri</button>
+        <button class="btn" id="dfCestino" onclick="dichFilter('cestino')" style="flex:1;font-size:12px;min-width:60px;display:none">🗑️ Cestino</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center" id="dichSortWrap">
         <span style="font-size:12px;color:var(--tx2)">Ordina:</span>
@@ -7800,7 +7802,7 @@ function startDichListener(){
 
 function dichFilter(f){
   dichCurrentFilter=f;
-  ['all','prep','rient'].forEach(k=>{
+  ['all','prep','rient','cestino'].forEach(k=>{
     const btn=$('df'+k.charAt(0).toUpperCase()+k.slice(1));
     if(!btn)return;
     if(k===f){btn.style.background='var(--acb)';btn.style.borderColor='var(--ac)';btn.style.color='var(--ac2)';}
@@ -7809,26 +7811,71 @@ function dichFilter(f){
   renderDich();
 }
 
+const CESTINO_GIORNI=30; // giorni di permanenza nel cestino prima della cancellazione definitiva
+
 async function dichElimina(id,nomeEnc){
   const nome=decodeURIComponent(nomeEnc||'');
-  if(!confirm('Eliminare definitivamente "'+nome+'" dall\'archivio? Questa azione non si può annullare.'))return;
+  if(!confirm('Spostare "'+nome+'" nel cestino? Verrà eliminato definitivamente dopo '+CESTINO_GIORNI+' giorni, ma puoi ripristinarlo prima.'))return;
   try{
-    await DB.collection('lavori').doc(id).delete();
-    toast('✓ Eliminato dall\'archivio');
+    await DB.collection('lavori').doc(id).update({eliminatoAt:new Date().toISOString(),eliminatoDa:USER?.nome||''});
+    toast('🗑️ Spostato nel cestino');
   }catch(e){
     toast('Errore: '+e.message,'r');
   }
 }
 
+async function dichRipristina(id,nomeEnc){
+  const nome=decodeURIComponent(nomeEnc||'');
+  try{
+    await DB.collection('lavori').doc(id).update({eliminatoAt:firebase.firestore.FieldValue.delete(),eliminatoDa:firebase.firestore.FieldValue.delete()});
+    toast('✓ "'+nome+'" ripristinato');
+  }catch(e){
+    toast('Errore: '+e.message,'r');
+  }
+}
+
+async function dichEliminaDefinitivo(id,nomeEnc){
+  const nome=decodeURIComponent(nomeEnc||'');
+  if(!confirm('Eliminare DEFINITIVAMENTE "'+nome+'"? Questa azione non si può annullare in nessun modo.'))return;
+  try{
+    await DB.collection('lavori').doc(id).delete();
+    toast('✓ Eliminato definitivamente');
+  }catch(e){
+    toast('Errore: '+e.message,'r');
+  }
+}
+
+// Pulizia automatica: elimina per sempre ciò che è nel cestino da più di CESTINO_GIORNI giorni.
+// Lanciata (in modo economico, senza bisogno di un cron server-side) ogni volta che l'Archivio
+// viene aperto — sufficiente per un\'app usata quotidianamente dal team.
+async function purgeCestinoVecchio(){
+  try{
+    const soglia=new Date();soglia.setDate(soglia.getDate()-CESTINO_GIORNI);
+    const soglisISO=soglia.toISOString();
+    const daEliminare=cacheDich.filter(d=>d.eliminatoAt&&d.eliminatoAt<soglisISO);
+    if(!daEliminare.length)return;
+    const batch=DB.batch();
+    daEliminare.forEach(d=>batch.delete(DB.collection('lavori').doc(d.id)));
+    await batch.commit();
+    console.log('Cestino: eliminati definitivamente',daEliminare.length,'lavori scaduti');
+  }catch(e){console.warn('purgeCestinoVecchio:',e.message);}
+}
+
 function renderDich(){
-  const prep=cacheDich.filter(d=>!d.rientroData);
-  const rient=cacheDich.filter(d=>!!d.rientroData);
+  purgeCestinoVecchio();
+  const puoGestireArchivio=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
+  const dfc=$('dfCestino');if(dfc)dfc.style.display=puoGestireArchivio?'block':'none';
+  const attivi=cacheDich.filter(d=>!d.eliminatoAt);
+  const cestino=cacheDich.filter(d=>!!d.eliminatoAt);
+  const prep=attivi.filter(d=>!d.rientroData);
+  const rient=attivi.filter(d=>!!d.rientroData);
   const nd=$('nDichPrep');if(nd)nd.textContent=prep.length;
   const nr=$('nDichRient');if(nr)nr.textContent=rient.length;
 
   let list=[];
-  if(dichCurrentFilter==='all')list=[...cacheDich];
+  if(dichCurrentFilter==='all')list=[...attivi];
   else if(dichCurrentFilter==='prep')list=prep;
+  else if(dichCurrentFilter==='cestino')list=cestino;
   else list=rient;
 
   // Ricerca
@@ -7837,18 +7884,24 @@ function renderDich(){
 
   // Ordinamento
   const sort=$('dichSort')?.value||'data_desc';
-  list.sort((a,b)=>{
-    if(sort==='data_asc') return new Date(a.data||a.createdAt)-new Date(b.data||b.createdAt);
-    if(sort==='location') return (a.location||'').localeCompare(b.location||'');
-    if(sort==='nome') return (a.nome||'').localeCompare(b.nome||'');
-    return new Date(b.data||b.createdAt)-new Date(a.data||a.createdAt);
-  });
+  if(dichCurrentFilter==='cestino'){
+    list.sort((a,b)=>(b.eliminatoAt||'').localeCompare(a.eliminatoAt||''));
+  } else {
+    list.sort((a,b)=>{
+      if(sort==='data_asc') return new Date(a.data||a.createdAt)-new Date(b.data||b.createdAt);
+      if(sort==='location') return (a.location||'').localeCompare(b.location||'');
+      if(sort==='nome') return (a.nome||'').localeCompare(b.nome||'');
+      return new Date(b.data||b.createdAt)-new Date(a.data||a.createdAt);
+    });
+  }
 
   const el=$('dichList');if(!el)return;
-  if(!list.length){el.innerHTML='<div class="empty">Nessun documento trovato</div>';return;}
+  if(!list.length){el.innerHTML='<div class="empty">'+(dichCurrentFilter==='cestino'?'Cestino vuoto':'Nessun documento trovato')+'</div>';return;}
 
   let h='';
-  if(sort==='location'){
+  if(dichCurrentFilter==='cestino'){
+    list.forEach(d=>{h+=dichCardCestinoHtml(d);});
+  } else if(sort==='location'){
     // Raggruppa per location
     const byLoc={};
     list.forEach(d=>{const k=d.location||'—';if(!byLoc[k])byLoc[k]=[];byLoc[k].push(d);});
@@ -7866,8 +7919,44 @@ function renderDich(){
 
 function renderDichDesktop(list){
   const el=$('dichListDesktop');if(!el)return;
-  if(!list||!list.length){el.innerHTML='<div class="empty">Nessun documento trovato</div>';return;}
+  if(!list||!list.length){el.innerHTML='<div class="empty">'+(dichCurrentFilter==='cestino'?'Cestino vuoto':'Nessun documento trovato')+'</div>';return;}
   const canManage=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
+
+  if(dichCurrentFilter==='cestino'){
+    const th='padding:10px 14px;font-size:11px;font-weight:600;color:var(--tx2);text-align:left;border-bottom:2px solid var(--b);white-space:nowrap';
+    const td='padding:9px 14px;border-bottom:1px solid var(--b);font-size:13px;vertical-align:middle';
+    let hc=`<div style="font-size:12px;color:var(--tx2);margin-bottom:10px">${list.length} nel cestino</div>
+    <div style="border-radius:var(--r);border:1px solid var(--b);overflow:hidden;overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;background:var(--bg1)">
+      <thead><tr style="background:var(--bg2)">
+        <th style="${th}">Lavoro</th>
+        <th style="${th}">Eliminato il</th>
+        <th style="${th}">Da</th>
+        <th style="${th}">Scadenza</th>
+        <th style="${th};text-align:center">Azioni</th>
+      </tr></thead><tbody>`;
+    const fmtDataL=iso=>{if(!iso)return'—';return new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});};
+    list.forEach((d,i)=>{
+      const scadenza=new Date(d.eliminatoAt);scadenza.setDate(scadenza.getDate()+CESTINO_GIORNI);
+      const giorniRimasti=Math.max(0,Math.ceil((scadenza-new Date())/(1000*60*60*24)));
+      const nomeEnc=encodeURIComponent(d.nome||'');
+      const rb=i%2===0?'var(--bg1)':'var(--bg2)';
+      hc+=`<tr style="background:${rb}">
+        <td style="${td};font-weight:600">🗑️ ${d.nome||'—'}</td>
+        <td style="${td};color:var(--tx2);font-size:12px">${fmtDataL(d.eliminatoAt)}</td>
+        <td style="${td};color:var(--tx2);font-size:12px">${d.eliminatoDa||'—'}</td>
+        <td style="${td};color:var(--rd);font-size:12px;font-weight:600">${giorniRimasti}g rimasti</td>
+        <td style="${td}"><div style="display:flex;gap:4px;justify-content:center">
+          <button onclick="dichRipristina('${d.id}','${nomeEnc}')" title="Ripristina" style="background:var(--acb);border:1px solid var(--ac);color:var(--ac2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">↩️</button>
+          <button onclick="dichEliminaDefinitivo('${d.id}','${nomeEnc}')" title="Elimina definitivamente" style="background:none;border:1px solid var(--rd);color:var(--rd);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">🗑️</button>
+        </div></td>
+      </tr>`;
+    });
+    hc+='</tbody></table></div>';
+    el.innerHTML=hc;
+    return;
+  }
+
   const th='padding:10px 14px;font-size:11px;font-weight:600;color:var(--tx2);text-align:left;border-bottom:2px solid var(--b);white-space:nowrap';
   const td='padding:9px 14px;border-bottom:1px solid var(--b);font-size:13px;vertical-align:middle';
   let h=`<div style="font-size:12px;color:var(--tx2);margin-bottom:10px">${list.length} lavori</div>
@@ -7924,6 +8013,25 @@ function renderDichDesktop(list){
   });
   h+='</tbody></table></div>';
   el.innerHTML=h;
+}
+
+function dichCardCestinoHtml(d){
+  const fmtDataL=iso=>{if(!iso)return'—';return new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});};
+  const eliminatoIl=fmtDataL(d.eliminatoAt);
+  const scadenza=new Date(d.eliminatoAt);scadenza.setDate(scadenza.getDate()+CESTINO_GIORNI);
+  const giorniRimasti=Math.max(0,Math.ceil((scadenza-new Date())/(1000*60*60*24)));
+  const nomeEnc=encodeURIComponent(d.nome||'');
+  return '<div style="background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);margin-bottom:10px;overflow:hidden;opacity:.85">'+
+    '<div style="padding:11px 14px;background:rgba(239,68,68,.06);border-bottom:2px solid var(--rd)">'+
+      '<div style="font-size:14px;font-weight:700">🗑️ '+(d.nome||'—')+'</div>'+
+      '<div style="font-size:11px;color:var(--tx2);margin-top:2px">Eliminato il '+eliminatoIl+(d.eliminatoDa?' da '+d.eliminatoDa:'')+'</div>'+
+      '<div style="font-size:11px;color:var(--rd);margin-top:2px;font-weight:600">⏳ Cancellazione definitiva tra '+giorniRimasti+' giorni</div>'+
+    '</div>'+
+    '<div style="padding:12px 14px;display:flex;gap:8px">'+
+      '<button onclick="dichRipristina(\''+d.id+'\',\''+nomeEnc+'\')" class="btn btn-p" style="flex:1;font-size:12px;padding:9px">↩️ Ripristina</button>'+
+      '<button onclick="dichEliminaDefinitivo(\''+d.id+'\',\''+nomeEnc+'\')" class="btn" style="flex:1;font-size:12px;padding:9px;border-color:var(--rd);color:var(--rd)">🗑️ Elimina ora</button>'+
+    '</div>'+
+  '</div>';
 }
 
 function dichCardHtml(d){
@@ -9497,15 +9605,92 @@ function renderStatsMag(){
 
 function mostraStatusMag(){switchMagTab('status');}
 
+let magLavCestinoView=false;
+
+async function magLavElimina(id,nomeEnc){
+  const nome=decodeURIComponent(nomeEnc||'');
+  if(!confirm('Spostare "'+nome+'" nel cestino? Verrà eliminato definitivamente dopo '+CESTINO_GIORNI+' giorni, ma puoi ripristinarlo prima.'))return;
+  try{
+    await DB.collection('lavori_cal').doc(id).update({eliminatoAt:new Date().toISOString(),eliminatoDa:USER?.nome||''});
+    toast('🗑️ Spostato nel cestino');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function magLavRipristina(id,nomeEnc){
+  const nome=decodeURIComponent(nomeEnc||'');
+  try{
+    await DB.collection('lavori_cal').doc(id).update({eliminatoAt:firebase.firestore.FieldValue.delete(),eliminatoDa:firebase.firestore.FieldValue.delete()});
+    toast('✓ "'+nome+'" ripristinato');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function magLavEliminaDefinitivo(id,nomeEnc){
+  const nome=decodeURIComponent(nomeEnc||'');
+  if(!confirm('Eliminare DEFINITIVAMENTE "'+nome+'"? Questa azione non si può annullare in nessun modo.'))return;
+  try{
+    await DB.collection('lavori_cal').doc(id).delete();
+    toast('✓ Eliminato definitivamente');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function purgeCestinoLavoriCal(){
+  try{
+    const soglia=new Date();soglia.setDate(soglia.getDate()-CESTINO_GIORNI);
+    const sogliaISO=soglia.toISOString();
+    const daEliminare=cacheLavoriCal.filter(l=>l.eliminatoAt&&l.eliminatoAt<sogliaISO);
+    if(!daEliminare.length)return;
+    const batch=DB.batch();
+    daEliminare.forEach(l=>batch.delete(DB.collection('lavori_cal').doc(l.id)));
+    await batch.commit();
+    console.log('Cestino lavori_cal: eliminati definitivamente',daEliminare.length);
+  }catch(e){console.warn('purgeCestinoLavoriCal:',e.message);}
+}
+
+function magLavToggleCestino(){
+  magLavCestinoView=!magLavCestinoView;
+  renderMagLavori();
+}
+
 function renderMagLavori(){
+  purgeCestinoLavoriCal();
   const el=$('magLavoriContent');if(!el)return;
+  const canManage=isResponsabile()||isAdmin();
+  const btnWrap=$('magLavCestinoBtn');
+  const cestino=cacheLavoriCal.filter(l=>!!l.eliminatoAt);
+  if(btnWrap){
+    btnWrap.style.display=canManage?'block':'none';
+    btnWrap.innerHTML='<button class="btn" style="font-size:12px'+(magLavCestinoView?';background:var(--acb);border-color:var(--ac);color:var(--ac2)':'')+'" onclick="magLavToggleCestino()">🗑️ '+(magLavCestinoView?'Torna ai lavori':'Cestino ('+cestino.length+')')+'</button>';
+  }
+
+  if(magLavCestinoView){
+    if(!cestino.length){el.innerHTML='<div class="empty">Cestino vuoto</div>';return;}
+    const fmtDataL=iso=>{if(!iso)return'—';return new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});};
+    let hc='';
+    [...cestino].sort((a,b)=>(b.eliminatoAt||'').localeCompare(a.eliminatoAt||'')).forEach(l=>{
+      const scadenza=new Date(l.eliminatoAt);scadenza.setDate(scadenza.getDate()+CESTINO_GIORNI);
+      const giorniRimasti=Math.max(0,Math.ceil((scadenza-new Date())/(1000*60*60*24)));
+      const nomeEnc=encodeURIComponent(l.nome||'');
+      hc+=`<div class="card" style="margin-bottom:10px;border-left:3px solid var(--rd);opacity:.85">
+        <div style="font-size:14px;font-weight:700">🗑️ ${l.nome||'—'}</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">Eliminato il ${fmtDataL(l.eliminatoAt)}${l.eliminatoDa?' da '+l.eliminatoDa:''}</div>
+        <div style="font-size:11px;color:var(--rd);margin-top:2px;font-weight:600">⏳ Cancellazione definitiva tra ${giorniRimasti} giorni</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button onclick="magLavRipristina('${l.id}','${nomeEnc}')" class="btn btn-p" style="flex:1;font-size:12px;padding:9px">↩️ Ripristina</button>
+          <button onclick="magLavEliminaDefinitivo('${l.id}','${nomeEnc}')" class="btn" style="flex:1;font-size:12px;padding:9px;border-color:var(--rd);color:var(--rd)">🗑️ Elimina ora</button>
+        </div>
+      </div>`;
+    });
+    el.innerHTML=hc;
+    return;
+  }
+
   // Combina lavori pianificati (lavori_cal) e lavori preparati (dich)
   const oggi=toLocalISO(new Date());
   const lavoriPianificati=cacheLavoriCal
-    .filter(l=>l.data>=oggi)
+    .filter(l=>!l.eliminatoAt&&l.data>=oggi)
     .sort((a,b)=>a.data.localeCompare(b.data));
-  const lavoriArchivio=[...cacheLavoriCal]
-    .filter(l=>l.data<oggi)
+  const lavoriArchivio=cacheLavoriCal
+    .filter(l=>!l.eliminatoAt&&l.data<oggi)
     .sort((a,b)=>b.data.localeCompare(a.data));
 
   let h='';
@@ -9539,6 +9724,7 @@ function renderMagLavori(){
         <div style="display:flex;gap:6px">
           <button class="btn btn-p" style="padding:7px 12px;font-size:12px" onclick="preparaLavoroDaCal('${lav.id}')">📋 Prepara</button>
           ${(isResponsabile()||isAdmin())?'<button class="btn" style="padding:7px 12px;font-size:12px" onclick="modificaLavoroCal(\''+lav.id+'\')">✏️ Modifica</button>':''}
+          ${canManage?'<button class="btn" style="padding:7px 12px;font-size:12px;border-color:var(--rd);color:var(--rd)" onclick="magLavElimina(\''+lav.id+'\',\''+encodeURIComponent(lav.nome||'')+'\')">🗑️</button>':''}
         </div>
       </div>`;
     });
@@ -9559,6 +9745,7 @@ function renderMagLavori(){
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           ${docs.map(d=>'<a href="'+d.url+'" target="_blank" style="font-size:10px;color:var(--ac2);text-decoration:none">📄 '+d.nome+'</a>').join('')}
           <span style="font-size:10px;color:${isRient?'#64748b':'var(--gn)'}">${isRient?'✅ Rientrato':'✓ Completato'}</span>
+          ${canManage?'<button onclick="magLavElimina(\''+lav.id+'\',\''+encodeURIComponent(lav.nome||'')+'\')" style="background:none;border:none;color:var(--rd);font-size:11px;cursor:pointer;padding:2px">🗑️ Elimina</button>':''}
         </div>
       </div>`;
     });
