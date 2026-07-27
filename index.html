@@ -394,11 +394,12 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- MAGAZZINO -->
     <div class="page" id="p-magazzino">
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px">
         <div class="sc"><div class="sn" id="nArt">0</div><div class="sl">Articoli</div></div>
         <div class="sc" style="cursor:pointer" onclick="mostraStatusMag()"><div class="sn" id="nDisp">0</div><div class="sl">Disponibili</div></div>
         <div class="sc" style="cursor:pointer" onclick="mostraStatusMag()"><div class="sn" id="nInUso">0</div><div class="sl">In uso</div></div>
         <div class="sc" style="cursor:pointer" onclick="mostraSottoScorta()"><div class="sn" id="nSottoScorta" style="color:var(--am)">0</div><div class="sl">⚠️ Sotto scorta</div></div>
+        <div class="sc" style="cursor:pointer" onclick="mostraManutenzioni()"><div class="sn" id="nManutScadute" style="color:var(--rd)">0</div><div class="sl">🔧 Manutenzioni</div></div>
       </div>
       <!-- Tab Inventario / Status -->
       <div style="display:flex;gap:8px;margin-bottom:14px">
@@ -2244,6 +2245,10 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       </div>
     </div>
     <div class="ig"><label class="il">⚠️ Soglia minima (opzionale)</label><input type="number" id="aSogliaMin" placeholder="Avvisa quando la disponibilità scende sotto questo numero" min="0"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">🔧 Verifica ogni (giorni)</label><input type="number" id="aManutIntervallo" placeholder="Es: 365" min="1"></div>
+      <div class="ig"><label class="il">Ultima verifica</label><input type="date" id="aManutUltima"></div>
+    </div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-f" onclick="closeMod('mNewArt')">Annulla</button>
       <button class="btn btn-p btn-f" onclick="saveArt()">Salva</button>
@@ -2258,6 +2263,16 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div class="stl" style="margin-bottom:14px">⚠️ Articoli sotto scorta minima</div>
     <div id="sottoScortaList"><div class="empty">Nessun articolo sotto soglia</div></div>
     <button class="btn btn-f" style="margin-top:12px" onclick="closeMod('mSottoScorta')">Chiudi</button>
+  </div>
+</div>
+
+<!-- MANUTENZIONI IN SCADENZA -->
+<div class="mol" id="mManutenzioni" onclick="if(event.target===this)closeMod('mManutenzioni')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px">🔧 Manutenzioni e verifiche</div>
+    <div id="manutenzioniList"><div class="empty">Nessuna manutenzione in scadenza</div></div>
+    <button class="btn btn-f" style="margin-top:12px" onclick="closeMod('mManutenzioni')">Chiudi</button>
   </div>
 </div>
 
@@ -4474,6 +4489,15 @@ document.addEventListener('click', e=>{
 });
 
 let _magRenderPending=false;
+function giorniAllaManutenzione(m){
+  if(!m.manutIntervallo||!m.manutUltima)return null;
+  const ultima=new Date(m.manutUltima);
+  const prossima=new Date(ultima);
+  prossima.setDate(prossima.getDate()+parseInt(m.manutIntervallo));
+  const oggi=new Date();oggi.setHours(0,0,0,0);
+  return Math.ceil((prossima-oggi)/(1000*60*60*24));
+}
+
 function renderMag(){
   if(_magRenderPending)return;
   _magRenderPending=true;
@@ -4539,6 +4563,14 @@ function _renderMagInner(){
     }).length;
     nSS.textContent=sottoScortaCount;
   }
+  const nMS=$('nManutScadute');
+  if(nMS){
+    const manutCount=cacheMag.filter(m=>{
+      const g=giorniAllaManutenzione(m);
+      return g!==null&&g<=14;
+    }).length;
+    nMS.textContent=manutCount;
+  }
 
   let h='';
   const categorieTrovate=[...new Set(fil.map(m=>m.cat||'altro'))];
@@ -4561,13 +4593,20 @@ function _renderMagInner(){
       const lavoriInUso=getLavoriInUso(m);
       const pct=qtaTotale>0?qtaDisp/qtaTotale:1;
       const sottoSoglia=(m.sogliaMin!==undefined&&m.sogliaMin!==null)?qtaDisp<=m.sogliaMin:(pct<=0.3||qtaDisp<=2);
+      const giorniManut=giorniAllaManutenzione(m);
+      const manutScaduta=giorniManut!==null&&giorniManut<=0;
+      const manutInScadenza=giorniManut!==null&&giorniManut>0&&giorniManut<=14;
 
       if(m.stato==='maint'){
         badgeHtml='<span class="bdg br">Manutenzione</span>';
+      } else if(manutScaduta){
+        badgeHtml='<span data-storico="'+m.id+'" class="bdg br" style="cursor:pointer" title="Verifica scaduta da '+Math.abs(giorniManut)+' giorni">🔧 Verifica scaduta</span>';
       } else if(qtaDisp===0){
         badgeHtml='<button data-dove="'+m.id+'" style="background:rgba(239,68,68,.15);color:var(--rd);border:1px solid var(--rd);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">🔴 Esaurito ›</button>';
       } else if(sottoSoglia){
         badgeHtml='<span data-dove="'+m.id+'" class="bdg ba" style="cursor:pointer" title="'+(m.sogliaMin!=null?'Sotto la soglia minima impostata ('+m.sogliaMin+')':'')+'">⚠️ Quasi finito</span>';
+      } else if(manutInScadenza){
+        badgeHtml='<span data-storico="'+m.id+'" class="bdg ba" style="cursor:pointer" title="Verifica tra '+giorniManut+' giorni">🔧 Verifica vicina</span>';
       } else if(qtaInUso>0){
         badgeHtml='<button data-dove="'+m.id+'" style="background:var(--amb);color:var(--am);border:1px solid var(--am);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📋 In uso ›</button>';
       } else {
@@ -4687,6 +4726,9 @@ async function saveArt(){
   const stato=val('aStato');
   const sogliaRaw=val('aSogliaMin');
   const sogliaMin=sogliaRaw?parseInt(sogliaRaw):null;
+  const manutIntRaw=val('aManutIntervallo');
+  const manutIntervallo=manutIntRaw?parseInt(manutIntRaw):null;
+  const manutUltima=val('aManutUltima')||null;
   const now=new Date().toISOString();
   const chi=USER?USER.nome+' '+USER.cognome:'—';
   const statoLabel={ok:'Disponibile',out:'In uso',maint:'Manutenzione'}[stato]||stato;
@@ -4695,8 +4737,9 @@ async function saveArt(){
     // Modifica di un articolo esistente
     const id=window._editingArtId;
     const dati={cat:val('aCat'),nome,marca:val('aMarca'),ser:val('aSer'),qty:parseInt(val('aQty'))||1,stato};
-    if(sogliaMin!==null)dati.sogliaMin=sogliaMin;
-    else dati.sogliaMin=firebase.firestore.FieldValue.delete();
+    dati.sogliaMin=sogliaMin!==null?sogliaMin:firebase.firestore.FieldValue.delete();
+    dati.manutIntervallo=manutIntervallo!==null?manutIntervallo:firebase.firestore.FieldValue.delete();
+    dati.manutUltima=manutUltima||firebase.firestore.FieldValue.delete();
     await DB.collection('magazzino').doc(id).update(dati);
     closeMod('mNewArt');toast('✓ Articolo aggiornato');
     window._editingArtId=null;
@@ -4712,10 +4755,12 @@ async function saveArt(){
       createdAt:now
     };
     if(sogliaMin!==null)dati.sogliaMin=sogliaMin;
+    if(manutIntervallo!==null)dati.manutIntervallo=manutIntervallo;
+    if(manutUltima)dati.manutUltima=manutUltima;
     await DB.collection('magazzino').add(dati);
     closeMod('mNewArt');toast('✓ Articolo salvato');
   }
-  ['aNome','aMarca','aSer','aSogliaMin'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  ['aNome','aMarca','aSer','aSogliaMin','aManutIntervallo','aManutUltima'].forEach(id=>{const el=$(id);if(el)el.value='';});
   $('aQty').value='1';
 }
 
@@ -4761,9 +4806,48 @@ function mostraSottoScorta(){
   openMod('mSottoScorta');
 }
 
+function mostraManutenzioni(){
+  const lista=cacheMag.filter(m=>{
+    const g=giorniAllaManutenzione(m);
+    return g!==null&&g<=14;
+  }).sort((a,b)=>giorniAllaManutenzione(a)-giorniAllaManutenzione(b));
+
+  const el=$('manutenzioniList');
+  if(!lista.length){
+    el.innerHTML='<div class="empty">Nessuna manutenzione in scadenza nei prossimi 14 giorni 🎉</div>';
+  } else {
+    el.innerHTML=lista.map(m=>{
+      const g=giorniAllaManutenzione(m);
+      const scaduta=g<=0;
+      const nomeEnc=encodeURIComponent(m.nome||'');
+      return '<div style="padding:10px 0;border-bottom:1px solid var(--b)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+          '<div>'+
+            '<div style="font-size:13px;font-weight:600">'+m.nome+'</div>'+
+            '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'—')+' · ultima verifica: '+(m.manutUltima?new Date(m.manutUltima).toLocaleDateString('it-IT'):'—')+'</div>'+
+          '</div>'+
+          '<div style="font-size:12px;font-weight:700;color:'+(scaduta?'var(--rd)':'var(--am)')+'">'+(scaduta?'Scaduta da '+Math.abs(g)+'gg':'Tra '+g+'gg')+'</div>'+
+        '</div>'+
+        '<button onclick="segnaManutenzioneVerificata(\''+m.id+'\',\''+nomeEnc+'\')" class="btn btn-p" style="width:100%;font-size:12px;padding:8px">✓ Segna verificato oggi</button>'+
+      '</div>';
+    }).join('');
+  }
+  openMod('mManutenzioni');
+}
+
+async function segnaManutenzioneVerificata(id,nomeEnc){
+  const nome=decodeURIComponent(nomeEnc||'');
+  const oggi=toLocalISO(new Date());
+  try{
+    await DB.collection('magazzino').doc(id).update({manutUltima:oggi});
+    toast('✓ '+nome+' — verifica registrata oggi');
+    mostraManutenzioni();
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
 function apriNuovoArticolo(){
   window._editingArtId=null;
-  ['aNome','aMarca','aSer','aSogliaMin'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  ['aNome','aMarca','aSer','aSogliaMin','aManutIntervallo','aManutUltima'].forEach(id=>{const el=$(id);if(el)el.value='';});
   const q=$('aQty');if(q)q.value='1';
   const cat=$('aCat');if(cat)cat.value='audio';
   const st=$('aStato');if(st)st.value='ok';
@@ -10496,6 +10580,8 @@ function apriModificaArticolo(id){
   const q=$('aQty');if(q)q.value=m.qty||1;
   const s=$('aSer');if(s)s.value=m.ser||'';
   const sm=$('aSogliaMin');if(sm)sm.value=(m.sogliaMin!==undefined&&m.sogliaMin!==null)?m.sogliaMin:'';
+  const mi=$('aManutIntervallo');if(mi)mi.value=m.manutIntervallo||'';
+  const mu=$('aManutUltima');if(mu)mu.value=m.manutUltima||'';
   const cat=$('aCat');if(cat)cat.value=m.cat||'audio';
   const st=$('aStato');if(st)st.value=m.stato||'ok';
   const t=$('mNewArtTitolo');if(t)t.textContent='✏️ Modifica articolo';
