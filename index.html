@@ -9918,18 +9918,24 @@ async function caricaUtentiPendenti(){
     h+='<div style="font-size:11px;font-weight:600;color:var(--rd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">⏳ In attesa ('+pendenti.length+')</div>';
     pendenti.forEach(u=>{
       const data=new Date(u.createdAt).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
+      const ruoli=['Tecnico AV','Project Manager','Magazziniere','Responsabile','Collaboratore esterno'];
+      const ruoloOpts=ruoli.map(r=>'<option value="'+r+'"'+(r===u.ruolo?' selected':'')+'>'+r+'</option>').join('');
       h+='<div style="border:1px solid var(--am);border-radius:var(--rs);padding:12px;margin-bottom:8px;background:rgba(245,158,11,.05)">'+
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
           '<div style="flex:1">'+
             '<div style="font-size:14px;font-weight:600">'+u.nome+' '+u.cognome+'</div>'+
-            '<div style="font-size:12px;color:var(--tx2)">'+u.email+' · '+u.ruolo+'</div>'+
-            '<div style="font-size:11px;color:var(--tx3)">Registrato il '+data+'</div>'+
+            '<div style="font-size:12px;color:var(--tx2)">'+u.email+'</div>'+
+            '<div style="font-size:11px;color:var(--tx3)">Registrato il '+data+' · si è auto-assegnato: <b>'+u.ruolo+'</b></div>'+
           '</div>'+
           '<div style="display:flex;gap:6px;flex-shrink:0">'+
-            '<button onclick="approvaUtente(\''+u.id+'\')" class="btn" style="padding:6px 10px;font-size:12px;border-color:var(--gn);color:var(--gn)">✅ Approva</button>'+
             '<button onclick="rifiutaUtente(\''+u.id+'\',\''+u.nome+'\')" class="btn" style="padding:6px 10px;font-size:12px;border-color:var(--rd);color:var(--rd)">✕</button>'+
           '</div>'+
-        '</div></div>';
+        '</div>'+
+        '<div style="display:flex;gap:8px;align-items:center;margin-top:10px">'+
+          '<select id="ruoloSel_'+u.id+'" style="flex:1;font-size:12px;padding:7px 10px">'+ruoloOpts+'</select>'+
+          '<button onclick="approvaUtente(\''+u.id+'\')" class="btn btn-p" style="padding:7px 12px;font-size:12px;white-space:nowrap">✅ Approva</button>'+
+        '</div>'+
+      '</div>';
     });
   }
   if(approvati.length){
@@ -9952,8 +9958,12 @@ async function caricaUtentiPendenti(){
 }
 
 async function approvaUtente(uid){
-  await DB.collection('team').doc(uid).update({approvato:true,approvatoIl:new Date().toISOString(),approvatoDa:USER.id});
-  toast('✅ Utente approvato!');
+  const sel=$('ruoloSel_'+uid);
+  const ruoloScelto=sel?sel.value:null;
+  const payload={approvato:true,approvatoIl:new Date().toISOString(),approvatoDa:USER.id};
+  if(ruoloScelto)payload.ruolo=ruoloScelto;
+  await DB.collection('team').doc(uid).update(payload);
+  toast('✅ Utente approvato come '+(ruoloScelto||'')+'!');
   caricaUtentiPendenti();
 }
 
@@ -10626,10 +10636,10 @@ function renderCalendario(){
   const titEl=$('calTitolo'),subEl=$('calSottotitolo');
   if(titEl)titEl.textContent=MESI[calMese]+' '+calAnno;
 
-  // Unisce lavori pianificati (cal) e lavori preparati (dich)
+  // Unisce lavori pianificati (cal) e lavori preparati (dich) — esclude quelli nel cestino
   const tuttiLavori=[
-    ...cacheLavoriCal.map(l=>({...l,_fonte:'cal'})),
-    ...cacheDich.map(l=>({...l,_fonte:'dich'}))
+    ...cacheLavoriCal.filter(l=>!l.eliminatoAt).map(l=>({...l,_fonte:'cal'})),
+    ...cacheDich.filter(l=>!l.eliminatoAt).map(l=>({...l,_fonte:'dich'}))
   ];
 
   const lavoriMese=tuttiLavori.filter(d=>{
@@ -10808,6 +10818,7 @@ function calApriGiorno(g){
           ${isPianificato&&(canEdit||isMioLavoro)?`<button class="btn btn-p" style="padding:7px 12px;font-size:12px" onclick="preparaLavoroDaCal('${lavId}')">📋 Prepara</button>`:''}
           ${isPianificato&&canEdit?`<button class="btn" style="padding:7px 12px;font-size:12px" onclick="modificaLavoroCal('${lavId}')">✏️ Modifica</button>`:''}
           ${isPianificato&&canEdit?`<button class="btn" style="padding:7px 12px;font-size:12px;border-color:var(--rd);color:var(--rd)" onclick="calSostituisciLavoro('${lavId}')">🔄 Sostituisci</button>`:''}
+          ${isPianificato&&canEdit?`<button class="btn" style="padding:7px 12px;font-size:12px;border-color:var(--rd);color:var(--rd)" onclick="magLavElimina('${lavId}','${encodeURIComponent(lav.nome||'')}')">🗑️ Elimina</button>`:''}
           ${!isPianificato?`<button class="btn" style="padding:7px 12px;font-size:12px" onclick="goPage('dichiarazione')">📁 Archivio</button>`:''}
         </div>
         ${isPianificato&&canEdit?`
@@ -11132,13 +11143,16 @@ async function salvaLavoroCal(){
 }
 
 async function eliminaLavoroCal(){
-  if(!calEditingId||!confirm('Eliminare questo lavoro dal calendario?'))return;
-  // Rimuovi anche i turni agenda collegati
+  if(!calEditingId)return;
+  const lav=cacheLavoriCal.find(l=>l.id===calEditingId);
+  const nome=lav?.nome||'';
+  if(!confirm('Spostare "'+nome+'" nel cestino? Verrà eliminato definitivamente dopo '+CESTINO_GIORNI+' giorni, ma puoi ripristinarlo prima.'))return;
+  // Rimuovi anche i turni agenda collegati (questi non vanno nel cestino, sono solo i turni di lavoro)
   const turni=await DB.collection('agenda').where('lavoriCalId','==',calEditingId).get();
   await Promise.all(turni.docs.map(d=>d.ref.delete()));
-  await DB.collection('lavori_cal').doc(calEditingId).delete();
+  await DB.collection('lavori_cal').doc(calEditingId).update({eliminatoAt:new Date().toISOString(),eliminatoDa:USER?.nome||''});
   closeMod('mNuovoLavoroCal');
-  toast('✓ Lavoro eliminato');
+  toast('🗑️ Spostato nel cestino');
   setTimeout(()=>renderCalendario(),300);
 }
 
