@@ -1048,6 +1048,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto">
       <button class="btn btn-p" id="ffTabBtn-squadra" style="white-space:nowrap" onclick="ffTab('squadra')">⚽ La mia squadra</button>
       <button class="btn" id="ffTabBtn-classifica" style="white-space:nowrap" onclick="ffTab('classifica')">🏆 Classifica</button>
+      <button class="btn" id="ffTabBtn-sfide" style="white-space:nowrap" onclick="ffTab('sfide')">⚔️ Sfide</button>
       <button class="btn" id="ffTabBtn-giornata" style="white-space:nowrap" onclick="ffTab('giornata')">📅 Ultima giornata</button>
     </div>
 
@@ -1063,6 +1064,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
         <button class="btn" style="font-size:12px" onclick="ffAggiornaGiocatori()">🔄 Aggiorna da API (sperimentale)</button>
         <button class="btn" style="font-size:12px" onclick="ffForzaSync()">⚡ Forza calcolo punteggi</button>
+        <button class="btn" style="font-size:12px" onclick="ffGeneraCalendarioSfide()">⚔️ Genera calendario sfide</button>
       </div>
       <div id="ffAdminMsg" style="font-size:11px;color:var(--tx3);margin-top:8px"></div>
     </div>
@@ -1084,6 +1086,14 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <!-- TAB: Classifica -->
     <div id="ffPageClassifica" style="display:none">
       <div id="ffClassificaList"><div class="empty">Nessun punteggio calcolato ancora</div></div>
+    </div>
+
+    <!-- TAB: Sfide (scontri diretti) -->
+    <div id="ffPageSfide" style="display:none">
+      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">🏆 Classifica a punti (scontri diretti)</div>
+      <div id="ffClassificaSfideList" style="margin-bottom:20px"><div class="empty">Calendario non ancora generato — chiedi a un Admin di premere "Genera calendario sfide"</div></div>
+      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">📅 Calendario</div>
+      <div id="ffCalendarioSfideList"><div class="empty">Nessun calendario generato</div></div>
     </div>
 
     <!-- TAB: Ultima giornata -->
@@ -12740,7 +12750,7 @@ async function initFCM(){
 // ══════════════════════════════════════════
 // ── FANTACALCIO MMG ──
 // ══════════════════════════════════════════
-let cacheFfGiocatori=[], cacheFfRosaMia=null, cacheFfPunteggi=[], cacheFfGiornate=[];
+let cacheFfGiocatori=[], cacheFfRosaMia=null, cacheFfPunteggi=[], cacheFfGiornate=[], cacheFfCalendario=[];
 let ffTeamNome={}; // uid -> nomeSquadra, popolato dalle rose per la classifica
 let ffFormazioneCorrente={P:[],D:[],C:[],A:[]};
 let _ffListenersStarted=false;
@@ -12767,16 +12777,22 @@ function startFfListeners(){
     ffTeamNome={};
     snap.docs.forEach(d=>{ffTeamNome[d.id]=d.data().nomeSquadra||'Squadra senza nome';});
     ffRenderClassifica();
+    ffRenderCalendarioSfide();
   },e=>console.error('ff_rose (tutte) listener:',e));
   DB.collection('ff_punteggi_giornata').onSnapshot(snap=>{
     cacheFfPunteggi=snap.docs.map(d=>({id:d.id,...d.data()}));
     ffRenderClassifica();
     ffRenderGiornata();
+    ffRenderCalendarioSfide();
   },e=>console.error('ff_punteggi listener:',e));
   DB.collection('ff_giornate').orderBy('numero','desc').onSnapshot(snap=>{
     cacheFfGiornate=snap.docs.map(d=>({id:d.id,...d.data()}));
     ffRenderGiornata();
   },e=>console.error('ff_giornate listener:',e));
+  DB.collection('ff_calendario').orderBy('numero','asc').onSnapshot(snap=>{
+    cacheFfCalendario=snap.docs.map(d=>({id:d.id,...d.data()}));
+    ffRenderCalendarioSfide();
+  },e=>console.error('ff_calendario listener:',e));
 }
 
 function initFantacalcioPage(){
@@ -12790,7 +12806,7 @@ function initFantacalcioPage(){
 }
 
 function ffTab(tab){
-  ['squadra','classifica','giornata'].forEach(t=>{
+  ['squadra','classifica','sfide','giornata'].forEach(t=>{
     const page=$('ffPage'+t.charAt(0).toUpperCase()+t.slice(1));
     const btn=$('ffTabBtn-'+t);
     if(page)page.style.display=(t===tab)?'block':'none';
@@ -12927,6 +12943,125 @@ function ffRenderGiornata(){
     });
   }
   el.innerHTML=h;
+}
+
+// ── CALENDARIO SFIDE (scontri diretti, tipo girone all'italiana) ──
+
+async function ffGeneraCalendarioSfide(){
+  const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ [Calendario sfide] Generazione in corso...';
+  try{
+    let squadre=Object.keys(ffTeamNome);
+    if(squadre.length<2){
+      throw new Error('Servono almeno 2 squadre iscritte per generare un calendario');
+    }
+    if(!confirm('Generare un nuovo calendario sfide per '+squadre.length+' squadre? Questo sovrascrive quello esistente.'))return;
+
+    // Girone all'italiana (metodo del cerchio): se dispari aggiungo un "riposo" fittizio
+    let conBye=false;
+    if(squadre.length%2!==0){squadre=[...squadre,null];conBye=true;}
+    const n=squadre.length;
+    const giornateTotali=n-1;
+    const arr=[...squadre];
+    const fisso=arr[0];
+    let ruotanti=arr.slice(1);
+
+    const batch=DB.batch();
+    for(let g=0;g<giornateTotali;g++){
+      const roundArr=[fisso,...ruotanti];
+      const coppie=[];
+      let bye=null;
+      for(let i=0;i<n/2;i++){
+        const uid1=roundArr[i], uid2=roundArr[n-1-i];
+        if(uid1===null||uid2===null){bye=uid1===null?uid2:uid1;continue;}
+        coppie.push({uid1,uid2});
+      }
+      const ref=DB.collection('ff_calendario').doc(String(g+1));
+      batch.set(ref,{numero:g+1,coppie,bye,generato:true});
+      // ruoto (il primo elemento resta fisso, gli altri ruotano in senso orario)
+      ruotanti=[ruotanti[ruotanti.length-1],...ruotanti.slice(0,ruotanti.length-1)];
+    }
+    await batch.commit();
+    if(msg)msg.textContent='✓ [Calendario sfide] Generato per '+giornateTotali+' giornate ('+squadre.filter(s=>s).length+' squadre'+(conBye?', con turni di riposo':'')+')';
+    toast('✓ Calendario sfide generato');
+  }catch(e){
+    if(msg)msg.textContent='❌ [Calendario sfide] Errore: '+e.message;
+    toast('Errore: '+e.message,'r');
+  }
+}
+
+function ffPuntiGiornataUid(uid,giornata){
+  const p=cacheFfPunteggi.find(x=>x.uid===uid&&x.giornata===giornata);
+  return p?p.punti:null; // null = non ancora calcolato
+}
+
+function ffRenderCalendarioSfide(){
+  const elCal=$('ffCalendarioSfideList'), elClass=$('ffClassificaSfideList');
+  if(!elCal||!elClass)return;
+  if(!cacheFfCalendario.length){
+    elCal.innerHTML='<div class="empty">Nessun calendario generato</div>';
+    elClass.innerHTML='<div class="empty">Calendario non ancora generato — chiedi a un Admin di premere "Genera calendario sfide"</div>';
+    return;
+  }
+
+  // ── Calendario (elenco sfide per giornata) ──
+  let hCal='';
+  cacheFfCalendario.forEach(g=>{
+    hCal+='<div style="margin-bottom:16px">';
+    hCal+='<div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:6px">Giornata '+g.numero+'</div>';
+    (g.coppie||[]).forEach(c=>{
+      const p1=ffPuntiGiornataUid(c.uid1,g.numero), p2=ffPuntiGiornataUid(c.uid2,g.numero);
+      const giocata=p1!==null&&p2!==null;
+      const n1=ffTeamNome[c.uid1]||'—', n2=ffTeamNome[c.uid2]||'—';
+      hCal+='<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border-radius:var(--rs);padding:8px 12px;margin-bottom:6px;font-size:13px">'+
+        '<div style="flex:1;text-align:right;font-weight:'+(giocata&&p1>p2?'700':'400')+'">'+n1+'</div>'+
+        '<div style="width:70px;text-align:center;font-weight:800;color:var(--ac2)">'+(giocata?p1+' - '+p2:'vs')+'</div>'+
+        '<div style="flex:1;font-weight:'+(giocata&&p2>p1?'700':'400')+'">'+n2+'</div>'+
+      '</div>';
+    });
+    if(g.bye){
+      hCal+='<div style="font-size:11px;color:var(--tx3);padding:4px 12px">😴 Riposa: '+(ffTeamNome[g.bye]||'—')+'</div>';
+    }
+    hCal+='</div>';
+  });
+  elCal.innerHTML=hCal;
+
+  // ── Classifica a punti (calcolata dal calendario + punteggi già sincronizzati) ──
+  const stat={}; // uid -> {v,n,p,puntiCampionato,puntiFanta}
+  Object.keys(ffTeamNome).forEach(uid=>{stat[uid]={v:0,n:0,p:0,puntiCampionato:0,puntiFanta:0,giocate:0};});
+  cacheFfCalendario.forEach(g=>{
+    (g.coppie||[]).forEach(c=>{
+      const p1=ffPuntiGiornataUid(c.uid1,g.numero), p2=ffPuntiGiornataUid(c.uid2,g.numero);
+      if(p1===null||p2===null)return; // giornata non ancora giocata/sincronizzata
+      if(!stat[c.uid1]||!stat[c.uid2])return;
+      stat[c.uid1].giocate++;stat[c.uid2].giocate++;
+      stat[c.uid1].puntiFanta+=p1;stat[c.uid2].puntiFanta+=p2;
+      if(p1>p2){stat[c.uid1].v++;stat[c.uid1].puntiCampionato+=3;stat[c.uid2].p++;}
+      else if(p2>p1){stat[c.uid2].v++;stat[c.uid2].puntiCampionato+=3;stat[c.uid1].p++;}
+      else{stat[c.uid1].n++;stat[c.uid2].n++;stat[c.uid1].puntiCampionato+=1;stat[c.uid2].puntiCampionato+=1;}
+    });
+  });
+  const righe=Object.entries(stat).map(([uid,s])=>({uid,nome:ffTeamNome[uid],...s}))
+    .sort((a,b)=>b.puntiCampionato-a.puntiCampionato||b.puntiFanta-a.puntiFanta);
+
+  if(!righe.some(r=>r.giocate>0)){
+    elClass.innerHTML='<div class="empty">Nessuna sfida ancora giocata/sincronizzata</div>';
+  } else {
+    let hTab='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+      '<tr style="border-bottom:1px solid var(--b);color:var(--tx3)"><th style="text-align:left;padding:6px">Squadra</th><th style="padding:6px">PG</th><th style="padding:6px">V</th><th style="padding:6px">N</th><th style="padding:6px">P</th><th style="padding:6px">Pt</th></tr>';
+    righe.forEach((r,i)=>{
+      const mia=USER&&r.uid===USER.id;
+      hTab+='<tr style="border-bottom:1px solid var(--b);'+(mia?'background:var(--acb)':'')+'">'+
+        '<td style="padding:6px;font-weight:600">'+(i+1)+'. '+(r.nome||'—')+(mia?' (tu)':'')+'</td>'+
+        '<td style="padding:6px;text-align:center">'+r.giocate+'</td>'+
+        '<td style="padding:6px;text-align:center">'+r.v+'</td>'+
+        '<td style="padding:6px;text-align:center">'+r.n+'</td>'+
+        '<td style="padding:6px;text-align:center">'+r.p+'</td>'+
+        '<td style="padding:6px;text-align:center;font-weight:800;color:var(--ac2)">'+r.puntiCampionato+'</td>'+
+      '</tr>';
+    });
+    hTab+='</table></div>';
+    elClass.innerHTML=hTab;
+  }
 }
 
 function ffExportTemplateGiocatori(){
