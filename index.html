@@ -1491,6 +1491,21 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
   </div>
 </div>
 
+<!-- FANTACALCIO: codice sincronizzazione -->
+<div class="mol" id="mFfSyncSecret" onclick="if(event.target===this)closeMod('mFfSyncSecret')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px">⚡ Forza calcolo punteggi</div>
+    <div class="ig"><label class="il">Codice FF_SYNC_SECRET</label>
+      <input type="password" id="ffSyncSecretInput" placeholder="Il codice impostato su Vercel" onkeydown="if(event.key==='Enter')ffForzaSyncConfirm()">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-f" style="flex:1" onclick="closeMod('mFfSyncSecret')">Annulla</button>
+      <button class="btn btn-p btn-f" style="flex:1" onclick="ffForzaSyncConfirm()">Conferma</button>
+    </div>
+  </div>
+</div>
+
 <!-- FIRMA DIGITALE -->
 <div class="mol" id="mFirma" style="z-index:200" onclick="if(event.target===this)closeMod('mFirma')">
   <div class="msh">
@@ -12931,11 +12946,20 @@ async function ffAggiornaGiocatori(){
   }
 }
 
-async function ffForzaSync(){
+function ffForzaSync(){
+  // Apre un piccolo modale invece di prompt() nativo: prompt() blocca il thread JS
+  // per tutto il tempo in cui l'utente digita, il che fa apparire falsi allarmi di
+  // performance (INP) negli strumenti di sviluppo del browser.
+  openMod('mFfSyncSecret');
+  setTimeout(()=>{const i=$('ffSyncSecretInput');if(i){i.value='';i.focus();}},50);
+}
+
+async function ffForzaSyncConfirm(){
+  const key=val('ffSyncSecretInput');
+  if(!key){toast('Inserisci il codice','r');return;}
+  closeMod('mFfSyncSecret');
   const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ [Calcolo punteggi] Sincronizzazione in corso...';
   try{
-    const key=prompt('Inserisci FF_SYNC_SECRET (configurato su Vercel):');
-    if(!key)return;
     const resp=await fetch('/api/ff-sync?key='+encodeURIComponent(key));
     const data=await resp.json();
     if(data.error)throw new Error(data.error);
