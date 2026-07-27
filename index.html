@@ -446,7 +446,10 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
             <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="magQrBulkUpdateCount();openMod('mMagQrBulk')">◼ QR Bulk</button>
           </div>
         </div>
-        <input type="text" id="magSearch" placeholder="🔍 Cerca articolo..." oninput="renderMag()" style="margin-bottom:12px">
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <input type="text" id="magSearch" placeholder="🔍 Cerca articolo..." oninput="renderMag()" style="margin:0;flex:1">
+          <button class="btn btn-f" style="padding:0 14px;font-size:16px" onclick="apriScanMag()" title="Scansiona QR">📷</button>
+        </div>
         <!-- Vista mobile (card) -->
         <div id="magList"><div class="empty">Caricamento...</div></div>
         <!-- Vista desktop (tabella) -->
@@ -1568,6 +1571,22 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <button class="btn btn-f" onclick="stampaQR()">🖨 Stampa</button>
       <button class="btn btn-f" onclick="closeMod('mQrCode')">Chiudi</button>
     </div>
+  </div>
+</div>
+
+<!-- SCANSIONA QR MAGAZZINO -->
+<div class="mol" id="mScanMag" onclick="if(event.target===this){stopCam();closeMod('mScanMag')}">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:12px">📷 Scansiona articolo</div>
+    <div style="position:relative;border-radius:var(--r);overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:1">
+      <video id="magScanVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+        <div style="width:60%;height:60%;border:2px solid rgba(108,99,255,.8);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>
+      </div>
+      <div style="position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:12px;color:rgba(255,255,255,.7)">Inquadra il QR sull'articolo</div>
+    </div>
+    <button class="btn btn-f" onclick="stopCam();closeMod('mScanMag')">Annulla</button>
   </div>
 </div>
 
@@ -6772,6 +6791,8 @@ async function plGeneraPDF(){
     daFinire:val('plDaFinire')==='true'||((val('plNote')||'').trim().length>0),
     articoli:plArticoli.map(a=>({id:a.id||'',nome:a.nome,cat:a.cat||'',marca:a.marca||'',ser:a.ser||'',qty:a.qtyPrep||1})),
     htmlPrep:html, // salva HTML per riapertura dall'archivio
+    modificatoDa:USER.nome+' '+USER.cognome,
+    modificatoIl:new Date().toISOString(),
     updatedAt:new Date().toISOString()
   };
   try{
@@ -8220,6 +8241,7 @@ function dichCardHtml(d){
         '<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">👤 Tecnico</div>'+
           '<div style="font-size:12px;font-weight:500">'+(d.tecnico||'—')+(isRient&&d.rientroTecnico&&d.rientroTecnico!==d.tecnico?' · Rientro: '+d.rientroTecnico:'')+'</div></div>'+
       '</div>'+
+      (d.modificatoDa?'<div style="font-size:10px;color:var(--tx3);margin-top:6px">✏️ Ultima modifica: '+d.modificatoDa+' · '+new Date(d.modificatoIl).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})+'</div>':'')+
       // Note visibili subito dopo la data
       noteHtml+
       // Note mancanti (solo per preparazioni non ancora rientrate)
@@ -9832,6 +9854,7 @@ function renderMagLavori(){
             <div style="font-size:11px;color:var(--tx2);margin-top:2px">
               📅 ${dataUsc} → ${dataRient}
             </div>
+            ${lav.modificatoDa?`<div style="font-size:10px;color:var(--tx3);margin-top:2px">✏️ ${lav.modificatoDa} · ${new Date(lav.modificatoIl).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>`:''}
           </div>
           <span style="font-size:10px;color:${statoColor};border:1px solid ${statoColor};border-radius:8px;padding:2px 7px;flex-shrink:0;white-space:nowrap">${statoLabel}</span>
         </div>
@@ -10940,6 +10963,7 @@ function calApriGiorno(g){
             <div style="font-size:11px;color:var(--tx2);margin-top:2px">
               📅 ${dataUsc} → ${dataRient}${nPezzi>0?' · 📦 '+nPezzi+' pz':''}
             </div>
+            ${lav.modificatoDa?`<div style="font-size:10px;color:var(--tx3);margin-top:2px">✏️ Ultima modifica: ${lav.modificatoDa} · ${new Date(lav.modificatoIl).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>`:''}
           </div>
           <span style="font-size:10px;background:${color}22;color:${color};border:1px solid ${color};border-radius:10px;padding:2px 7px;flex-shrink:0;white-space:nowrap">${statoLabel}</span>
         </div>
@@ -11181,13 +11205,15 @@ async function salvaLavoroCal(){
   if(btn){btn.textContent='Salvataggio...';btn.disabled=true;}
 
   try{
+    const now=new Date().toISOString();
+    const chiModifica=USER.nome+' '+USER.cognome;
     const lavData={
       nome,data,dataFine,location,note,
       tecnicoUid,tecnicoNome,
       stato:val('nlcStato')||'confermato',
-      createdBy:USER.id,
-      createdAt:new Date().toISOString(),
-      updatedAt:new Date().toISOString()
+      modificatoDa:chiModifica,
+      modificatoIl:now,
+      updatedAt:now
     };
 
     let lavId;
@@ -11195,6 +11221,9 @@ async function salvaLavoroCal(){
       await DB.collection('lavori_cal').doc(calEditingId).update({...lavData});
       lavId=calEditingId;
     } else {
+      lavData.createdBy=USER.id;
+      lavData.creatoDa=chiModifica;
+      lavData.createdAt=now;
       const ref=await DB.collection('lavori_cal').add(lavData);
       lavId=ref.id;
     }
@@ -12705,6 +12734,26 @@ function mostraQrInstallazione(){
     });
   }catch(e){canvas.innerHTML='<div style="padding:20px;color:red">Errore generazione QR</div>';}
   openMod('mQrInstall');
+}
+
+function apriScanMag(){
+  openMod('mScanMag');
+  setTimeout(()=>startCam('magScanVideo',processMagScan),200);
+}
+
+function processMagScan(raw){
+  let id=raw,nomeHint=null;
+  try{const d=JSON.parse(raw);id=d.id||raw;nomeHint=d.nome||null;}catch(e){}
+  const m=cacheMag.find(x=>x.id===id||(x.ser||'').toLowerCase()===String(id).toLowerCase());
+  stopCam();closeMod('mScanMag');
+  if(!m){
+    toast('Articolo non trovato'+(nomeHint?' ('+nomeHint+')':''),'r');
+    return;
+  }
+  // Filtra la lista sulla ricerca manuale (resta comunque disponibile) e mostra il dettaglio
+  const s=$('magSearch');if(s){s.value=m.nome;renderMag();}
+  toast('✓ '+m.nome);
+  mostraStorico(m.id);
 }
 
 function mostraQR(artId){
