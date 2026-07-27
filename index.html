@@ -1054,8 +1054,14 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <!-- Admin: strumenti sincronizzazione -->
     <div id="ffAdminTools" style="display:none;background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:12px;margin-bottom:14px">
       <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">🔧 Strumenti Admin/Responsabile</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn" style="font-size:12px" onclick="ffAggiornaGiocatori()">🔄 Aggiorna elenco giocatori Serie A</button>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">📥 Il piano gratuito dell'API sportiva non include le rose giocatori: importale da Excel (un "listone" — se ne trovano di gratuiti online ogni stagione).</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn" style="font-size:12px" onclick="ffExportTemplateGiocatori()">📋 Scarica template</button>
+        <label class="btn" style="font-size:12px;cursor:pointer">📥 Importa giocatori da Excel<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="ffHandleImportGiocatori(this)"></label>
+      </div>
+      <div id="ffImportPreview"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn" style="font-size:12px" onclick="ffAggiornaGiocatori()">🔄 Aggiorna da API (sperimentale)</button>
         <button class="btn" style="font-size:12px" onclick="ffForzaSync()">⚡ Forza calcolo punteggi</button>
       </div>
       <div id="ffAdminMsg" style="font-size:11px;color:var(--tx3);margin-top:8px"></div>
@@ -12921,6 +12927,76 @@ function ffRenderGiornata(){
     });
   }
   el.innerHTML=h;
+}
+
+function ffExportTemplateGiocatori(){
+  const header=['Nome','Squadra','Ruolo'];
+  const example=['Nome Cognome','Squadra (es: Juventus)','P/D/C/A'];
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([header,example]);
+  ws['!cols']=[{wch:26},{wch:20},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws,'Giocatori');
+  XLSX.writeFile(wb,'Template_Giocatori_Fantacalcio.xlsx');
+  toast('📋 Template scaricato');
+}
+
+let ffImportRows=[];
+
+function ffHandleImportGiocatori(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      const headerRow=(rows[0]||[]).map(h=>String(h).toLowerCase().trim());
+      const findCol=(...keys)=>headerRow.findIndex(h=>keys.some(k=>h.includes(k)));
+      const iNome=findCol('nome'),iSquadra=findCol('squadra'),iRuolo=findCol('ruolo');
+      if(iNome<0){toast('Colonna "Nome" non trovata nel file','r');return;}
+      ffImportRows=rows.slice(1).filter(r=>r[iNome]).map((r,idx)=>{
+        const ruoloRaw=String(iRuolo>=0?r[iRuolo]:'').toUpperCase().trim();
+        const ruolo=['P','D','C','A'].includes(ruoloRaw)?ruoloRaw:'C';
+        return {
+          id:'imp_'+String(r[iNome]).toLowerCase().replace(/[^a-z0-9]/g,'')+'_'+idx,
+          nome:String(r[iNome]).trim(),
+          squadra:iSquadra>=0?String(r[iSquadra]).trim():'',
+          ruolo
+        };
+      });
+      const prev=$('ffImportPreview');
+      if(prev){
+        prev.innerHTML='<div style="font-size:12px;color:var(--tx2);margin:8px 0">Trovati <b>'+ffImportRows.length+'</b> giocatori nel file. '+
+          '<button class="btn btn-p" style="font-size:12px;margin-left:8px" onclick="ffConfirmImportGiocatori()">✓ Conferma import</button></div>';
+      }
+    }catch(err){
+      toast('Errore lettura file: '+err.message,'r');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value='';
+}
+
+async function ffConfirmImportGiocatori(){
+  if(!ffImportRows.length)return;
+  const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ [Import Excel] Scrittura in corso...';
+  try{
+    const batchSize=400;
+    for(let i=0;i<ffImportRows.length;i+=batchSize){
+      const batch=DB.batch();
+      ffImportRows.slice(i,i+batchSize).forEach(g=>{
+        batch.set(DB.collection('ff_giocatori').doc(g.id),g,{merge:true});
+      });
+      await batch.commit();
+    }
+    if(msg)msg.textContent='✓ [Import Excel] '+ffImportRows.length+' giocatori importati';
+    toast('✓ Giocatori importati');
+    const prev=$('ffImportPreview');if(prev)prev.innerHTML='';
+    ffImportRows=[];
+  }catch(e){
+    if(msg)msg.textContent='❌ [Import Excel] Errore: '+e.message;
+    toast('Errore: '+e.message,'r');
+  }
 }
 
 async function ffAggiornaGiocatori(){
