@@ -34,8 +34,9 @@ export default async function handler(req, res) {
       throw new Error(`HTTP ${r.status}: ${body.slice(0, 200)}`);
     }
     const data = await r.json();
+    const teams = data.teams || [];
     const giocatori = [];
-    (data.teams || []).forEach(team => {
+    teams.forEach(team => {
       (team.squad || []).forEach(p => {
         giocatori.push({
           id: String(p.id),
@@ -47,6 +48,26 @@ export default async function handler(req, res) {
         });
       });
     });
+
+    if (!giocatori.length) {
+      // Diagnostica: capiamo se il problema è "zero squadre" o "squadre senza rosa"
+      const squadreConRosaVuota = teams.filter(t => !t.squad || !t.squad.length).length;
+      return res.status(200).json({
+        ok: true,
+        aggiornatoAt: new Date().toISOString(),
+        totale: 0,
+        giocatori: [],
+        diagnostica: {
+          squadreTrovate: teams.length,
+          squadreConRosaVuota,
+          nomiSquadre: teams.map(t => t.name),
+          messaggio: teams.length === 0
+            ? 'La competizione SA (Serie A) non ha restituito nessuna squadra: controlla che il token sia valido e che il piano includa questa competizione.'
+            : 'Le squadre sono state trovate ma il campo "squad" (rosa) è vuoto per tutte — probabile limite del piano gratuito su questo endpoint. Serve un fallback per-squadra o un piano superiore.'
+        }
+      });
+    }
+
     res.status(200).json({ ok: true, aggiornatoAt: new Date().toISOString(), totale: giocatori.length, giocatori });
   } catch (e) {
     console.error('ff-players error:', e);
