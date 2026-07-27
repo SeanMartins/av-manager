@@ -12909,11 +12909,12 @@ function ffRenderGiornata(){
 }
 
 async function ffAggiornaGiocatori(){
-  const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ Recupero rose Serie A in corso...';
+  const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ [Elenco giocatori] Recupero rose Serie A in corso...';
   try{
     const resp=await fetch('/api/ff-players');
     const data=await resp.json();
     if(data.error)throw new Error(data.error);
+    if(!data.giocatori||!data.giocatori.length)throw new Error('Nessun giocatore ricevuto dall\'API — controlla FOOTBALL_DATA_TOKEN su Vercel');
     const batchSize=400;
     for(let i=0;i<data.giocatori.length;i+=batchSize){
       const batch=DB.batch();
@@ -12922,26 +12923,26 @@ async function ffAggiornaGiocatori(){
       });
       await batch.commit();
     }
-    if(msg)msg.textContent='✓ '+data.totale+' giocatori aggiornati ('+new Date(data.aggiornatoAt).toLocaleString('it-IT')+')';
+    if(msg)msg.textContent='✓ [Elenco giocatori] '+data.totale+' giocatori aggiornati ('+new Date(data.aggiornatoAt).toLocaleString('it-IT')+')';
     toast('✓ Elenco giocatori aggiornato');
   }catch(e){
-    if(msg)msg.textContent='Errore: '+e.message;
+    if(msg)msg.textContent='❌ [Elenco giocatori] Errore: '+e.message;
     toast('Errore: '+e.message,'r');
   }
 }
 
 async function ffForzaSync(){
-  const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ Sincronizzazione punteggi in corso...';
+  const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ [Calcolo punteggi] Sincronizzazione in corso...';
   try{
     const key=prompt('Inserisci FF_SYNC_SECRET (configurato su Vercel):');
     if(!key)return;
     const resp=await fetch('/api/ff-sync?key='+encodeURIComponent(key));
     const data=await resp.json();
     if(data.error)throw new Error(data.error);
-    if(msg)msg.textContent='✓ Sincronizzato — giornata attuale: '+data.giornataAttuale+' · '+(data.risultati||[]).length+' giornate elaborate';
+    if(msg)msg.textContent='✓ [Calcolo punteggi] Sincronizzato — giornata attuale: '+data.giornataAttuale+' · '+(data.risultati||[]).length+' giornate elaborate';
     toast('✓ Punteggi aggiornati');
   }catch(e){
-    if(msg)msg.textContent='Errore: '+e.message;
+    if(msg)msg.textContent='❌ [Calcolo punteggi] Errore: '+e.message;
     toast('Errore: '+e.message,'r');
   }
 }
