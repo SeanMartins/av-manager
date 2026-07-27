@@ -12924,24 +12924,40 @@ function ffRenderGiornata(){
 }
 
 async function ffAggiornaGiocatori(){
-  const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ [Elenco giocatori] Recupero rose Serie A in corso...';
+  const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ [Elenco giocatori] Recupero elenco squadre...';
   try{
-    const resp=await fetch('/api/ff-players');
-    const data=await resp.json();
-    if(data.error)throw new Error(data.error);
-    if(!data.giocatori||!data.giocatori.length){
-      const d=data.diagnostica;
-      throw new Error(d?d.messaggio+' (squadre trovate: '+d.squadreTrovate+(d.nomiSquadre?.length?' — '+d.nomiSquadre.slice(0,3).join(', ')+(d.nomiSquadre.length>3?'...':''):'')+')':'Nessun giocatore ricevuto dall\'API');
+    const respTeams=await fetch('/api/ff-players?mode=teams');
+    const dataTeams=await respTeams.json();
+    if(dataTeams.error)throw new Error(dataTeams.error);
+    const squadre=dataTeams.squadre||[];
+    if(!squadre.length)throw new Error('Nessuna squadra ricevuta — controlla FOOTBALL_DATA_TOKEN su Vercel');
+
+    let totaleGiocatori=0;
+    for(let i=0;i<squadre.length;i++){
+      const sq=squadre[i];
+      if(msg)msg.textContent='⏳ [Elenco giocatori] ('+(i+1)+'/'+squadre.length+') Recupero rosa '+sq.nome+'...';
+      try{
+        const resp=await fetch('/api/ff-players?mode=squad&teamId='+sq.id);
+        const data=await resp.json();
+        if(data.error){
+          console.warn('Rosa non recuperata per',sq.nome,data.error);
+        } else if(data.giocatori&&data.giocatori.length){
+          const batch=DB.batch();
+          data.giocatori.forEach(g=>{
+            batch.set(DB.collection('ff_giocatori').doc(g.id),g,{merge:true});
+          });
+          await batch.commit();
+          totaleGiocatori+=data.giocatori.length;
+        }
+      }catch(eSquad){
+        console.warn('Errore rosa',sq.nome,eSquad.message);
+      }
+      // Pausa tra una squadra e l'altra per rispettare il limite di 10 richieste/minuto del piano gratuito
+      if(i<squadre.length-1)await new Promise(r=>setTimeout(r,6500));
     }
-    const batchSize=400;
-    for(let i=0;i<data.giocatori.length;i+=batchSize){
-      const batch=DB.batch();
-      data.giocatori.slice(i,i+batchSize).forEach(g=>{
-        batch.set(DB.collection('ff_giocatori').doc(g.id),g,{merge:true});
-      });
-      await batch.commit();
-    }
-    if(msg)msg.textContent='✓ [Elenco giocatori] '+data.totale+' giocatori aggiornati ('+new Date(data.aggiornatoAt).toLocaleString('it-IT')+')';
+
+    if(!totaleGiocatori)throw new Error('Elenco squadre ricevuto ma nessuna rosa disponibile — verifica il piano football-data.org');
+    if(msg)msg.textContent='✓ [Elenco giocatori] '+totaleGiocatori+' giocatori aggiornati su '+squadre.length+' squadre ('+new Date().toLocaleString('it-IT')+')';
     toast('✓ Elenco giocatori aggiornato');
   }catch(e){
     if(msg)msg.textContent='❌ [Elenco giocatori] Errore: '+e.message;
