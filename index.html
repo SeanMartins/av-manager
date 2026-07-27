@@ -12929,7 +12929,10 @@ async function ffAggiornaGiocatori(){
     const resp=await fetch('/api/ff-players');
     const data=await resp.json();
     if(data.error)throw new Error(data.error);
-    if(!data.giocatori||!data.giocatori.length)throw new Error('Nessun giocatore ricevuto dall\'API — controlla FOOTBALL_DATA_TOKEN su Vercel');
+    if(!data.giocatori||!data.giocatori.length){
+      const d=data.diagnostica;
+      throw new Error(d?d.messaggio+' (squadre trovate: '+d.squadreTrovate+(d.nomiSquadre?.length?' — '+d.nomiSquadre.slice(0,3).join(', ')+(d.nomiSquadre.length>3?'...':''):'')+')':'Nessun giocatore ricevuto dall\'API');
+    }
     const batchSize=400;
     for(let i=0;i<data.giocatori.length;i+=batchSize){
       const batch=DB.batch();
