@@ -1423,6 +1423,8 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div style="font-size:16px;font-weight:700;margin-bottom:2px" id="storicoNome">—</div>
     <div style="font-size:12px;color:var(--tx2);margin-bottom:14px" id="storicoSer">—</div>
     <div id="storicoList"><div class="empty">Nessuna modifica registrata</div></div>
+    <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-top:18px;margin-bottom:8px">📦 Storico utilizzo (lavori)</div>
+    <div id="storicoUsoList"><div class="empty">Nessun utilizzo registrato</div></div>
     <button class="btn btn-f" style="margin-top:12px" onclick="closeMod('mStorico')">Chiudi</button>
   </div>
 </div>
@@ -4364,9 +4366,18 @@ function _renderMagInner(){
   $('nInUso').textContent=cacheMag.filter(m=>getInUso(m)>0).length;
 
   let h='';
-  ['audio','luci','ledwall','traduzione','video','strutture'].forEach(cat=>{
+  const categorieTrovate=[...new Set(fil.map(m=>m.cat||'altro'))];
+  const ordineNoto=['audio','luci','ledwall','traduzione','video','strutture'];
+  categorieTrovate.sort((a,b)=>{
+    const ia=ordineNoto.indexOf(a),ib=ordineNoto.indexOf(b);
+    if(ia===-1&&ib===-1)return a==='altro'?1:b==='altro'?-1:a.localeCompare(b);
+    if(ia===-1)return 1;
+    if(ib===-1)return -1;
+    return ia-ib;
+  });
+  categorieTrovate.forEach(cat=>{
     const items=fil.filter(m=>m.cat===cat);if(!items.length)return;
-    const label={audio:'🎙 Audio',luci:'💡 Luci',ledwall:'🖥 LED wall',traduzione:'🎧 Traduzione simultanea',video:'📽 Video / Proiezione',strutture:'🏗 Strutture'}[cat]||cat;
+    const label=magCatLabel(cat);
     h+='<div style="font-size:11px;font-weight:600;color:var(--tx2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:7px">'+label+'</div><div class="card" style="margin-bottom:13px">';
     items.forEach(m=>{
       const qtaTotale=m.qty||1;
@@ -4570,6 +4581,37 @@ async function mostraStorico(artId){
       '</div>';
     }).join('');
   }
+
+  // ── STORICO UTILIZZO: tutti i lavori (in corso o già rientrati) che hanno usato questo articolo ──
+  const artSer=m.ser||'';
+  const lavoriConArt=cacheDich.filter(d=>
+    (d.articoli||[]).some(a=>(artId&&a.id===artId)||(artSer&&a.ser===artSer&&!a.id))
+  ).sort((a,b)=>(b.data||b.createdAt||'').localeCompare(a.data||a.createdAt||''));
+  const elUso=$('storicoUsoList');
+  if(elUso){
+    if(!lavoriConArt.length){
+      elUso.innerHTML='<div class="empty">Nessun utilizzo registrato per questo articolo</div>';
+    } else {
+      elUso.innerHTML=lavoriConArt.map(d=>{
+        const artInLavoro=(d.articoli||[]).find(a=>(artId&&a.id===artId)||(artSer&&a.ser===artSer&&!a.id));
+        const qty=artInLavoro?.qty||1;
+        const chiuso=!!d.rientroData;
+        const dataUsc=d.data?fmtData(d.data,{day:'2-digit',month:'short',year:'numeric'}):'—';
+        const dataRient=d.dataFine?fmtData(d.dataFine,{day:'2-digit',month:'short',year:'numeric'}):'—';
+        const loc=(d.location||'').replace(/[^\w\s\-\.]/g,'').trim();
+        return '<div style="padding:10px;background:var(--bg2);border-radius:var(--rs);margin-bottom:8px;border-left:3px solid '+(chiuso?'var(--tx3)':'var(--am)')+'">'+
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">'+
+            '<div style="font-size:13px;font-weight:700">'+(d.nome||'—')+'</div>'+
+            '<span style="font-size:10px;color:'+(chiuso?'var(--tx3)':'var(--am)')+';white-space:nowrap">'+(chiuso?'✓ Rientrato':'⏳ In corso')+'</span>'+
+          '</div>'+
+          '<div style="font-size:11px;color:var(--tx2);margin-top:4px">📅 '+dataUsc+' → '+dataRient+'</div>'+
+          (loc?'<div style="font-size:11px;color:var(--tx2)">📍 '+loc+'</div>':'')+
+          '<div style="font-size:11px;color:var(--tx2)">👤 '+(d.tecnico||'—')+' · 📦 '+qty+' pz</div>'+
+        '</div>';
+      }).join('');
+    }
+  }
+
   // Aggiungi bottone cambio stato (solo per responsabile/admin)
   if(isResponsabile()||isAdmin()){
     const statoAttuale=m.stato||'ok';
@@ -7404,7 +7446,20 @@ function cesBuildQrPDF(results,cols,tipo,cat){
 // ── IMPORT MAGAZZINO ──────────────────────────────────────
 const MAG_FIELDS=['cat','nome','quantita','qDisponibile','note'];
 const MAG_LABELS={cat:'Categoria',nome:'Nome articolo',quantita:'Quantità totale',qDisponibile:'Disponibile',note:'Note'};
-const MAG_CAT_MAP={audio:'audio',luci:'luci',ledwall:'ledwall',traduzione:'traduzione',video:'video',strutture:'strutture',altro:'altro'};
+const MAG_CAT_MAP={audio:'🎙 Audio',luci:'💡 Luci',ledwall:'🖥 LED wall',traduzione:'🎧 Traduzione simultanea',video:'📽 Video / Proiezione',strutture:'🏗 Strutture',altro:'📦 Altro'};
+// Etichette con emoji per le 7 categorie "storiche": usate solo per l'icona quando il nome combacia esattamente.
+// Qualunque altro testo di categoria (es. "computer", "cavi audio", "video proiettore") viene accettato così com'è:
+// non viene più forzato dentro una delle 7 — vedi magCatLabel() e la resa dinamica in _renderMagInner().
+function magCatLabel(cat){
+  const emojiFallback={audio:'🎙',luci:'💡',ledwall:'🖥',traduzione:'🎧',video:'📽',strutture:'🏗',altro:'📦'};
+  if(MAG_CAT_MAP[cat])return MAG_CAT_MAP[cat];
+  const catLow=(cat||'').toLowerCase();
+  // Categoria personalizzata: se contiene una delle parole chiave storiche, riusa la sua emoji
+  const found=Object.keys(emojiFallback).find(k=>catLow.includes(k));
+  const emoji=found?emojiFallback[found]:'📦';
+  const label=cat.charAt(0).toUpperCase()+cat.slice(1);
+  return emoji+' '+label;
+}
 
 let magImportRows=[];
 
@@ -7469,8 +7524,8 @@ async function magConfirmImport(){
     const nome=magImportMapped.nome>=0?String(r[magImportMapped.nome]||'').trim():'';
     if(!nome)return;
     const qty=parseInt(r[magImportMapped.quantita>=0?magImportMapped.quantita:-1])||0;
-    const catRaw=magImportMapped.cat>=0?String(r[magImportMapped.cat]||'').toLowerCase().trim():'altro';
-    const cat=Object.keys(MAG_CAT_MAP).find(k=>catRaw.includes(k))||'altro';
+    const catRaw=magImportMapped.cat>=0?String(r[magImportMapped.cat]||'').trim():'';
+    const cat=catRaw||'altro';
     const data={
       cat,nome,
       marca:magImportMapped.marca>=0?String(r[magImportMapped.marca]||'').trim():'',
@@ -10844,8 +10899,18 @@ function preparaLavoroDaCal(lavCalId){
       const n=$('plNome');if(n)n.value=lav.nome||'';
       const d=$('plData');if(d)d.value=lav.data||'';
       const df=$('plDataFine');if(df)df.value=lav.dataFine||'';
+      const nt=$('plNote');if(nt)nt.value=lav.note||'';
       const l=$('plLoc');if(l&&lav.location){
-        Array.from(l.options).forEach(o=>{if(o.value===lav.location)o.selected=true;});
+        const match=Array.from(l.options).find(o=>o.value===lav.location);
+        if(match){
+          match.selected=true;
+        } else {
+          // Nessuna corrispondenza esatta nell'elenco location (es. indirizzo cliente da preventivo):
+          // aggiungo comunque il valore come opzione così non va perso
+          const o=document.createElement('option');
+          o.value=lav.location;o.textContent=lav.location+' (da scheda lavoro)';o.selected=true;
+          l.appendChild(o);
+        }
       }
       // Segna il lavoro_cal come "in preparazione"
       DB.collection('lavori_cal').doc(lavCalId).update({stato:'in_preparazione',lavoriCalId:lavCalId});
