@@ -446,6 +446,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
             <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="magExportTemplate()">📋 Template</button>
             <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="magQrBulkUpdateCount();openMod('mMagQrBulk')">◼ QR Bulk</button>
             <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="apriUnisciArticoli()">🔗 Unisci articoli</button>
+            <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="magEsportaExcel()">📥 Esporta Excel</button>
             <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="mostraCestinoMagazzino()">🗑️ Cestino</button>
           </div>
         </div>
@@ -8331,6 +8332,24 @@ function magExportTemplate(){
   XLSX.utils.book_append_sheet(wb,ws,'Magazzino');
   XLSX.writeFile(wb,'Template_Magazzino.xlsx');
   toast('📋 Template scaricato');
+}
+
+function magEsportaExcel(){
+  const attivi=cacheMag.filter(m=>!m.eliminatoAt).sort((a,b)=>(a.cat||'').localeCompare(b.cat||'')||(a.nome||'').localeCompare(b.nome||''));
+  if(!attivi.length){toast('Magazzino vuoto — niente da esportare','r');return;}
+  const header=['Categoria','Nome articolo','Marca / Modello','Numero seriale','Quantità totale','Disponibile','Note'];
+  const righe=attivi.map(m=>{
+    const inUso=getInUsoGlobale(m);
+    const disp=Math.max(0,(m.qty||1)-inUso);
+    return [m.cat||'altro',m.nome||'',m.marca||'',m.ser||'',m.qty||1,disp,m.note||''];
+  });
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([header,...righe]);
+  ws['!cols']=[{wch:14},{wch:34},{wch:22},{wch:18},{wch:14},{wch:12},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws,'Magazzino');
+  const stamp=new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb,'Magazzino_MMG_'+stamp+'.xlsx');
+  toast('📥 Esportati '+righe.length+' articoli');
 }
 
 function magHandleImport(input){
