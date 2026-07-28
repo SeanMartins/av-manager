@@ -810,6 +810,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
           <button class="chip" onclick="pvFiltraStato('inviato',this)" data-stato="inviato">🔵 Inviato</button>
           <button class="chip" onclick="pvFiltraStato('accettato',this)" data-stato="accettato">🟢 Accettato</button>
           <button class="chip" onclick="pvFiltraStato('rifiutato',this)" data-stato="rifiutato">🔴 Rifiutato</button>
+          <button class="chip" onclick="pvFiltraStato('dafatturare',this)" data-stato="dafatturare">💰 Da fatturare</button>
         </div>
         <div id="pvDocList"></div>
       </div>
@@ -5526,14 +5527,17 @@ function pvRenderStats(){
   const accettati=delMese.filter(d=>d.stato==='accettato');
   const tassoAccettazione=inviatiOAltro.length?Math.round(accettati.length/inviatiOAltro.length*100):0;
   const valoreAccettati=cachePvDoc.filter(d=>d.stato==='accettato'&&(d.createdAt||'').startsWith(meseCorrente)).reduce((s,d)=>s+(d.totale||0),0);
+  const daFatturare=cachePvDoc.filter(d=>d.stato==='accettato'&&d.fatturaStato!=='fatturato');
 
-  const card=(label,value,color)=>`<div style="background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);padding:10px;text-align:center">
+  const card=(label,value,color,onclick)=>`<div ${onclick?`onclick="${onclick}" style="cursor:pointer;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);padding:10px;text-align:center"`:'style="background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);padding:10px;text-align:center"'}>
     <div style="font-size:18px;font-weight:800;color:${color||'var(--tx)'}">${value}</div>
     <div style="font-size:9px;color:var(--tx2);text-transform:uppercase;letter-spacing:.3px;margin-top:2px">${label}</div>
   </div>`;
+  bar.style.gridTemplateColumns='1fr 1fr 1fr 1fr';
   bar.innerHTML=card('Preventivi mese',delMese.length)+
     card('% Accettati',tassoAccettazione+'%','var(--gn)')+
-    card('Valore accettato',fmtEuro(valoreAccettati).replace('€ ',''),'var(--ac2)');
+    card('Valore accettato',fmtEuro(valoreAccettati).replace('€ ',''),'var(--ac2)')+
+    card('💰 Da fatturare',daFatturare.length,daFatturare.length?'var(--am)':'var(--gn)',"document.querySelector('#pvTab_doc .chip[data-stato=dafatturare]').click()");
 }
 
 function pvIsScaduto(d){
@@ -5547,15 +5551,19 @@ function pvIsScaduto(d){
 function renderPvDocList(){
   const list=$('pvDocList');if(!list)return;
   pvRenderStats();
-  const filtered=pvFiltroStato==='tutti'?cachePvDoc:cachePvDoc.filter(d=>d.stato===pvFiltroStato);
+  let filtered;
+  if(pvFiltroStato==='tutti')filtered=cachePvDoc;
+  else if(pvFiltroStato==='dafatturare')filtered=cachePvDoc.filter(d=>d.stato==='accettato'&&d.fatturaStato!=='fatturato');
+  else filtered=cachePvDoc.filter(d=>d.stato===pvFiltroStato);
   if(!filtered.length){list.innerHTML='<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessun preventivo'+(pvFiltroStato!=='tutti'?' in questo stato':' — creane uno!')+'</div>';return;}
   list.innerHTML=filtered.map(d=>{
     const _cBase=cachePvClienti.find(c=>c.id===d.clienteId);
     const cliente=_cBase||(d.clienteLibero?{nome:d.clienteLibero,piva:'',indirizzo:''}:null);
     const scaduto=pvIsScaduto(d);
+    const fattBadge=d.stato==='accettato'?(d.fatturaStato==='fatturato'?'<span style="font-size:10px;font-weight:700;color:var(--gn);margin-left:4px">✓ Fatturato</span>':'<span style="font-size:10px;font-weight:700;color:var(--am);background:var(--amb);padding:1px 6px;border-radius:8px;margin-left:4px">💰 Da fatturare</span>'):'';
     return `<div onclick="pvViewDoc('${d.id}')" class="row" style="align-items:center;padding:12px;background:var(--bg1);border:1px solid ${scaduto?'var(--am)':'var(--b)'};border-radius:var(--rs);margin-bottom:8px;cursor:pointer">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600">${d.numero||'—'} · ${d.oggetto||'Senza oggetto'}${scaduto?' <span style="font-size:10px;font-weight:700;color:var(--am);background:var(--amb);padding:1px 6px;border-radius:8px;margin-left:4px">⏰ Scaduto</span>':''}</div>
+        <div style="font-size:13px;font-weight:600">${d.numero||'—'} · ${d.oggetto||'Senza oggetto'}${scaduto?' <span style="font-size:10px;font-weight:700;color:var(--am);background:var(--amb);padding:1px 6px;border-radius:8px;margin-left:4px">⏰ Scaduto</span>':''}${fattBadge}</div>
         <div style="font-size:11px;color:var(--tx2);margin-top:2px">${cliente?cliente.nome:'Cliente eliminato'}</div>
         <div style="font-size:11px;color:var(--tx3);margin-top:2px">${d.dataEvento?new Date(d.dataEvento+'T12:00:00').toLocaleDateString('it-IT'):''}</div>
       </div>
@@ -5864,6 +5872,35 @@ async function pvCambiaStato(docId,nuovoStato){
   }catch(e){toast('Errore: '+e.message,'r');}
 }
 
+async function pvSegnaFatturato(docId){
+  const numero=prompt('Numero fattura (opzionale, lascia vuoto per saltare):','');
+  if(numero===null)return; // annullato
+  try{
+    await DB.collection('preventivi').doc(docId).update({
+      fatturaStato:'fatturato',
+      fatturaNumero:numero||'',
+      fatturaData:new Date().toISOString(),
+      updatedAt:new Date().toISOString()
+    });
+    toast('✓ Segnato come fatturato');
+    pvViewDoc(docId);
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function pvSegnaDaFatturare(docId){
+  if(!confirm('Riportare questo preventivo a "da fatturare"?'))return;
+  try{
+    await DB.collection('preventivi').doc(docId).update({
+      fatturaStato:firebase.firestore.FieldValue.delete(),
+      fatturaNumero:firebase.firestore.FieldValue.delete(),
+      fatturaData:firebase.firestore.FieldValue.delete(),
+      updatedAt:new Date().toISOString()
+    });
+    toast('✓ Rimesso "da fatturare"');
+    pvViewDoc(docId);
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
 function pvSafeNum(v){
   const n=parseFloat(v);
   return isNaN(n)?0:n;
@@ -6039,6 +6076,13 @@ function pvViewDoc(docId){
     ${d.stato==='accettato'?(d.lavoroCalId
       ?'<div style="background:var(--gnb);border:1px solid var(--gn);border-radius:var(--rs);padding:10px;margin-bottom:10px;font-size:12px;color:var(--gn);display:flex;align-items:center;gap:6px">✅ Collegato al Calendario Lavori — assegna il tecnico da lì</div>'
       :'<button class="btn btn-p btn-f" style="margin-bottom:10px;font-size:12px" onclick="pvCreaLavoroDaPreventivo(\''+d.id+'\')">📅 Crea lavoro in Calendario</button>')
+      :''}
+    ${d.stato==='accettato'?(d.fatturaStato==='fatturato'
+      ?'<div style="background:var(--gnb);border:1px solid var(--gn);border-radius:var(--rs);padding:10px;margin-bottom:10px;font-size:12px;color:var(--gn)">'+
+          '✅ Fatturato'+(d.fatturaNumero?' — n. '+d.fatturaNumero:'')+(d.fatturaData?' del '+new Date(d.fatturaData).toLocaleDateString('it-IT'):'')+
+          '<button onclick="pvSegnaDaFatturare(\''+d.id+'\')" style="background:none;border:none;color:var(--tx3);font-size:11px;text-decoration:underline;cursor:pointer;margin-left:8px">annulla</button>'+
+        '</div>'
+      :'<button class="btn btn-f" style="margin-bottom:10px;font-size:12px;border-color:var(--am);color:var(--am)" onclick="pvSegnaFatturato(\''+d.id+'\')">💰 Segna come fatturato</button>')
       :''}
     <div style="display:flex;gap:8px">
       <button class="btn btn-f" onclick="pvGeneraPDF('${d.id}')">📄 PDF</button>
