@@ -61,7 +61,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 }
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .page{display:none;padding:16px 16px calc(80px + var(--sb))}
-.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.28i';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
+.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.28j';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
 .page.on{display:block}
 #nav{display:flex;background:var(--bg1);border-top:1px solid var(--b);padding-bottom:var(--sb);flex-shrink:0}
 .ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 6px;cursor:pointer;gap:2px;min-width:0}
@@ -299,7 +299,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div id="deskNav"></div>
     </div>
     <div style="padding:10px 16px;border-top:1px solid var(--b);font-size:9px;color:var(--tx3);text-align:center">
-      © Martins Osemwengie · MMG Logistics · v2026.07.28i
+      © Martins Osemwengie · MMG Logistics · v2026.07.28j
     </div>
   </div>
   <div id="topbar">
@@ -2314,15 +2314,15 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
   <div class="msh">
     <div class="mhd"></div>
     <div class="stl" style="margin-bottom:6px" id="vtgTitolo">👁 Vedi tutti</div>
-    <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Seleziona quali aggiungere alla scheda di lavoro</div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:10px" id="vtgSottotitolo">Seleziona quali aggiungere alla scheda di lavoro</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px" id="vtgSelezioneBar">
       <button class="btn btn-f" style="font-size:12px;padding:6px 10px" onclick="vtgSelezionaTutti(true)">Seleziona tutti</button>
       <button class="btn btn-f" style="font-size:12px;padding:6px 10px" onclick="vtgSelezionaTutti(false)">Deseleziona tutti</button>
     </div>
     <div id="vtgLista" style="max-height:280px;overflow-y:auto;margin-bottom:12px"></div>
     <div style="display:flex;gap:8px">
-      <button class="btn btn-f" onclick="closeMod('mVediTuttiGruppo')">Annulla</button>
-      <button class="btn btn-p btn-f" onclick="vtgAggiungiSelezionati()">Aggiungi selezionati</button>
+      <button class="btn btn-f" onclick="closeMod('mVediTuttiGruppo')" id="vtgBtnChiudi">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="vtgAggiungiSelezionati()" id="vtgBtnAggiungi">Aggiungi selezionati</button>
     </div>
   </div>
 </div>
@@ -4814,6 +4814,16 @@ function _renderMagInner(){
       const barColor=qtaDisp===0?'var(--rd)':sottoSoglia?'var(--am)':'var(--gn)';
       const barW=qtaTotale>1?`<div style="width:40px;height:4px;background:var(--b);border-radius:2px;margin-top:2px"><div style="width:${Math.round(pct*100)}%;height:100%;background:${barColor};border-radius:2px"></div></div>`:'';
 
+      // Se l'articolo fa parte di una famiglia numerata (es. n.1/n.2), offro un accesso rapido a tutti i "fratelli"
+      let famigliaHtml='';
+      const baseNome=estraiNomeBase(m.nome);
+      if(baseNome!==m.nome.trim()){
+        const delGruppo=cacheMagVisibili.filter(x=>estraiNomeBase(x.nome)===baseNome);
+        if(delGruppo.length>=2){
+          famigliaHtml='<div onclick="event.stopPropagation();apriVediTuttiLista(\'FAMIGLIA:'+encodeURIComponent(baseNome)+'\',['+delGruppo.map(x=>'\''+x.id+'\'').join(',')+'],true)" style="font-size:10px;font-weight:600;color:var(--ac2);cursor:pointer;white-space:nowrap">👁 Tutti ('+delGruppo.length+')</div>';
+        }
+      }
+
       h+='<div class="row">'+
         '<div onclick="mostraQR(\''+m.id+'\')" style="width:36px;height:36px;border-radius:var(--rs);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;cursor:pointer">📦</div>'+
         '<div style="flex:1;min-width:0;cursor:pointer" onclick="mostraQR(\''+m.id+'\')">'+
@@ -4830,6 +4840,7 @@ function _renderMagInner(){
             '<button data-storico="'+m.id+'" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--b2);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center" title="Storico">📋</button>'+
           '</div>'+
           badgeHtml+
+          famigliaHtml+
         '</div></div>';
     });
     h+='</div>';
@@ -7242,7 +7253,7 @@ function plAggiungiNumerato(){
 // ── VEDI TUTTI (gruppo di articoli con numerazione sequenziale) ──
 let vtgIds=[];
 
-function apriVediTuttiLista(titoloRaw,ids){
+function apriVediTuttiLista(titoloRaw,ids,soloVisualizza){
   let titolo=titoloRaw;
   if(titoloRaw.startsWith('RISULTATI:'))titolo='Risultati per "'+decodeURIComponent(titoloRaw.slice(10))+'"';
   else if(titoloRaw.startsWith('FAMIGLIA:'))titolo=decodeURIComponent(titoloRaw.slice(9));
@@ -7250,16 +7261,29 @@ function apriVediTuttiLista(titoloRaw,ids){
     .sort((a,b)=>a.nome.localeCompare(b.nome,undefined,{numeric:true}));
   vtgIds=gruppo.map(m=>m.id);
   $('vtgTitolo').textContent='👁 '+titolo+' ('+gruppo.length+')';
+  const sott=$('vtgSottotitolo'),btnA=$('vtgBtnAggiungi'),btnC=$('vtgBtnChiudi'),selBar=$('vtgSelezioneBar');
+  if(soloVisualizza){
+    if(sott)sott.textContent='Tutti gli articoli di questa famiglia';
+    if(btnA)btnA.style.display='none';
+    if(btnC)btnC.textContent='Chiudi';
+    if(selBar)selBar.style.display='none';
+  } else {
+    if(sott)sott.textContent='Seleziona quali aggiungere alla scheda di lavoro';
+    if(btnA)btnA.style.display='';
+    if(btnC)btnC.textContent='Annulla';
+    if(selBar)selBar.style.display='flex';
+  }
   $('vtgLista').innerHTML=gruppo.map(m=>{
     const disp=Math.max(0,(m.qty||1)-getInUsoGlobale(m));
-    const inPl=plArticoli.some(a=>a.id===m.id);
-    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--b);cursor:pointer">'+
-      '<input type="checkbox" data-vtg="'+m.id+'" '+(inPl?'checked disabled':'')+' style="width:18px;height:18px;flex-shrink:0">'+
+    const inPl=!soloVisualizza&&plArticoli.some(a=>a.id===m.id);
+    const checkbox=soloVisualizza?'':'<input type="checkbox" data-vtg="'+m.id+'" '+(inPl?'checked disabled':'')+' style="width:18px;height:18px;flex-shrink:0">';
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--b);cursor:'+(soloVisualizza?'default':'pointer')+'">'+
+      checkbox+
       '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">'+m.nome+'</div>'+
       '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'—')+' · '+disp+'/'+(m.qty||1)+' disp.'+(inPl?' · già in lista':'')+'</div></div>'+
     '</label>';
   }).join('');
-  document.getElementById('plSuggest').style.display='none';
+  const ps=document.getElementById('plSuggest');if(ps)ps.style.display='none';
   openMod('mVediTuttiGruppo');
 }
 
