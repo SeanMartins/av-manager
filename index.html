@@ -2212,7 +2212,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div style="font-size:11px;color:var(--tx3);margin-bottom:14px">⚠️ I record verranno aggiunti senza sovrascrivere quelli esistenti.</div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-f btn-f" onclick="closeMod('mMagImport')">Annulla</button>
-      <button class="btn btn-p btn-f" onclick="magConfirmImport()">✓ Importa tutto</button>
+      <button id="magConfirmImportBtn" class="btn btn-p btn-f" onclick="magConfirmImport()">✓ Importa tutto</button>
     </div>
   </div>
 </div>
@@ -2305,6 +2305,24 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div style="display:flex;gap:8px">
       <button class="btn btn-f" onclick="closeMod('mNumerato')">Annulla</button>
       <button class="btn btn-p btn-f" onclick="plAggiungiNumerato()">Aggiungi</button>
+    </div>
+  </div>
+</div>
+
+<!-- VEDI TUTTI (gruppo articoli numerati in sequenza) -->
+<div class="mol" id="mVediTuttiGruppo" onclick="if(event.target===this)closeMod('mVediTuttiGruppo')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:6px" id="vtgTitolo">👁 Vedi tutti</div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Seleziona quali aggiungere alla scheda di lavoro</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn btn-f" style="font-size:12px;padding:6px 10px" onclick="vtgSelezionaTutti(true)">Seleziona tutti</button>
+      <button class="btn btn-f" style="font-size:12px;padding:6px 10px" onclick="vtgSelezionaTutti(false)">Deseleziona tutti</button>
+    </div>
+    <div id="vtgLista" style="max-height:280px;overflow-y:auto;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mVediTuttiGruppo')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="vtgAggiungiSelezionati()">Aggiungi selezionati</button>
     </div>
   </div>
 </div>
@@ -7087,17 +7105,40 @@ function processPlQR(raw){
   if(m&&m.numerato){apriNumerato(m.id);return;}
   plAddToList(id,nomeHint);
 }
+// Estrae il "nome base" rimuovendo un numero sequenziale tipo "n.3", "n3", "#3"
+function estraiNomeBase(nome){
+  return (nome||'').replace(/\s*(?:n\.?|#)\s*\d+\s*/i,' ').trim().replace(/\s+/g,' ');
+}
+
 function plSuggerisci(){
   const q=(document.getElementById('plManualId')?.value||'').toLowerCase().trim();
   const box=document.getElementById('plSuggest');if(!box)return;
   if(!q||q.length<2){box.style.display='none';return;}
-  const matches=cacheMag.filter(m=>!m.eliminatoAt&&(
+  const attivi=cacheMag.filter(m=>!m.eliminatoAt);
+  const matches=attivi.filter(m=>
     m.nome.toLowerCase().includes(q)||
     (m.ser||'').toLowerCase().includes(q)||
     (m.marca||'').toLowerCase().includes(q)
-  )).slice(0,8);
+  ).slice(0,8);
   if(!matches.length){box.style.display='none';return;}
-  box.innerHTML=matches.map(m=>{
+
+  // Per ogni gruppo (stesso nome base) presente tra i risultati, se ci sono
+  // almeno 2 articoli in tutto il magazzino con quel nome base, offro "Vedi tutti"
+  const gruppiMostrati=new Set();
+  let gruppiHtml='';
+  matches.forEach(m=>{
+    const base=estraiNomeBase(m.nome);
+    if(gruppiMostrati.has(base))return;
+    const delGruppo=attivi.filter(x=>estraiNomeBase(x.nome)===base);
+    if(delGruppo.length>=2){
+      gruppiMostrati.add(base);
+      gruppiHtml+='<div onclick="event.stopPropagation();apriVediTuttiGruppo(\''+encodeURIComponent(base)+'\')" style="padding:9px 12px;cursor:pointer;background:var(--acb);border-bottom:1px solid var(--ac);font-size:12px;font-weight:600;color:var(--ac2);display:flex;justify-content:space-between;align-items:center">'+
+        '<span>👁 Vedi tutti — '+base+'</span><span>'+delGruppo.length+' articoli ›</span>'+
+      '</div>';
+    }
+  });
+
+  box.innerHTML=gruppiHtml+matches.map(m=>{
     const sc={ok:'var(--gn)',out:'var(--am)',maint:'var(--rd)'}[m.stato]||'var(--gn)';
     return '<div onclick="plSeleziona(\''+m.id+'\')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:10px" onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'\'">'+
       '<div style="width:8px;height:8px;border-radius:50%;background:'+sc+';flex-shrink:0"></div>'+
@@ -7182,6 +7223,46 @@ function plAggiungiNumerato(){
     plArticoli.push({...m,qtyPrep:numeri.length,note:'Numeri: '+numeri.join(', ')});
     toast('✓ '+m.nome+' — n. '+numeri.join(', '));
   }
+  renderPlItems();
+}
+
+// ── VEDI TUTTI (gruppo di articoli con numerazione sequenziale) ──
+let vtgIds=[];
+
+function apriVediTuttiGruppo(baseEnc){
+  const base=decodeURIComponent(baseEnc);
+  const gruppo=cacheMag.filter(m=>!m.eliminatoAt&&estraiNomeBase(m.nome)===base)
+    .sort((a,b)=>a.nome.localeCompare(b.nome,undefined,{numeric:true}));
+  vtgIds=gruppo.map(m=>m.id);
+  $('vtgTitolo').textContent='👁 '+base+' ('+gruppo.length+')';
+  $('vtgLista').innerHTML=gruppo.map(m=>{
+    const disp=Math.max(0,(m.qty||1)-getInUsoGlobale(m));
+    const inPl=plArticoli.some(a=>a.id===m.id);
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--b);cursor:pointer">'+
+      '<input type="checkbox" data-vtg="'+m.id+'" '+(inPl?'checked disabled':'')+' style="width:18px;height:18px;flex-shrink:0">'+
+      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">'+m.nome+'</div>'+
+      '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'—')+' · '+disp+'/'+(m.qty||1)+' disp.'+(inPl?' · già in lista':'')+'</div></div>'+
+    '</label>';
+  }).join('');
+  document.getElementById('plSuggest').style.display='none';
+  openMod('mVediTuttiGruppo');
+}
+
+function vtgSelezionaTutti(stato){
+  document.querySelectorAll('#vtgLista input[type=checkbox]:not(:disabled)').forEach(cb=>{cb.checked=stato;});
+}
+
+function vtgAggiungiSelezionati(){
+  const selezionati=[...document.querySelectorAll('#vtgLista input[type=checkbox]:checked:not(:disabled)')].map(cb=>cb.dataset.vtg);
+  if(!selezionati.length){toast('Nessun articolo selezionato','r');return;}
+  selezionati.forEach(id=>{
+    const m=cacheMag.find(x=>x.id===id);if(!m)return;
+    if(plArticoli.some(a=>a.id===id))return;
+    plArticoli.push({...m,qtyPrep:1});
+  });
+  closeMod('mVediTuttiGruppo');
+  document.getElementById('plManualId').value='';
+  toast('✓ Aggiunti '+selezionati.length+' articoli');
   renderPlItems();
 }
 
@@ -8393,16 +8474,17 @@ let magImportMapped={};
 
 async function magConfirmImport(){
   if(!magImportRows.length){toast('Nessuna riga','r');return;}
+  const btn=$('magConfirmImportBtn');
+  if(btn){if(btn.disabled)return;btn.disabled=true;btn.textContent='⏳ Importazione in corso...';}
   const now=new Date().toISOString();
-  const batch=DB.batch();
-  let ok=0;
+  const daScrivere=[];
   magImportRows.forEach(r=>{
     const nome=magImportMapped.nome>=0?String(r[magImportMapped.nome]||'').trim():'';
     if(!nome)return;
     const qty=parseInt(r[magImportMapped.quantita>=0?magImportMapped.quantita:-1])||0;
     const catRaw=magImportMapped.cat>=0?String(r[magImportMapped.cat]||'').trim():'';
     const cat=catRaw||'altro';
-    const data={
+    daScrivere.push({
       cat,nome,
       marca:magImportMapped.marca>=0?String(r[magImportMapped.marca]||'').trim():'',
       ser:magImportMapped.seriale>=0?String(r[magImportMapped.seriale]||'').trim():'',
@@ -8410,15 +8492,26 @@ async function magConfirmImport(){
       stato:'ok',
       note:magImportMapped.note>=0?String(r[magImportMapped.note]||'').trim():'',
       createdAt:now,fonte:'import'
-    };
-    batch.set(DB.collection('magazzino').doc(),data);
-    ok++;
+    });
   });
+
   try{
-    await batch.commit();
-    toast('✓ Importati '+ok+' articoli');
+    const batchSize=400; // il limite Firestore è 500 scritture per batch — restiamo prudenti
+    for(let i=0;i<daScrivere.length;i+=batchSize){
+      const batch=DB.batch();
+      daScrivere.slice(i,i+batchSize).forEach(data=>{
+        batch.set(DB.collection('magazzino').doc(),data);
+      });
+      await batch.commit();
+      if(btn)btn.textContent='⏳ Importati '+Math.min(i+batchSize,daScrivere.length)+'/'+daScrivere.length+'...';
+    }
+    toast('✓ Importati '+daScrivere.length+' articoli');
     closeMod('mMagImport');
-  }catch(e){toast('Errore: '+e.message,'r');}
+  }catch(e){
+    toast('Errore: '+e.message,'r');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='✓ Importa tutto';}
+  }
 }
 
 function popolaArtSel(selId){
