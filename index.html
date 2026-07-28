@@ -445,10 +445,13 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
             <input type="file" id="magImportInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="magHandleImport(this)">
             <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="magExportTemplate()">📋 Template</button>
             <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="magQrBulkUpdateCount();openMod('mMagQrBulk')">◼ QR Bulk</button>
+            <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="apriUnisciArticoli()">🔗 Unisci articoli</button>
+            <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="mostraCestinoMagazzino()">🗑️ Cestino</button>
           </div>
         </div>
-        <div style="margin-bottom:12px">
-          <input type="text" id="magSearch" placeholder="🔍 Cerca articolo..." oninput="renderMag()" style="width:100%;margin:0;padding:14px 16px;font-size:15px;font-weight:500;border:2px solid var(--ac);border-radius:var(--r);background:var(--bg2);box-sizing:border-box">
+        <div style="margin-bottom:12px;position:relative">
+          <input type="text" id="magSearch" placeholder="🔍 Cerca articolo..." autocomplete="off" oninput="renderMag();magSuggerisci()" onfocus="magSuggerisci()" style="width:100%;margin:0;padding:14px 16px;font-size:15px;font-weight:500;border:2px solid var(--ac);border-radius:var(--r);background:var(--bg2);box-sizing:border-box">
+          <div id="magSuggestBox" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--bg1);border:1px solid var(--b);border-top:none;border-radius:0 0 var(--r) var(--r);max-height:280px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,.15)"></div>
           <button class="btn btn-f" style="width:100%;margin-top:8px;padding:10px;font-size:13px;font-weight:600" onclick="apriScanMag()">📷 Scansiona QR</button>
         </div>
         <!-- Vista mobile (card) -->
@@ -765,6 +768,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
         <button id="pvTabBtn_clienti" onclick="pvSwitchTab('clienti')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:var(--ac);color:#fff;white-space:nowrap">👤 Clienti</button>
         <button id="pvTabBtn_listino" onclick="pvSwitchTab('listino')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2);white-space:nowrap">💶 Listino</button>
         <button id="pvTabBtn_pacchetti" onclick="pvSwitchTab('pacchetti')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2);white-space:nowrap">📦 Pacchetti</button>
+        <button id="pvTabBtn_fornitori" onclick="pvSwitchTab('fornitori')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2);white-space:nowrap">🚚 Fornitori</button>
         <button id="pvTabBtn_doc" onclick="pvSwitchTab('doc')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2);white-space:nowrap">📋 Preventivi</button>
       </div>
 
@@ -795,6 +799,13 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
         <button class="btn btn-p btn-f" style="margin-bottom:12px" onclick="pvOpenPacchettoForm()">+ Nuovo pacchetto</button>
         <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Gruppi di voci che usi spesso insieme (es. "Service base wedding") — aggiungili a un preventivo con un click.</div>
         <div id="pvPacchettiList"></div>
+      </div>
+
+      <!-- TAB: FORNITORI -->
+      <div id="pvTab_fornitori" style="display:none">
+        <button class="btn btn-p btn-f" style="margin-bottom:12px" onclick="pvOpenFornitoreForm()">+ Nuovo fornitore</button>
+        <input type="text" id="pvFornitoriSearch" placeholder="🔍 Cerca fornitore..." oninput="renderPvFornitori()" style="width:100%;padding:10px;border-radius:var(--rs);border:1px solid var(--b);background:var(--bg2);color:var(--tx);font-family:var(--font);font-size:13px;margin-bottom:10px">
+        <div id="pvFornitoriList"></div>
       </div>
 
       <!-- TAB: PREVENTIVI (documenti) -->
@@ -1163,6 +1174,15 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <button class="btn" style="padding:5px 10px;font-size:12px" onclick="caricaUtentiPendenti()">↺ Aggiorna</button>
     </div>
     <div id="pendingList"><div class="empty">Caricamento...</div></div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--b)">
+      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">💾 Backup</div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">Esegue automaticamente ogni domenica alle 3:00. Puoi anche avviarlo manualmente.</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" style="flex:1;font-size:12px" onclick="eseguiBackupManuale()">☁️ Backup su Firebase</button>
+        <button class="btn" style="flex:1;font-size:12px" onclick="scaricaBackupLocale()">📥 Scarica sul dispositivo</button>
+      </div>
+      <div id="backupMsg" style="font-size:11px;color:var(--tx3);margin-top:8px"></div>
+    </div>
     <button class="btn btn-f" style="margin-top:12px" onclick="closeMod('mGestUtenti')">Chiudi</button>
   </div>
 </div>
@@ -1538,7 +1558,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 </div>
 
 <!-- FIRMA DIGITALE -->
-<div class="mol" id="mFirma" style="z-index:200" onclick="if(event.target===this)closeMod('mFirma')">
+<div class="mol" id="mFirma" style="z-index:500" onclick="if(event.target===this)closeMod('mFirma')">
   <div class="msh">
     <div class="mhd"></div>
     <div style="font-size:16px;font-weight:700;margin-bottom:4px">✍️ Firma digitale</div>
@@ -2250,6 +2270,11 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div class="ig"><label class="il">🔧 Verifica ogni (giorni)</label><input type="number" id="aManutIntervallo" placeholder="Es: 365" min="1"></div>
       <div class="ig"><label class="il">Ultima verifica</label><input type="date" id="aManutUltima"></div>
     </div>
+    <div class="ig"><label class="il">🎙 Gruppo per ricerca aggregata (opzionale)</label>
+      <select id="aTagGruppo"><option value="">— Nessuno —</option><option value="RMM">RMM (radiomicrofoni a mano)</option><option value="RMC">RMC (radiomicrofoni a clip)</option></select>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);margin:10px 0"><input type="checkbox" id="aComponibile" style="width:auto"> 🔀 Kit scomponibile (chiede la composizione RMM/RMC alla selezione)</label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);margin:10px 0"><input type="checkbox" id="aNumerato" style="width:auto"> 🔢 Pezzi numerati singolarmente (chiede quale/i numero/i alla selezione — es. tavoli, casse)</label>
     <div style="display:flex;gap:8px">
       <button class="btn btn-f" onclick="closeMod('mNewArt')">Annulla</button>
       <button class="btn btn-p btn-f" onclick="saveArt()">Salva</button>
@@ -2258,6 +2283,58 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 </div>
 
 <!-- SOTTO SCORTA MINIMA -->
+<!-- KIT SCOMPONIBILE: scelta composizione RMM/RMC -->
+<div class="mol" id="mKitComponibile" onclick="if(event.target===this)closeMod('mKitComponibile')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:6px">🔀 Composizione kit</div>
+    <div id="kitComponibileNome" style="font-size:12px;color:var(--tx2);margin-bottom:14px"></div>
+    <div style="display:flex;flex-direction:column;gap:8px" id="kitComponibileOpzioni"></div>
+    <button class="btn btn-f" style="margin-top:12px" onclick="closeMod('mKitComponibile')">Annulla</button>
+  </div>
+</div>
+
+<!-- ARTICOLO NUMERATO: scelta numero/i specifico/i -->
+<div class="mol" id="mNumerato" onclick="if(event.target===this)closeMod('mNumerato')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:6px">🔢 Quale numero?</div>
+    <div id="numeratoNome" style="font-size:12px;color:var(--tx2);margin-bottom:14px"></div>
+    <div class="ig"><label class="il">Numero/i (es: 3 oppure 3, 7, 12)</label><input type="text" id="numeratoInput" placeholder="Es: 5" onkeydown="if(event.key==='Enter')plAggiungiNumerato()"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mNumerato')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="plAggiungiNumerato()">Aggiungi</button>
+    </div>
+  </div>
+</div>
+
+<!-- UNISCI ARTICOLI DUPLICATI -->
+<div class="mol" id="mUnisciArticoli" onclick="if(event.target===this)closeMod('mUnisciArticoli')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:6px">🔗 Unisci articoli</div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Seleziona le voci singole da unire in un unico articolo con quantità sommata. Gli originali vanno nel cestino, non si perdono.</div>
+    <input type="text" id="uaSearch" placeholder="🔍 Cerca articoli da unire..." oninput="renderUnisciArticoliLista()" style="width:100%;padding:10px;border-radius:var(--rs);border:1px solid var(--b);background:var(--bg2);color:var(--tx);font-family:var(--font);font-size:13px;margin-bottom:10px">
+    <div id="uaLista" style="max-height:240px;overflow-y:auto;margin-bottom:12px"></div>
+    <div id="uaRiepilogo" style="font-size:12px;font-weight:600;color:var(--ac2);margin-bottom:10px">0 articoli selezionati — quantità totale: 0</div>
+    <div class="ig"><label class="il">Nome del kit unito</label><input type="text" id="uaNomeFinale" placeholder="Es: Kit da 4 RMC"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mUnisciArticoli')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="confermaUnisciArticoli()">Unisci</button>
+    </div>
+  </div>
+</div>
+
+<!-- CESTINO MAGAZZINO (articoli uniti/eliminati) -->
+<div class="mol" id="mCestinoMagazzino" onclick="if(event.target===this)closeMod('mCestinoMagazzino')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px">🗑️ Cestino Magazzino</div>
+    <div id="cestinoMagazzinoList"><div class="empty">Cestino vuoto</div></div>
+    <button class="btn btn-f" style="margin-top:12px" onclick="closeMod('mCestinoMagazzino')">Chiudi</button>
+  </div>
+</div>
+
 <div class="mol" id="mSottoScorta" onclick="if(event.target===this)closeMod('mSottoScorta')">
   <div class="msh">
     <div class="mhd"></div>
@@ -2345,6 +2422,30 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div style="display:flex;gap:8px">
       <button class="btn btn-f" onclick="closeMod('mPvCliente')">Annulla</button>
       <button class="btn btn-p btn-f" onclick="pvSaveCliente()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- PV: NUOVO/MODIFICA FORNITORE -->
+<div class="mol" id="mPvFornitore" onclick="if(event.target===this)closeMod('mPvFornitore')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px" id="mPvFornitoreTitle">🚚 Nuovo fornitore</div>
+    <input type="hidden" id="pvfId">
+    <div class="ig"><label class="il">Ragione sociale / Nome</label><input type="text" id="pvfNome" placeholder="Service Audio Srl"></div>
+    <div class="ig"><label class="il">Categoria</label>
+      <select id="pvfCat"><option value="audio">🎙 Audio</option><option value="luci">💡 Luci</option><option value="ledwall">🖥 LED wall</option><option value="traduzione">🎧 Traduzione simultanea</option><option value="video">📽 Video / Proiezione</option><option value="strutture">🏗 Strutture</option><option value="informatica">💻 Informatica</option><option value="altro" selected>📦 Altro</option></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Email</label><input type="email" id="pvfEmail" placeholder="ordini@fornitore.it"></div>
+      <div class="ig"><label class="il">Telefono</label><input type="tel" id="pvfTel" placeholder="055 1234567"></div>
+    </div>
+    <div class="ig"><label class="il">Referente</label><input type="text" id="pvfReferente" placeholder="Luca Bianchi"></div>
+    <div class="ig"><label class="il">Condizioni / termini di pagamento</label><input type="text" id="pvfCondizioni" placeholder="Es: 30gg data fattura"></div>
+    <div class="ig"><label class="il">Note</label><textarea id="pvfNote" placeholder="Note interne sul fornitore..." style="min-height:60px"></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mPvFornitore')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="pvSaveFornitore()">Salva</button>
     </div>
   </div>
 </div>
@@ -4499,6 +4600,81 @@ function giorniAllaManutenzione(m){
   return Math.ceil((prossima-oggi)/(1000*60*60*24));
 }
 
+function magSuggerisci(){
+  const input=$('magSearch');
+  const q=(input?.value||'').toLowerCase().trim();
+  const box=$('magSuggestBox');if(!box)return;
+  if(!q||q.length<3){box.style.display='none';return;}
+
+  // Aggregazione per gruppo (RMM/RMC/altri gruppi tag): se la ricerca corrisponde
+  // a un gruppo, mostra un riepilogo totale in cima, poi comunque i singoli articoli.
+  let aggregatoHtml='';
+  const gruppo=MAG_GRUPPI.find(g=>g.toLowerCase()===q||g.toLowerCase().startsWith(q));
+  if(gruppo){
+    const delGruppo=cacheMag.filter(m=>!m.eliminatoAt&&(m.tagGruppo||'').toUpperCase()===gruppo);
+    if(delGruppo.length){
+      const totQty=delGruppo.reduce((s,m)=>s+(m.qty||1),0);
+      const totDisp=delGruppo.reduce((s,m)=>s+Math.max(0,(m.qty||1)-getInUsoGlobale(m)),0);
+      aggregatoHtml='<div style="padding:10px 12px;background:var(--acb);border-bottom:2px solid var(--ac);font-size:12px;font-weight:700;color:var(--ac2)">🎙 '+gruppo+' totali: '+totDisp+' / '+totQty+' disponibili ('+delGruppo.length+' articoli)</div>';
+    }
+  }
+
+  const matches=cacheMag.filter(m=>!m.eliminatoAt&&(
+    (m.nome||'').toLowerCase().includes(q)||
+    (m.ser||'').toLowerCase().includes(q)||
+    (m.marca||'').toLowerCase().includes(q)||
+    (m.cat||'').toLowerCase().includes(q)
+  )).slice(0,8);
+
+  if(!matches.length&&!aggregatoHtml){box.style.display='none';return;}
+
+  box.innerHTML=aggregatoHtml+matches.map(m=>{
+    const disp=Math.max(0,(m.qty||1)-getInUsoGlobale(m));
+    const sc=disp===0?'var(--rd)':m.stato==='maint'?'var(--am)':'var(--gn)';
+    return '<div onclick="magSelezionaSuggerimento(\''+m.id+'\')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:10px" onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'\'">'+
+      '<div style="width:8px;height:8px;border-radius:50%;background:'+sc+';flex-shrink:0"></div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.nome+'</div>'+
+        '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'')+(m.ser?' · '+m.ser:'')+' · '+disp+'/'+(m.qty||1)+' disp.</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  box.style.display='block';
+}
+
+function magSelezionaSuggerimento(id){
+  const m=cacheMag.find(x=>x.id===id);if(!m)return;
+  const input=$('magSearch');if(input)input.value=m.nome;
+  const box=$('magSuggestBox');if(box)box.style.display='none';
+  renderMag();
+  mostraStorico(id);
+}
+
+// Chiude il dropdown suggerimenti se clicco fuori
+document.addEventListener('click',(e)=>{
+  const box=$('magSuggestBox'),input=$('magSearch');
+  if(box&&box.style.display==='block'&&!box.contains(e.target)&&e.target!==input){
+    box.style.display='none';
+  }
+});
+
+// Gruppi per l'aggregazione ricerca (es: cercando "RMM" vedi il totale di tutti i
+// radiomicrofoni a mano, pur restando ognuno con la propria numerazione/categoria)
+const MAG_GRUPPI=['RMM','RMC'];
+
+// Versione "globale" di getInUso, riusabile fuori dallo scope di renderMag()
+function getInUsoGlobale(m){
+  let tot=0;
+  cacheDich.filter(d=>!d.rientroData).forEach(d=>{
+    (d.articoli||[]).forEach(a=>{
+      if(a.id===m.id||(a.ser&&a.ser===m.ser)||(!a.id&&(a.nome||'').toLowerCase().trim()===(m.nome||'').toLowerCase().trim())){
+        tot+=a.qty||1;
+      }
+    });
+  });
+  return tot;
+}
+
 function renderMag(){
   if(_magRenderPending)return;
   _magRenderPending=true;
@@ -4514,11 +4690,12 @@ function magDove(id){
 }
 
 function _renderMagInner(){
+  const cacheMagVisibili=cacheMag.filter(m=>!m.eliminatoAt); // esclude articoli uniti/nel cestino
   const q=($('magSearch')?.value||'').toLowerCase();
-  const fil=q?cacheMag.filter(m=>m.nome.toLowerCase().includes(q)||(m.marca||'').toLowerCase().includes(q)):cacheMag;
+  const fil=q?cacheMagVisibili.filter(m=>m.nome.toLowerCase().includes(q)||(m.marca||'').toLowerCase().includes(q)):cacheMagVisibili;
   // Popola mappa globale ID→nome
   fil.forEach(m=>{window._magMap[m.id]=m.nome;});
-  $('nArt').textContent=cacheMag.length;
+  $('nArt').textContent=cacheMagVisibili.length;
 
   // Calcola quantità in uso per ogni articolo dai lavori aperti
   // Chiave = ID articolo magazzino (univoco) — evita confusione tra articoli con stesso nome
@@ -4551,13 +4728,13 @@ function _renderMagInner(){
     return inUsoMap[nkey]?.lavori||[];
   };
 
-  $('nDisp').textContent=cacheMag.filter(m=>{
+  $('nDisp').textContent=cacheMagVisibili.filter(m=>{
     return Math.max(0,(m.qty||1)-getInUso(m))>0&&m.stato==='ok';
   }).length;
-  $('nInUso').textContent=cacheMag.filter(m=>getInUso(m)>0).length;
+  $('nInUso').textContent=cacheMagVisibili.filter(m=>getInUso(m)>0).length;
   const nSS=$('nSottoScorta');
   if(nSS){
-    const sottoScortaCount=cacheMag.filter(m=>{
+    const sottoScortaCount=cacheMagVisibili.filter(m=>{
       const disp=Math.max(0,(m.qty||1)-getInUso(m));
       if(m.stato==='maint')return false;
       return (m.sogliaMin!==undefined&&m.sogliaMin!==null)?disp<=m.sogliaMin:false;
@@ -4566,7 +4743,7 @@ function _renderMagInner(){
   }
   const nMS=$('nManutScadute');
   if(nMS){
-    const manutCount=cacheMag.filter(m=>{
+    const manutCount=cacheMagVisibili.filter(m=>{
       const g=giorniAllaManutenzione(m);
       return g!==null&&g<=14;
     }).length;
@@ -4730,6 +4907,9 @@ async function saveArt(){
   const manutIntRaw=val('aManutIntervallo');
   const manutIntervallo=manutIntRaw?parseInt(manutIntRaw):null;
   const manutUltima=val('aManutUltima')||null;
+  const tagGruppo=val('aTagGruppo')||null;
+  const componibile=$('aComponibile')?.checked||false;
+  const numerato=$('aNumerato')?.checked||false;
   const now=new Date().toISOString();
   const chi=USER?USER.nome+' '+USER.cognome:'—';
   const statoLabel={ok:'Disponibile',out:'In uso',maint:'Manutenzione'}[stato]||stato;
@@ -4741,6 +4921,9 @@ async function saveArt(){
     dati.sogliaMin=sogliaMin!==null?sogliaMin:firebase.firestore.FieldValue.delete();
     dati.manutIntervallo=manutIntervallo!==null?manutIntervallo:firebase.firestore.FieldValue.delete();
     dati.manutUltima=manutUltima||firebase.firestore.FieldValue.delete();
+    dati.tagGruppo=tagGruppo||firebase.firestore.FieldValue.delete();
+    dati.componibile=componibile||firebase.firestore.FieldValue.delete();
+    dati.numerato=numerato||firebase.firestore.FieldValue.delete();
     await DB.collection('magazzino').doc(id).update(dati);
     closeMod('mNewArt');toast('✓ Articolo aggiornato');
     window._editingArtId=null;
@@ -4758,10 +4941,13 @@ async function saveArt(){
     if(sogliaMin!==null)dati.sogliaMin=sogliaMin;
     if(manutIntervallo!==null)dati.manutIntervallo=manutIntervallo;
     if(manutUltima)dati.manutUltima=manutUltima;
+    if(tagGruppo)dati.tagGruppo=tagGruppo;
+    if(componibile)dati.componibile=true;
+    if(numerato)dati.numerato=true;
     await DB.collection('magazzino').add(dati);
     closeMod('mNewArt');toast('✓ Articolo salvato');
   }
-  ['aNome','aMarca','aSer','aSogliaMin','aManutIntervallo','aManutUltima'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  ['aNome','aMarca','aSer','aSogliaMin','aManutIntervallo','aManutUltima','aTagGruppo'].forEach(id=>{const el=$(id);if(el)el.value='';});
   $('aQty').value='1';
 }
 
@@ -4846,12 +5032,167 @@ async function segnaManutenzioneVerificata(id,nomeEnc){
   }catch(e){toast('Errore: '+e.message,'r');}
 }
 
+// ── UNISCI ARTICOLI DUPLICATI ──
+let uaSelezionati=[];
+
+function apriUnisciArticoli(){
+  uaSelezionati=[];
+  $('uaSearch').value='';
+  $('uaNomeFinale').value='';
+  renderUnisciArticoliLista();
+  openMod('mUnisciArticoli');
+}
+
+function renderUnisciArticoliLista(){
+  const q=($('uaSearch')?.value||'').toLowerCase();
+  const lista=cacheMag.filter(m=>!m.eliminatoAt&&(!q||(m.nome||'').toLowerCase().includes(q)||(m.marca||'').toLowerCase().includes(q)));
+  const el=$('uaLista');
+  if(!lista.length){el.innerHTML='<div class="empty">Nessun articolo trovato</div>';}
+  else{
+    el.innerHTML=lista.slice(0,60).map(m=>{
+      const checked=uaSelezionati.includes(m.id);
+      return '<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--b);cursor:pointer">'+
+        '<input type="checkbox" '+(checked?'checked':'')+' onchange="toggleUaSelezione(\''+m.id+'\')" style="width:18px;height:18px;flex-shrink:0">'+
+        '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">'+m.nome+'</div>'+
+        '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'—')+' · qty '+(m.qty||1)+'</div></div>'+
+      '</label>';
+    }).join('');
+  }
+  aggiornaRiepilogoUa();
+}
+
+function toggleUaSelezione(id){
+  const i=uaSelezionati.indexOf(id);
+  if(i>=0)uaSelezionati.splice(i,1);
+  else uaSelezionati.push(id);
+  aggiornaRiepilogoUa();
+}
+
+function aggiornaRiepilogoUa(){
+  const items=uaSelezionati.map(id=>cacheMag.find(m=>m.id===id)).filter(Boolean);
+  const totQty=items.reduce((s,m)=>s+(m.qty||1),0);
+  $('uaRiepilogo').textContent=items.length+' articoli selezionati — quantità totale: '+totQty;
+  // Suggerisce un nome se non ancora scritto
+  if(items.length>=2&&!$('uaNomeFinale').value){
+    $('uaNomeFinale').placeholder='Es: Kit da '+totQty+' '+(items[0].nome.split(' ').pop()||'');
+  }
+}
+
+async function confermaUnisciArticoli(){
+  const items=uaSelezionati.map(id=>cacheMag.find(m=>m.id===id)).filter(Boolean);
+  if(items.length<2){toast('Seleziona almeno 2 articoli da unire','r');return;}
+  const nomeFinale=val('uaNomeFinale');
+  if(!nomeFinale){toast('Inserisci il nome del kit unito','r');return;}
+  if(!confirm('Unire '+items.length+' articoli in "'+nomeFinale+'"? Gli originali andranno nel cestino.'))return;
+
+  try{
+    const totQty=items.reduce((s,m)=>s+(m.qty||1),0);
+    const marche=[...new Set(items.map(m=>m.marca).filter(Boolean))];
+    const now=new Date().toISOString();
+    const chi=USER?USER.nome+' '+USER.cognome:'—';
+    const storicoUnito=items.flatMap(m=>m.storico||[]);
+    storicoUnito.push({stato:'ok',statoLabel:'Disponibile',chi,at:now,note:'Unione di '+items.length+' articoli singoli'});
+
+    const nuovoRef=DB.collection('magazzino').doc();
+    const batch=DB.batch();
+    batch.set(nuovoRef,{
+      cat:items[0].cat||'altro',
+      nome:nomeFinale,
+      marca:marche.join(' / '),
+      ser:'',
+      qty:totQty,
+      stato:'ok',
+      ultimaMod:chi+' → Creato unendo '+items.length+' articoli · '+new Date(now).toLocaleDateString('it-IT'),
+      storico:storicoUnito,
+      modificatoDa:chi,
+      modificatoIl:now,
+      createdAt:now
+    });
+    items.forEach(m=>{
+      batch.update(DB.collection('magazzino').doc(m.id),{
+        eliminatoAt:now,
+        eliminatoDa:chi,
+        fusoInId:nuovoRef.id,
+        fusoInNome:nomeFinale
+      });
+    });
+    await batch.commit();
+    closeMod('mUnisciArticoli');
+    toast('✓ '+items.length+' articoli uniti in "'+nomeFinale+'" (qty '+totQty+')');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+// ── CESTINO MAGAZZINO ──
+async function purgeCestinoMagazzino(){
+  try{
+    const soglia=new Date();soglia.setDate(soglia.getDate()-CESTINO_GIORNI);
+    const sogliaISO=soglia.toISOString();
+    const daEliminare=cacheMag.filter(m=>m.eliminatoAt&&m.eliminatoAt<sogliaISO);
+    if(!daEliminare.length)return;
+    const batch=DB.batch();
+    daEliminare.forEach(m=>batch.delete(DB.collection('magazzino').doc(m.id)));
+    await batch.commit();
+    console.log('Cestino magazzino: eliminati definitivamente',daEliminare.length);
+  }catch(e){console.warn('purgeCestinoMagazzino:',e.message);}
+}
+
+function mostraCestinoMagazzino(){
+  purgeCestinoMagazzino();
+  const cestino=cacheMag.filter(m=>!!m.eliminatoAt).sort((a,b)=>(b.eliminatoAt||'').localeCompare(a.eliminatoAt||''));
+  const el=$('cestinoMagazzinoList');
+  if(!cestino.length){el.innerHTML='<div class="empty">Cestino vuoto</div>';}
+  else{
+    const fmtDataL=iso=>{if(!iso)return'—';return new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});};
+    el.innerHTML=cestino.map(m=>{
+      const scadenza=new Date(m.eliminatoAt);scadenza.setDate(scadenza.getDate()+CESTINO_GIORNI);
+      const giorniRimasti=Math.max(0,Math.ceil((scadenza-new Date())/(1000*60*60*24)));
+      const nomeEnc=encodeURIComponent(m.nome||'');
+      return '<div class="card" style="margin-bottom:10px;border-left:3px solid var(--rd);opacity:.85">'+
+        '<div style="font-size:14px;font-weight:700">🗑️ '+(m.nome||'—')+'</div>'+
+        '<div style="font-size:11px;color:var(--tx2);margin-top:2px">Eliminato il '+fmtDataL(m.eliminatoAt)+(m.eliminatoDa?' da '+m.eliminatoDa:'')+(m.fusoInNome?' — unito in "'+m.fusoInNome+'"':'')+'</div>'+
+        '<div style="font-size:11px;color:var(--rd);margin-top:2px;font-weight:600">⏳ Cancellazione definitiva tra '+giorniRimasti+' giorni</div>'+
+        '<div style="display:flex;gap:8px;margin-top:8px">'+
+          '<button onclick="magArtRipristina(\''+m.id+'\',\''+nomeEnc+'\')" class="btn btn-p" style="flex:1;font-size:12px;padding:9px">↩️ Ripristina</button>'+
+          '<button onclick="magArtEliminaDefinitivo(\''+m.id+'\',\''+nomeEnc+'\')" class="btn" style="flex:1;font-size:12px;padding:9px;border-color:var(--rd);color:var(--rd)">🗑️ Elimina ora</button>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }
+  openMod('mCestinoMagazzino');
+}
+
+async function magArtRipristina(id,nomeEnc){
+  const nome=decodeURIComponent(nomeEnc||'');
+  try{
+    await DB.collection('magazzino').doc(id).update({
+      eliminatoAt:firebase.firestore.FieldValue.delete(),
+      eliminatoDa:firebase.firestore.FieldValue.delete(),
+      fusoInId:firebase.firestore.FieldValue.delete(),
+      fusoInNome:firebase.firestore.FieldValue.delete()
+    });
+    toast('✓ "'+nome+'" ripristinato');
+    mostraCestinoMagazzino();
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function magArtEliminaDefinitivo(id,nomeEnc){
+  const nome=decodeURIComponent(nomeEnc||'');
+  if(!confirm('Eliminare DEFINITIVAMENTE "'+nome+'"? Non si può annullare.'))return;
+  try{
+    await DB.collection('magazzino').doc(id).delete();
+    toast('✓ Eliminato definitivamente');
+    mostraCestinoMagazzino();
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
 function apriNuovoArticolo(){
   window._editingArtId=null;
-  ['aNome','aMarca','aSer','aSogliaMin','aManutIntervallo','aManutUltima'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  ['aNome','aMarca','aSer','aSogliaMin','aManutIntervallo','aManutUltima','aTagGruppo'].forEach(id=>{const el=$(id);if(el)el.value='';});
   const q=$('aQty');if(q)q.value='1';
   const cat=$('aCat');if(cat)cat.value='audio';
   const st=$('aStato');if(st)st.value='ok';
+  const cb=$('aComponibile');if(cb)cb.checked=false;
+  const nc=$('aNumerato');if(nc)nc.checked=false;
   const t=$('mNewArtTitolo');if(t)t.textContent='📦 Nuovo articolo';
   openMod('mNewArt');
 }
@@ -4966,7 +5307,7 @@ async function mostraStorico(artId){
 // ══════════════════════════════════════════
 // ── PREVENTIVI ──
 // ══════════════════════════════════════════
-let cachePvClienti=[],cachePvListino=[],cachePvDoc=[],cachePvPacchetti=[];
+let cachePvClienti=[],cachePvListino=[],cachePvDoc=[],cachePvPacchetti=[],cachePvFornitori=[];
 let pvpkRigheCorrenti=[]; // righe del pacchetto in editing (stesso formato di pvRigheCorrenti)
 let pvPickTarget='preventivo'; // 'preventivo' | 'pacchetto' — decide su quale array scrive il picker listino
 let pvActiveTab='clienti',pvFiltroStato='tutti';
@@ -4994,14 +5335,18 @@ function initPreventiviPage(){
       cachePvPacchetti=snap.docs.map(d=>({id:d.id,...d.data()}));
       renderPvPacchetti();
     },e=>console.error('pacchetti listener:',e));
+    DB.collection('fornitori').orderBy('nome').onSnapshot(snap=>{
+      cachePvFornitori=snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderPvFornitori();
+    },e=>console.error('fornitori listener:',e));
   } else {
-    renderPvClienti();renderPvListino();renderPvDocList();renderPvPacchetti();
+    renderPvClienti();renderPvListino();renderPvDocList();renderPvPacchetti();renderPvFornitori();
   }
 }
 
 function pvSwitchTab(tab){
   pvActiveTab=tab;
-  ['clienti','listino','pacchetti','doc'].forEach(t=>{
+  ['clienti','listino','pacchetti','fornitori','doc'].forEach(t=>{
     $('pvTab_'+t).style.display=t===tab?'block':'none';
     $('pvTabBtn_'+t).style.background=t===tab?'var(--ac)':'transparent';
     $('pvTabBtn_'+t).style.color=t===tab?'#fff':'var(--tx2)';
@@ -5068,6 +5413,70 @@ function renderPvClienti(){
         <div style="font-size:11px;color:var(--tx3);margin-top:2px">${c.email||''}${c.email&&c.tel?' · ':''}${c.tel||''}</div>
       </div>
       <button onclick="pvDeleteCliente('${c.id}')" style="flex-shrink:0;width:32px;height:32px;border-radius:var(--rs);border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:13px;cursor:pointer">🗑</button>
+    </div>`).join('');
+}
+
+// ── FORNITORI ──
+function pvOpenFornitoreForm(fId){
+  ['pvfId','pvfNome','pvfEmail','pvfTel','pvfReferente','pvfCondizioni','pvfNote'].forEach(id=>$(id).value='');
+  $('pvfCat').value='altro';
+  if(fId){
+    const f=cachePvFornitori.find(x=>x.id===fId);if(!f)return;
+    $('mPvFornitoreTitle').textContent='🚚 Modifica fornitore';
+    $('pvfId').value=f.id;$('pvfNome').value=f.nome||'';$('pvfCat').value=f.cat||'altro';
+    $('pvfEmail').value=f.email||'';$('pvfTel').value=f.tel||'';
+    $('pvfReferente').value=f.referente||'';$('pvfCondizioni').value=f.condizioni||'';$('pvfNote').value=f.note||'';
+  } else {
+    $('mPvFornitoreTitle').textContent='🚚 Nuovo fornitore';
+  }
+  openMod('mPvFornitore');
+}
+
+async function pvSaveFornitore(){
+  const nome=val('pvfNome');
+  if(!nome){toast('Inserisci il nome del fornitore','r');return;}
+  const id=val('pvfId');
+  const data={
+    nome,cat:val('pvfCat'),email:val('pvfEmail'),tel:val('pvfTel'),
+    referente:val('pvfReferente'),condizioni:val('pvfCondizioni'),note:val('pvfNote'),
+    updatedAt:new Date().toISOString()
+  };
+  try{
+    if(id){
+      await DB.collection('fornitori').doc(id).update(data);
+      toast('✓ Fornitore aggiornato');
+    } else {
+      data.createdAt=data.updatedAt;
+      await DB.collection('fornitori').add(data);
+      toast('✓ Fornitore salvato');
+    }
+    closeMod('mPvFornitore');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function pvDeleteFornitore(fId){
+  if(!confirm('Eliminare questo fornitore?'))return;
+  try{
+    await DB.collection('fornitori').doc(fId).delete();
+    toast('Fornitore eliminato');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+function renderPvFornitori(){
+  const list=$('pvFornitoriList');if(!list)return;
+  const q=(val('pvFornitoriSearch')||'').toLowerCase();
+  const filtered=cachePvFornitori.filter(f=>!q||((f.nome||'')+(f.referente||'')+(f.email||'')).toLowerCase().includes(q));
+  if(!filtered.length){list.innerHTML='<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessun fornitore'+(q?' trovato':' — aggiungine uno!')+'</div>';return;}
+  const catLabel={audio:'🎙 Audio',luci:'💡 Luci',ledwall:'🖥 LED wall',traduzione:'🎧 Traduzione',video:'📽 Video',strutture:'🏗 Strutture',informatica:'💻 Informatica',altro:'📦 Altro'};
+  list.innerHTML=filtered.map(f=>`
+    <div class="row" style="align-items:flex-start;padding:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px">
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="pvOpenFornitoreForm('${f.id}')">
+        <div style="font-size:14px;font-weight:600">${f.nome||'—'}</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${catLabel[f.cat]||''}${f.referente?' · '+f.referente:''}</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${f.email||''}${f.email&&f.tel?' · ':''}${f.tel||''}</div>
+        ${f.condizioni?'<div style="font-size:11px;color:var(--tx3);margin-top:2px">💳 '+f.condizioni+'</div>':''}
+      </div>
+      <button onclick="pvDeleteFornitore('${f.id}')" style="flex-shrink:0;width:32px;height:32px;border-radius:var(--rs);border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:13px;cursor:pointer">🗑</button>
     </div>`).join('');
 }
 
@@ -6670,18 +7079,22 @@ function stopCam(){
 }
 
 function processPlQR(raw){
-  try{const d=JSON.parse(raw);plAddToList(d.id||raw,d.nome||null);}
-  catch(e){plAddToList(raw,null);}
+  let id=raw,nomeHint=null;
+  try{const d=JSON.parse(raw);id=d.id||raw;nomeHint=d.nome||null;}catch(e){}
+  const m=cacheMag.find(x=>x.id===id);
+  if(m&&m.componibile){apriKitComponibile(m.id);return;}
+  if(m&&m.numerato){apriNumerato(m.id);return;}
+  plAddToList(id,nomeHint);
 }
 function plSuggerisci(){
   const q=(document.getElementById('plManualId')?.value||'').toLowerCase().trim();
   const box=document.getElementById('plSuggest');if(!box)return;
   if(!q||q.length<2){box.style.display='none';return;}
-  const matches=cacheMag.filter(m=>
+  const matches=cacheMag.filter(m=>!m.eliminatoAt&&(
     m.nome.toLowerCase().includes(q)||
     (m.ser||'').toLowerCase().includes(q)||
     (m.marca||'').toLowerCase().includes(q)
-  ).slice(0,8);
+  )).slice(0,8);
   if(!matches.length){box.style.display='none';return;}
   box.innerHTML=matches.map(m=>{
     const sc={ok:'var(--gn)',out:'var(--am)',maint:'var(--rd)'}[m.stato]||'var(--gn)';
@@ -6700,8 +7113,75 @@ function plSeleziona(id){
   const m=cacheMag.find(x=>x.id===id);if(!m)return;
   document.getElementById('plManualId').value=m.nome;
   document.getElementById('plSuggest').style.display='none';
-  plAddToList(id,m.nome);
   document.getElementById('plManualId').value='';
+  if(m.componibile){apriKitComponibile(id);return;}
+  if(m.numerato){apriNumerato(id);return;}
+  plAddToList(id,m.nome);
+}
+
+// ── KIT SCOMPONIBILE (es. G4-500: 4 pezzi totali, mix libero RMM/RMC) ──
+const KIT_COMBO=[
+  {rmm:4,rmc:0},{rmm:3,rmc:1},{rmm:2,rmc:2},{rmm:1,rmc:3},{rmm:0,rmc:4}
+];
+
+function apriKitComponibile(id){
+  const m=cacheMag.find(x=>x.id===id);if(!m)return;
+  $('kitComponibileNome').textContent=m.nome+' — scegli quanti radiomicrofoni a mano (RMM) e a clip (RMC), totale 4';
+  $('kitComponibileOpzioni').innerHTML=KIT_COMBO.map(c=>
+    '<button class="btn btn-f" style="text-align:left;padding:10px 14px" onclick="plAggiungiKitComposizione(\''+id+'\','+c.rmm+','+c.rmc+')">'+
+      (c.rmm>0?c.rmm+'× RMM':'')+(c.rmm>0&&c.rmc>0?' + ':'')+(c.rmc>0?c.rmc+'× RMC':'')+
+    '</button>'
+  ).join('');
+  openMod('mKitComponibile');
+}
+
+function plAggiungiKitComposizione(id,rmm,rmc){
+  const m=cacheMag.find(x=>x.id===id);if(!m)return;
+  closeMod('mKitComponibile');
+  const label=(rmm>0?rmm+'× RMM':'')+(rmm>0&&rmc>0?' + ':'')+(rmc>0?rmc+'× RMC':'');
+  const key=m.id;
+  const exist=plArticoli.find(x=>x.id===key);
+  if(exist){
+    exist.qtyPrep=(exist.qtyPrep||1)+1;
+    exist.note=(exist.note?exist.note+' · ':'')+label;
+    toast('✓ '+m.nome+' (×'+exist.qtyPrep+')');
+  } else {
+    plArticoli.push({...m,qtyPrep:1,note:'Composizione: '+label});
+    toast('✓ '+m.nome+' — '+label);
+  }
+  renderPlItems();
+}
+
+// ── ARTICOLO NUMERATO (es. tavoli, casse — pool con qty ma unità fisiche numerate) ──
+let numeratoTargetId=null;
+
+function apriNumerato(id){
+  numeratoTargetId=id;
+  const m=cacheMag.find(x=>x.id===id);if(!m)return;
+  $('numeratoNome').textContent=m.nome+' — inserisci il/i numero/i preso/i (max '+(m.qty||1)+' disponibili)';
+  $('numeratoInput').value='';
+  openMod('mNumerato');
+  setTimeout(()=>$('numeratoInput')?.focus(),100);
+}
+
+function plAggiungiNumerato(){
+  const id=numeratoTargetId;
+  const m=cacheMag.find(x=>x.id===id);if(!m)return;
+  const raw=val('numeratoInput').trim();
+  if(!raw){toast('Inserisci almeno un numero','r');return;}
+  const numeri=raw.split(',').map(s=>s.trim()).filter(s=>s);
+  closeMod('mNumerato');
+  const key=m.id;
+  const exist=plArticoli.find(x=>x.id===key);
+  if(exist){
+    exist.qtyPrep=(exist.qtyPrep||1)+numeri.length;
+    exist.note=(exist.note?exist.note+', ':'Numeri: ')+numeri.join(', ');
+    toast('✓ '+m.nome+' (×'+exist.qtyPrep+')');
+  } else {
+    plArticoli.push({...m,qtyPrep:numeri.length,note:'Numeri: '+numeri.join(', ')});
+    toast('✓ '+m.nome+' — n. '+numeri.join(', '));
+  }
+  renderPlItems();
 }
 
 // Chiudi suggerimenti cliccando fuori
@@ -6743,7 +7223,9 @@ function renderPlItems(){
   plArticoli.forEach((a,i)=>{
     h+='<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b)">'+
       '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+a.nome+'</div>'+
-      '<div style="font-size:11px;color:var(--tx2)">'+(a.ser||a.id)+'</div></div>'+
+      '<div style="font-size:11px;color:var(--tx2)">'+(a.ser||a.id)+'</div>'+
+      (a.note?'<div style="font-size:11px;color:var(--ac2);font-weight:600">🔀 '+a.note+'</div>':'')+
+      '</div>'+
       '<div style="display:flex;align-items:center;gap:5px;flex-shrink:0">'+
       '<button onclick="plQty('+i+',-1)" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);color:var(--tx);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>'+
       '<span style="font-size:14px;min-width:22px;text-align:center">'+(a.qtyPrep||1)+'</span>'+
@@ -6766,7 +7248,7 @@ async function plGeneraPDF(){
   const now=new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
 
   // Costruisci lista articoli — uno per tipo con quantità
-  const articoliFlat=plArticoli.map(a=>({nome:a.nome,qty:a.qtyPrep||1}));
+  const articoliFlat=plArticoli.map(a=>({nome:a.nome+(a.note?' — '+a.note:''),qty:a.qtyPrep||1}));
   // Dividi in due colonne
   const metà=Math.ceil(articoliFlat.length/2);
   const colSx=articoliFlat.slice(0,metà);
@@ -6917,7 +7399,7 @@ async function plGeneraPDF(){
     nome,location:loc||'',data:dataRaw,dataFine:dataFineRaw||'',
     tecnico,note:val('plNote'),
     daFinire:val('plDaFinire')==='true'||((val('plNote')||'').trim().length>0),
-    articoli:plArticoli.map(a=>({id:a.id||'',nome:a.nome,cat:a.cat||'',marca:a.marca||'',ser:a.ser||'',qty:a.qtyPrep||1})),
+    articoli:plArticoli.map(a=>({id:a.id||'',nome:a.nome,cat:a.cat||'',marca:a.marca||'',ser:a.ser||'',qty:a.qtyPrep||1,note:a.note||''})),
     htmlPrep:html, // salva HTML per riapertura dall'archivio
     modificatoDa:USER.nome+' '+USER.cognome,
     modificatoIl:new Date().toISOString(),
@@ -8434,9 +8916,9 @@ function toggleNota(id){
 function dichModifica(id){
   // Apre il form prepara lavoro precompilato con i dati esistenti
   const d=cacheDich.find(x=>x.id===id);if(!d)return;
-  plEditingId=id;
   apriPreparaLavoro();
   setTimeout(()=>{
+    plEditingId=id; // impostato DOPO apriPreparaLavoro(), che altrimenti lo resetta a null
     plRenderExisting(cacheDich);
     const nm=$('plNome');if(nm)nm.value=d.nome||'';
     const da=$('plData');if(da)da.value=d.data||'';
@@ -10174,6 +10656,53 @@ function apriGestioneUtenti(){
   caricaUtentiPendenti();
 }
 
+async function eseguiBackupManuale(){
+  const key=prompt('Codice BACKUP_SECRET (configurato su Vercel):');
+  if(!key)return;
+  const msg=$('backupMsg');if(msg)msg.textContent='⏳ Backup in corso...';
+  try{
+    const resp=await fetch('/api/backup?key='+encodeURIComponent(key));
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error);
+    const tot=Object.values(data.conteggi||{}).reduce((s,n)=>s+n,0);
+    if(msg)msg.textContent='✓ Backup completato — '+tot+' documenti salvati in '+data.file;
+    toast('✓ Backup completato');
+  }catch(e){
+    if(msg)msg.textContent='❌ Errore: '+e.message;
+    toast('Errore: '+e.message,'r');
+  }
+}
+
+// Stesso elenco di collezioni di api/backup.js — tenerlo allineato se si aggiungono moduli
+const BACKUP_COLLECTIONS=['magazzino','lavori','lavori_cal','ces_nuovi','ces_venduti','ces_install',
+  'preventivi','clienti','fornitori','listino','pacchetti','team','presenze','ferie_permessi',
+  'straordinari','agenda','locations'];
+
+async function scaricaBackupLocale(){
+  const msg=$('backupMsg');if(msg)msg.textContent='⏳ Preparazione backup locale...';
+  try{
+    const dump={};
+    for(const col of BACKUP_COLLECTIONS){
+      const snap=await DB.collection(col).get();
+      dump[col]=snap.docs.map(d=>({id:d.id,...d.data()}));
+    }
+    const payload={generatoIl:new Date().toISOString(),collezioni:dump};
+    const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const stamp=new Date().toISOString().slice(0,16).replace('T','_').replace(':','-');
+    a.href=url;a.download='backup-mmg-'+stamp+'.json';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    const tot=Object.values(dump).reduce((s,arr)=>s+arr.length,0);
+    if(msg)msg.textContent='✓ Backup locale scaricato — '+tot+' documenti';
+    toast('✓ Backup scaricato');
+  }catch(e){
+    if(msg)msg.textContent='❌ Errore: '+e.message;
+    toast('Errore: '+e.message,'r');
+  }
+}
+
 async function caricaUtentiPendenti(){
   const el=$('pendingList');if(!el)return;
   el.innerHTML='<div class="empty">Caricamento...</div>';
@@ -10626,6 +11155,9 @@ function apriModificaArticolo(id){
   const sm=$('aSogliaMin');if(sm)sm.value=(m.sogliaMin!==undefined&&m.sogliaMin!==null)?m.sogliaMin:'';
   const mi=$('aManutIntervallo');if(mi)mi.value=m.manutIntervallo||'';
   const mu=$('aManutUltima');if(mu)mu.value=m.manutUltima||'';
+  const tg=$('aTagGruppo');if(tg)tg.value=m.tagGruppo||'';
+  const cb=$('aComponibile');if(cb)cb.checked=!!m.componibile;
+  const nc=$('aNumerato');if(nc)nc.checked=!!m.numerato;
   const cat=$('aCat');if(cat)cat.value=m.cat||'audio';
   const st=$('aStato');if(st)st.value=m.stato||'ok';
   const t=$('mNewArtTitolo');if(t)t.textContent='✏️ Modifica articolo';
