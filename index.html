@@ -61,7 +61,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 }
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .page{display:none;padding:16px 16px calc(80px + var(--sb))}
-.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.28r';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
+.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.28s';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
 .page.on{display:block}
 #nav{display:flex;background:var(--bg1);border-top:1px solid var(--b);padding-bottom:var(--sb);flex-shrink:0}
 .ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 6px;cursor:pointer;gap:2px;min-width:0}
@@ -302,7 +302,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div id="deskNav"></div>
     </div>
     <div style="padding:10px 16px;border-top:1px solid var(--b);font-size:9px;color:var(--tx3);text-align:center">
-      © Martins Osemwengie · MMG Logistics · v2026.07.28r
+      © Martins Osemwengie · MMG Logistics · v2026.07.28s
     </div>
   </div>
   <div id="topbar">
@@ -866,6 +866,26 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       </div>
     </div>
 
+    <!-- SCADENZARIO -->
+    <div class="page" id="p-scadenzario">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+        <div class="sc"><div class="sn" id="scNumScadute" style="color:var(--rd)">0</div><div class="sl">🔴 Scadute</div></div>
+        <div class="sc"><div class="sn" id="scNumEntro30" style="color:var(--am)">0</div><div class="sl">🟡 Entro 30gg</div></div>
+        <div class="sc"><div class="sn" id="scNumAttive">0</div><div class="sl">Totali attive</div></div>
+      </div>
+      <button class="btn btn-p btn-f" style="margin-bottom:12px" onclick="apriNuovaScadenza()">+ Nuova scadenza</button>
+      <button class="btn btn-f" style="margin-bottom:12px" onclick="scTestaNotifiche()">🔔 Testa notifiche scadenze</button>
+      <div id="scTestMsg" style="font-size:11px;color:var(--tx3);margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto">
+        <button class="chip on" id="scfTutti" onclick="scFiltra('tutti',this)">Tutti</button>
+        <button class="chip" id="scfCorso" onclick="scFiltra('Corso obbligatorio',this)">🎓 Corsi</button>
+        <button class="chip" id="scfManut" onclick="scFiltra('Manutenzione sicurezza',this)">🔧 Manutenzione</button>
+        <button class="chip" id="scfVisita" onclick="scFiltra('Visita medica',this)">🩺 Visite mediche</button>
+        <button class="chip" id="scfAltro" onclick="scFiltra('Altro',this)">📌 Altro</button>
+      </div>
+      <div id="scadenzarioList"><div class="empty">Caricamento...</div></div>
+    </div>
+
     <!-- DETTAGLIO PERSONALE -->
     <div class="page" id="p-personale-dett">
       <button class="btn btn-f" style="margin-bottom:12px;width:auto;padding:8px 14px;font-size:12px" onclick="goPage('personale')">← Torna alla lista</button>
@@ -1282,6 +1302,10 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <button class="sidebar-btn" onclick="chiudiSidebar();goPage('personale')" style="color:var(--ac2)">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Personale — Ferie/Permessi
+    </button>
+    <button class="sidebar-btn" onclick="chiudiSidebar();goPage('scadenzario')" style="color:var(--ac2)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M12 14v4M10 16h4"/></svg>
+      Scadenzario
     </button>
     </div>
   </div>
@@ -2493,6 +2517,47 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
   </div>
 </div>
 
+<!-- NUOVA/MODIFICA SCADENZA -->
+<div class="mol" id="mScadenza" onclick="if(event.target===this)closeMod('mScadenza')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:14px" id="scModalTitolo">📅 Nuova scadenza</div>
+    <input type="hidden" id="scId">
+    <div class="ig"><label class="il">Tipo</label>
+      <select id="scTipo"><option value="Corso obbligatorio">🎓 Corso obbligatorio</option><option value="Manutenzione sicurezza">🔧 Manutenzione sicurezza</option><option value="Visita medica">🩺 Visita medica</option><option value="Altro">📌 Altro</option></select>
+    </div>
+    <div class="ig"><label class="il">Titolo</label><input type="text" id="scTitolo" placeholder="Es: Corso antincendio — Mario Rossi"></div>
+    <div class="ig"><label class="il">Collegato a (opzionale)</label>
+      <select id="scCollegatoTipo" onchange="scCollegatoTipoChange()">
+        <option value="">— Nessuno —</option>
+        <option value="dipendente">👤 Dipendente</option>
+        <option value="articolo">📦 Articolo Magazzino</option>
+      </select>
+    </div>
+    <div class="ig" id="scCollegatoDipendenteWrap" style="display:none"><label class="il">Dipendente</label><select id="scCollegatoDipendente"></select></div>
+    <div class="ig" id="scCollegatoArticoloWrap" style="display:none"><label class="il">Articolo</label>
+      <input type="text" id="scCollegatoArticoloSearch" placeholder="🔍 Cerca articolo..." oninput="scSuggerisciArticolo()">
+      <div id="scCollegatoArticoloSuggest" style="display:none;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);max-height:160px;overflow-y:auto;margin-top:4px"></div>
+      <input type="hidden" id="scCollegatoArticoloId">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">Data scadenza</label><input type="date" id="scData"></div>
+      <div class="ig"><label class="il">Avvisa con anticipo (giorni)</label><input type="number" id="scPromemoria" value="30" min="1"></div>
+    </div>
+    <div class="ig"><label class="il">Ricorrenza</label>
+      <select id="scRicorrenza"><option value="">— Nessuna (scadenza singola) —</option><option value="6">Ogni 6 mesi</option><option value="12">Ogni 12 mesi</option><option value="24">Ogni 24 mesi</option><option value="36">Ogni 36 mesi</option></select>
+    </div>
+    <div class="ig"><label class="il">Note</label><textarea id="scNote" placeholder="Note..." style="min-height:50px"></textarea></div>
+    <div id="scEliminaWrap" style="display:none;margin-bottom:10px">
+      <button class="btn" style="width:100%;font-size:12px;border-color:var(--rd);color:var(--rd)" onclick="scEliminaScadenza()">🗑️ Elimina scadenza</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-f" onclick="closeMod('mScadenza')">Annulla</button>
+      <button class="btn btn-p btn-f" onclick="scSalvaScadenza()">Salva</button>
+    </div>
+  </div>
+</div>
+
 <!-- PV: NUOVA/MODIFICA VOCE LISTINO -->
 <div class="mol" id="mPvListino" onclick="if(event.target===this)closeMod('mPvListino')">
   <div class="msh">
@@ -2888,7 +2953,7 @@ function closeMod(id){
   document.body.style.overflow='';
 }
 function goPage(n){
-  if((n==='preventivi'||n==='ai-preventivi'||n==='personale'||n==='personale-dett')&&!pvCanAccess()){
+  if((n==='preventivi'||n==='ai-preventivi'||n==='personale'||n==='personale-dett'||n==='scadenzario')&&!pvCanAccess()){
     toast('Accesso riservato a Responsabili e Project Manager','r');
     return;
   }
@@ -2903,6 +2968,7 @@ function goPage(n){
   if(n==='dashboard'){renderDashboard();}
   if(n==='preventivi'){initPreventiviPage();}
   if(n==='personale'){initPersonalePage();}
+  if(n==='scadenzario'){initScadenzarioPage();}
   if(n==='fantacalcio'){initFantacalcioPage();}
   // Aggiorna sidebar desktop
   if(document.body.classList.contains('desktop-mode')) setTimeout(renderDeskNav,50);
@@ -3166,6 +3232,7 @@ function renderDeskNav(){
     pages.push({id:'preventivi',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>',label:'Preventivi'});
     pages.push({id:'ai-preventivi',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',label:'AI Preventivi',special:true});
     pages.push({id:'personale',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',label:'Personale'});
+    pages.push({id:'scadenzario',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',label:'Scadenzario'});
   }
 
   // Sezione principale
@@ -9592,6 +9659,225 @@ const ORE_SETTIMANALI_DEFAULT=40;
 let cacheFeriePermessi=[],cacheStraordinari=[];
 let perDettUid=null,perAnnoCorrente=new Date().getFullYear();
 let _perListenersStarted=false;
+
+// ══════════════════════════════════════════════════════════════
+// SCADENZARIO — promemoria scadenze aziendali (corsi, manutenzioni, visite mediche)
+// ══════════════════════════════════════════════════════════════
+let cacheScadenzario=[];
+let _scListenerStarted=false;
+let scFiltroTipo='tutti';
+
+function initScadenzarioPage(){
+  if(!_scListenerStarted){
+    _scListenerStarted=true;
+    DB.collection('scadenzario').orderBy('dataScadenza').onSnapshot(snap=>{
+      cacheScadenzario=snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderScadenzario();
+    },e=>console.error('scadenzario listener:',e));
+  } else {
+    renderScadenzario();
+  }
+}
+
+function scFiltra(tipo,btn){
+  scFiltroTipo=tipo;
+  document.querySelectorAll('#p-scadenzario .chip').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  renderScadenzario();
+}
+
+function scGiorniA(dataISO){
+  const d=new Date(dataISO+'T00:00:00');
+  const oggi=new Date();oggi.setHours(0,0,0,0);
+  return Math.ceil((d-oggi)/(1000*60*60*24));
+}
+
+function renderScadenzario(){
+  const attive=cacheScadenzario.filter(s=>s.stato!=='completato'&&s.stato!=='annullato');
+  const scadute=attive.filter(s=>scGiorniA(s.dataScadenza)<0);
+  const entro30=attive.filter(s=>{const g=scGiorniA(s.dataScadenza);return g>=0&&g<=30;});
+  $('scNumScadute').textContent=scadute.length;
+  $('scNumEntro30').textContent=entro30.length;
+  $('scNumAttive').textContent=attive.length;
+
+  const lista=(scFiltroTipo==='tutti'?attive:attive.filter(s=>s.tipo===scFiltroTipo))
+    .sort((a,b)=>a.dataScadenza.localeCompare(b.dataScadenza));
+
+  const el=$('scadenzarioList');if(!el)return;
+  if(!lista.length){el.innerHTML='<div class="empty">Nessuna scadenza attiva'+(scFiltroTipo!=='tutti'?' in questa categoria':'')+' 🎉</div>';return;}
+
+  const tipoIcon={'Corso obbligatorio':'🎓','Manutenzione sicurezza':'🔧','Visita medica':'🩺','Altro':'📌'};
+  el.innerHTML=lista.map(s=>{
+    const g=scGiorniA(s.dataScadenza);
+    const scaduta=g<0,vicina=g>=0&&g<=(s.promemoriaGiorni||30);
+    const colore=scaduta?'var(--rd)':vicina?'var(--am)':'var(--gn)';
+    const collegatoLabel=s.collegatoNome?' · '+(s.collegatoTipo==='dipendente'?'👤 ':'📦 ')+s.collegatoNome:'';
+    return '<div class="card" style="margin-bottom:10px;border-left:3px solid '+colore+'" onclick="apriModificaScadenza(\''+s.id+'\')">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:600">'+(tipoIcon[s.tipo]||'📌')+' '+s.titolo+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2);margin-top:2px">'+new Date(s.dataScadenza+'T12:00:00').toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'})+collegatoLabel+(s.ricorrenzaMesi?' · 🔁 ogni '+s.ricorrenzaMesi+' mesi':'')+'</div>'+
+        '</div>'+
+        '<div style="font-size:12px;font-weight:700;color:'+colore+';white-space:nowrap">'+(scaduta?'Scaduta da '+Math.abs(g)+'gg':g+'gg')+'</div>'+
+      '</div>'+
+      (s.note?'<div style="font-size:11px;color:var(--tx3);margin-top:6px">'+s.note+'</div>':'')+
+      '<button onclick="event.stopPropagation();scCompletaScadenza(\''+s.id+'\')" class="btn btn-p" style="width:100%;font-size:12px;padding:7px;margin-top:8px">✓ Completata'+(s.ricorrenzaMesi?' (genera prossima)':'')+'</button>'+
+    '</div>';
+  }).join('');
+}
+
+function scCollegatoTipoChange(){
+  const tipo=val('scCollegatoTipo');
+  $('scCollegatoDipendenteWrap').style.display=tipo==='dipendente'?'block':'none';
+  $('scCollegatoArticoloWrap').style.display=tipo==='articolo'?'block':'none';
+  if(tipo==='dipendente'){
+    const sel=$('scCollegatoDipendente');
+    sel.innerHTML=cacheTeam.filter(t=>t.approvato).map(t=>'<option value="'+t.id+'">'+t.nome+' '+t.cognome+'</option>').join('');
+  }
+}
+
+function scSuggerisciArticolo(){
+  const q=val('scCollegatoArticoloSearch').toLowerCase().trim();
+  const box=$('scCollegatoArticoloSuggest');
+  if(!q||q.length<2){box.style.display='none';return;}
+  const matches=cacheMag.filter(m=>!m.eliminatoAt&&m.nome.toLowerCase().includes(q)).slice(0,8);
+  if(!matches.length){box.style.display='none';return;}
+  box.innerHTML=matches.map(m=>
+    '<div onclick="scSelezionaArticolo(\''+m.id+'\',\''+encodeURIComponent(m.nome)+'\')" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--b);font-size:13px">'+m.nome+'</div>'
+  ).join('');
+  box.style.display='block';
+}
+
+function scSelezionaArticolo(id,nomeEnc){
+  $('scCollegatoArticoloId').value=id;
+  $('scCollegatoArticoloSearch').value=decodeURIComponent(nomeEnc);
+  $('scCollegatoArticoloSuggest').style.display='none';
+}
+
+function apriNuovaScadenza(){
+  $('scId').value='';
+  $('scModalTitolo').textContent='📅 Nuova scadenza';
+  $('scTipo').value='Corso obbligatorio';
+  $('scTitolo').value='';
+  $('scCollegatoTipo').value='';
+  $('scCollegatoDipendenteWrap').style.display='none';
+  $('scCollegatoArticoloWrap').style.display='none';
+  $('scCollegatoArticoloId').value='';
+  $('scCollegatoArticoloSearch').value='';
+  $('scData').value='';
+  $('scPromemoria').value='30';
+  $('scRicorrenza').value='';
+  $('scNote').value='';
+  $('scEliminaWrap').style.display='none';
+  openMod('mScadenza');
+}
+
+function apriModificaScadenza(id){
+  const s=cacheScadenzario.find(x=>x.id===id);if(!s)return;
+  $('scId').value=s.id;
+  $('scModalTitolo').textContent='✏️ Modifica scadenza';
+  $('scTipo').value=s.tipo||'Altro';
+  $('scTitolo').value=s.titolo||'';
+  $('scCollegatoTipo').value=s.collegatoTipo||'';
+  scCollegatoTipoChange();
+  if(s.collegatoTipo==='dipendente')$('scCollegatoDipendente').value=s.collegatoId||'';
+  if(s.collegatoTipo==='articolo'){$('scCollegatoArticoloId').value=s.collegatoId||'';$('scCollegatoArticoloSearch').value=s.collegatoNome||'';}
+  $('scData').value=s.dataScadenza||'';
+  $('scPromemoria').value=s.promemoriaGiorni||30;
+  $('scRicorrenza').value=s.ricorrenzaMesi||'';
+  $('scNote').value=s.note||'';
+  $('scEliminaWrap').style.display='block';
+  openMod('mScadenza');
+}
+
+async function scSalvaScadenza(){
+  const titolo=val('scTitolo');
+  const data=val('scData');
+  if(!titolo||!data){toast('Inserisci almeno titolo e data','r');return;}
+  const collegatoTipo=val('scCollegatoTipo');
+  let collegatoId='',collegatoNome='';
+  if(collegatoTipo==='dipendente'){
+    collegatoId=val('scCollegatoDipendente');
+    const t=cacheTeam.find(x=>x.id===collegatoId);
+    collegatoNome=t?t.nome+' '+t.cognome:'';
+  } else if(collegatoTipo==='articolo'){
+    collegatoId=val('scCollegatoArticoloId');
+    collegatoNome=val('scCollegatoArticoloSearch');
+  }
+  const now=new Date().toISOString();
+  const chi=USER?USER.nome+' '+USER.cognome:'—';
+  const dati={
+    tipo:val('scTipo'),titolo,
+    collegatoTipo:collegatoTipo||'',collegatoId,collegatoNome,
+    dataScadenza:data,
+    promemoriaGiorni:parseInt(val('scPromemoria'))||30,
+    ricorrenzaMesi:val('scRicorrenza')?parseInt(val('scRicorrenza')):null,
+    note:val('scNote'),
+    stato:'attivo',
+    modificatoDa:chi,modificatoIl:now
+  };
+  try{
+    const id=val('scId');
+    if(id){
+      await DB.collection('scadenzario').doc(id).update(dati);
+      toast('✓ Scadenza aggiornata');
+    } else {
+      dati.createdBy=chi;dati.createdAt=now;
+      await DB.collection('scadenzario').add(dati);
+      toast('✓ Scadenza creata');
+    }
+    closeMod('mScadenza');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function scCompletaScadenza(id){
+  const s=cacheScadenzario.find(x=>x.id===id);if(!s)return;
+  if(!confirm('Segnare "'+s.titolo+'" come completata?'))return;
+  try{
+    await DB.collection('scadenzario').doc(id).update({stato:'completato',completataIl:new Date().toISOString()});
+    if(s.ricorrenzaMesi){
+      const prossima=new Date(s.dataScadenza+'T00:00:00');
+      prossima.setMonth(prossima.getMonth()+s.ricorrenzaMesi);
+      const {id:_old,...resto}=s;
+      await DB.collection('scadenzario').add({
+        ...resto,
+        dataScadenza:toLocalISO(prossima),
+        stato:'attivo',
+        createdAt:new Date().toISOString(),
+        createdBy:USER?USER.nome+' '+USER.cognome:'—'
+      });
+      toast('✓ Completata — prossima scadenza generata per '+prossima.toLocaleDateString('it-IT'));
+    } else {
+      toast('✓ Scadenza completata');
+    }
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function scEliminaScadenza(){
+  const id=val('scId');if(!id)return;
+  if(!confirm('Eliminare definitivamente questa scadenza?'))return;
+  try{
+    await DB.collection('scadenzario').doc(id).delete();
+    toast('✓ Scadenza eliminata');
+    closeMod('mScadenza');
+  }catch(e){toast('Errore: '+e.message,'r');}
+}
+
+async function scTestaNotifiche(){
+  const key=prompt('Codice SCADENZARIO_SECRET (configurato su Vercel):');
+  if(!key)return;
+  const msg=$('scTestMsg');if(msg)msg.textContent='⏳ Controllo in corso...';
+  try{
+    const resp=await fetch('/api/scadenzario-check?key='+encodeURIComponent(key));
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error);
+    if(msg)msg.textContent='✓ '+(data.scadenzeSegnalate||0)+' scadenze segnalate a '+(data.destinatari||0)+' destinatari ('+(data.notificheInviate||0)+' notifiche inviate)';
+    toast('✓ Controllo completato');
+  }catch(e){
+    if(msg)msg.textContent='❌ Errore: '+e.message;
+    toast('Errore: '+e.message,'r');
+  }
+}
 
 function initPersonalePage(){
   // Popola selettore anno (anno corrente ± 1)
