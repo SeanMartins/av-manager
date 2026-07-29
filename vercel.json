@@ -8,12 +8,26 @@
     },
     "api/ff-players.js": {
       "maxDuration": 30
+    },
+    "api/backup.js": {
+      "maxDuration": 60
+    },
+    "api/scadenzario-check.js": {
+      "maxDuration": 30
     }
   },
   "crons": [
     {
       "path": "/api/ff-sync",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/backup",
+      "schedule": "0 3 * * 0"
+    },
+    {
+      "path": "/api/scadenzario-check",
+      "schedule": "0 7 * * *"
     }
   ]
 }
