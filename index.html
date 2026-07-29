@@ -61,7 +61,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 }
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .page{display:none;padding:16px 16px calc(80px + var(--sb))}
-.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.28p';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
+.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.28q';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
 .page.on{display:block}
 #nav{display:flex;background:var(--bg1);border-top:1px solid var(--b);padding-bottom:var(--sb);flex-shrink:0}
 .ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 6px;cursor:pointer;gap:2px;min-width:0}
@@ -300,7 +300,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div id="deskNav"></div>
     </div>
     <div style="padding:10px 16px;border-top:1px solid var(--b);font-size:9px;color:var(--tx3);text-align:center">
-      © Martins Osemwengie · MMG Logistics · v2026.07.28p
+      © Martins Osemwengie · MMG Logistics · v2026.07.28q
     </div>
   </div>
   <div id="topbar">
@@ -2278,6 +2278,9 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);margin:10px 0"><input type="checkbox" id="aComponibile" style="width:auto"> 🔀 Kit scomponibile (chiede la composizione RMM/RMC alla selezione)</label>
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);margin:10px 0"><input type="checkbox" id="aNumerato" style="width:auto"> 🔢 Pezzi numerati singolarmente (chiede quale/i numero/i alla selezione — es. tavoli, casse)</label>
+    <div id="aEliminaWrap" style="display:none;margin-bottom:10px">
+      <button class="btn" style="width:100%;font-size:12px;border-color:var(--rd);color:var(--rd)" onclick="magEliminaArticolo()">🗑️ Elimina articolo</button>
+    </div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-f" onclick="closeMod('mNewArt')">Annulla</button>
       <button class="btn btn-p btn-f" onclick="saveArt()">Salva</button>
@@ -5348,6 +5351,7 @@ function apriNuovoArticolo(){
   const cb=$('aComponibile');if(cb)cb.checked=false;
   const nc=$('aNumerato');if(nc)nc.checked=false;
   const t=$('mNewArtTitolo');if(t)t.textContent='📦 Nuovo articolo';
+  const ew=$('aEliminaWrap');if(ew)ew.style.display='none';
   openMod('mNewArt');
 }
 
@@ -11473,7 +11477,23 @@ function apriModificaArticolo(id){
   const st=$('aStato');if(st)st.value=m.stato||'ok';
   const t=$('mNewArtTitolo');if(t)t.textContent='✏️ Modifica articolo';
   window._editingArtId=id;
+  const ew=$('aEliminaWrap');if(ew)ew.style.display='block';
   openMod('mNewArt');
+}
+
+async function magEliminaArticolo(){
+  const id=window._editingArtId;if(!id)return;
+  const m=cacheMag.find(x=>x.id===id);if(!m)return;
+  if(!confirm('Spostare "'+m.nome+'" nel cestino? Verrà eliminato definitivamente dopo '+CESTINO_GIORNI+' giorni, ma puoi ripristinarlo prima dal Cestino Magazzino.'))return;
+  try{
+    await DB.collection('magazzino').doc(id).update({
+      eliminatoAt:new Date().toISOString(),
+      eliminatoDa:USER?(USER.nome+' '+USER.cognome):''
+    });
+    closeMod('mNewArt');
+    toast('🗑️ "'+m.nome+'" spostato nel cestino');
+    window._editingArtId=null;
+  }catch(e){toast('Errore: '+e.message,'r');}
 }
 
 let planningPdfFiles=[];
