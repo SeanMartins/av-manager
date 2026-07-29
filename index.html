@@ -61,7 +61,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 }
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .page{display:none;padding:16px 16px calc(80px + var(--sb))}
-.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.28o';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
+.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.28p';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
 .page.on{display:block}
 #nav{display:flex;background:var(--bg1);border-top:1px solid var(--b);padding-bottom:var(--sb);flex-shrink:0}
 .ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 6px;cursor:pointer;gap:2px;min-width:0}
@@ -300,7 +300,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div id="deskNav"></div>
     </div>
     <div style="padding:10px 16px;border-top:1px solid var(--b);font-size:9px;color:var(--tx3);text-align:center">
-      © Martins Osemwengie · MMG Logistics · v2026.07.28o
+      © Martins Osemwengie · MMG Logistics · v2026.07.28p
     </div>
   </div>
   <div id="topbar">
@@ -5245,13 +5245,42 @@ function mostraCestinoMagazzino(){
   if(!cestino.length){el.innerHTML='<div class="empty">Cestino vuoto</div>';}
   else{
     const fmtDataL=iso=>{if(!iso)return'—';return new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});};
-    el.innerHTML=cestino.map(m=>{
+
+    // Raggruppa per unione (fusoInId) — chi non ha fusoInId (eliminato singolarmente) resta a sé
+    const gruppi={};
+    const singoli=[];
+    cestino.forEach(m=>{
+      if(m.fusoInId){(gruppi[m.fusoInId]=gruppi[m.fusoInId]||[]).push(m);}
+      else singoli.push(m);
+    });
+
+    let h='';
+    Object.entries(gruppi).forEach(([fusoInId,items])=>{
+      const nomeUnito=items[0].fusoInNome||'—';
+      const idsEnc=encodeURIComponent(items.map(x=>x.id).join(','));
+      h+='<div class="card" style="margin-bottom:10px;border-left:3px solid var(--am);background:var(--amb)">'+
+        '<div style="font-size:13px;font-weight:700">🔗 Unione: "'+nomeUnito+'"</div>'+
+        '<div style="font-size:11px;color:var(--tx2);margin-top:2px">'+items.length+' articoli originali · scadenza tra '+Math.max(0,Math.ceil((new Date(items[0].eliminatoAt).getTime()+CESTINO_GIORNI*86400000-Date.now())/86400000))+' giorni</div>'+
+        '<button onclick="annullaUnioneCompleta(\''+fusoInId+'\',\''+idsEnc+'\',\''+encodeURIComponent(nomeUnito)+'\')" class="btn btn-p" style="width:100%;font-size:12px;padding:9px;margin-top:8px">↩️ Annulla intera unione ('+items.length+' articoli)</button>'+
+        '<details style="margin-top:8px"><summary style="font-size:11px;color:var(--tx3);cursor:pointer">Vedi i singoli articoli</summary>'+
+        items.map(m=>{
+          const nomeEnc=encodeURIComponent(m.nome||'');
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--b);font-size:12px">'+
+            '<span>'+m.nome+'</span>'+
+            '<button onclick="magArtRipristina(\''+m.id+'\',\''+nomeEnc+'\')" style="background:none;border:1px solid var(--ac);color:var(--ac2);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer">↩️</button>'+
+          '</div>';
+        }).join('')+
+        '</details>'+
+      '</div>';
+    });
+
+    h+=singoli.map(m=>{
       const scadenza=new Date(m.eliminatoAt);scadenza.setDate(scadenza.getDate()+CESTINO_GIORNI);
       const giorniRimasti=Math.max(0,Math.ceil((scadenza-new Date())/(1000*60*60*24)));
       const nomeEnc=encodeURIComponent(m.nome||'');
       return '<div class="card" style="margin-bottom:10px;border-left:3px solid var(--rd);opacity:.85">'+
         '<div style="font-size:14px;font-weight:700">🗑️ '+(m.nome||'—')+'</div>'+
-        '<div style="font-size:11px;color:var(--tx2);margin-top:2px">Eliminato il '+fmtDataL(m.eliminatoAt)+(m.eliminatoDa?' da '+m.eliminatoDa:'')+(m.fusoInNome?' — unito in "'+m.fusoInNome+'"':'')+'</div>'+
+        '<div style="font-size:11px;color:var(--tx2);margin-top:2px">Eliminato il '+fmtDataL(m.eliminatoAt)+(m.eliminatoDa?' da '+m.eliminatoDa:'')+'</div>'+
         '<div style="font-size:11px;color:var(--rd);margin-top:2px;font-weight:600">⏳ Cancellazione definitiva tra '+giorniRimasti+' giorni</div>'+
         '<div style="display:flex;gap:8px;margin-top:8px">'+
           '<button onclick="magArtRipristina(\''+m.id+'\',\''+nomeEnc+'\')" class="btn btn-p" style="flex:1;font-size:12px;padding:9px">↩️ Ripristina</button>'+
@@ -5259,8 +5288,31 @@ function mostraCestinoMagazzino(){
         '</div>'+
       '</div>';
     }).join('');
+
+    el.innerHTML=h;
   }
   openMod('mCestinoMagazzino');
+}
+
+async function annullaUnioneCompleta(fusoInId,idsEnc,nomeUnitoEnc){
+  const ids=decodeURIComponent(idsEnc).split(',').filter(Boolean);
+  const nomeUnito=decodeURIComponent(nomeUnitoEnc);
+  if(!confirm('Ripristinare tutti i '+ids.length+' articoli originali e rimuovere "'+nomeUnito+'"? L\'unione verrà completamente annullata.'))return;
+  try{
+    const batch=DB.batch();
+    ids.forEach(id=>{
+      batch.update(DB.collection('magazzino').doc(id),{
+        eliminatoAt:firebase.firestore.FieldValue.delete(),
+        eliminatoDa:firebase.firestore.FieldValue.delete(),
+        fusoInId:firebase.firestore.FieldValue.delete(),
+        fusoInNome:firebase.firestore.FieldValue.delete()
+      });
+    });
+    batch.delete(DB.collection('magazzino').doc(fusoInId));
+    await batch.commit();
+    toast('✓ Unione annullata — '+ids.length+' articoli ripristinati');
+    mostraCestinoMagazzino();
+  }catch(e){toast('Errore: '+e.message,'r');}
 }
 
 async function magArtRipristina(id,nomeEnc){
