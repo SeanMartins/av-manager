@@ -61,7 +61,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 }
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .page{display:none;padding:16px 16px calc(80px + var(--sb))}
-.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.28s';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
+.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.28t';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
 .page.on{display:block}
 #nav{display:flex;background:var(--bg1);border-top:1px solid var(--b);padding-bottom:var(--sb);flex-shrink:0}
 .ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 6px;cursor:pointer;gap:2px;min-width:0}
@@ -302,7 +302,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div id="deskNav"></div>
     </div>
     <div style="padding:10px 16px;border-top:1px solid var(--b);font-size:9px;color:var(--tx3);text-align:center">
-      © Martins Osemwengie · MMG Logistics · v2026.07.28s
+      © Martins Osemwengie · MMG Logistics · v2026.07.28t
     </div>
   </div>
   <div id="topbar">
@@ -721,6 +721,13 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
             <button class="btn btn-f" style="padding:4px 10px;font-size:11px" onclick="goPage('magazzino')">Vai →</button>
           </div>
           <div id="dashMag" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
+        </div>
+        <div class="card" id="dashScadenzarioCard" style="display:none">
+          <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+            <span>📅 Prossime scadenze</span>
+            <button class="btn btn-f" style="padding:4px 10px;font-size:11px" onclick="goPage('scadenzario')">Vai →</button>
+          </div>
+          <div id="dashScadenzario" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
         </div>
       </div>
     </div>
@@ -2546,6 +2553,9 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
     <div class="ig"><label class="il">Ricorrenza</label>
       <select id="scRicorrenza"><option value="">— Nessuna (scadenza singola) —</option><option value="6">Ogni 6 mesi</option><option value="12">Ogni 12 mesi</option><option value="24">Ogni 24 mesi</option><option value="36">Ogni 36 mesi</option></select>
+    </div>
+    <div class="ig"><label class="il">Responsabile assegnato (opzionale)</label>
+      <select id="scResponsabile"><option value="">— Nessuno —</option></select>
     </div>
     <div class="ig"><label class="il">Note</label><textarea id="scNote" placeholder="Note..." style="min-height:50px"></textarea></div>
     <div id="scEliminaWrap" style="display:none;margin-bottom:10px">
@@ -4685,6 +4695,7 @@ function startMagListener(){
   DB.collection('magazzino').orderBy('nome').onSnapshot(snap=>{
     cacheMag=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderMag();
+    if(typeof renderScadenzario==='function')renderScadenzario();
   });
 }
 
@@ -9692,15 +9703,36 @@ function scGiorniA(dataISO){
   return Math.ceil((d-oggi)/(1000*60*60*24));
 }
 
-function renderScadenzario(){
-  const attive=cacheScadenzario.filter(s=>s.stato!=='completato'&&s.stato!=='annullato');
-  const scadute=attive.filter(s=>scGiorniA(s.dataScadenza)<0);
-  const entro30=attive.filter(s=>{const g=scGiorniA(s.dataScadenza);return g>=0&&g<=30;});
-  $('scNumScadute').textContent=scadute.length;
-  $('scNumEntro30').textContent=entro30.length;
-  $('scNumAttive').textContent=attive.length;
+function scListaCombinata(){
+  const reali=cacheScadenzario.filter(s=>s.stato!=='completato'&&s.stato!=='annullato').map(s=>({...s,virtuale:false}));
+  const virtuali=cacheMag.filter(m=>!m.eliminatoAt&&giorniAllaManutenzione(m)!==null).map(m=>{
+    const g=giorniAllaManutenzione(m);
+    const scadenza=new Date();scadenza.setDate(scadenza.getDate()+g);
+    return {
+      id:m.id,virtuale:true,
+      tipo:'Manutenzione sicurezza',
+      titolo:'🔧 Verifica: '+m.nome,
+      dataScadenza:toLocalISO(scadenza),
+      promemoriaGiorni:14,
+      collegatoTipo:'articolo',collegatoNome:m.nome,
+      responsabileNome:'',
+      note:'Manutenzione articolo Magazzino — impostata dalla scheda articolo'
+    };
+  });
+  return [...reali,...virtuali];
+}
 
-  const lista=(scFiltroTipo==='tutti'?attive:attive.filter(s=>s.tipo===scFiltroTipo))
+function renderScadenzario(){
+  const combinata=scListaCombinata();
+  const scadute=combinata.filter(s=>scGiorniA(s.dataScadenza)<0);
+  const entro30=combinata.filter(s=>{const g=scGiorniA(s.dataScadenza);return g>=0&&g<=30;});
+  const nScadute=$('scNumScadute'),nEntro30=$('scNumEntro30'),nAttive=$('scNumAttive');
+  if(!nScadute||!nEntro30||!nAttive)return; // pagina Scadenzario non aperta
+  nScadute.textContent=scadute.length;
+  nEntro30.textContent=entro30.length;
+  nAttive.textContent=combinata.length;
+
+  const lista=(scFiltroTipo==='tutti'?combinata:combinata.filter(s=>s.tipo===scFiltroTipo))
     .sort((a,b)=>a.dataScadenza.localeCompare(b.dataScadenza));
 
   const el=$('scadenzarioList');if(!el)return;
@@ -9712,16 +9744,21 @@ function renderScadenzario(){
     const scaduta=g<0,vicina=g>=0&&g<=(s.promemoriaGiorni||30);
     const colore=scaduta?'var(--rd)':vicina?'var(--am)':'var(--gn)';
     const collegatoLabel=s.collegatoNome?' · '+(s.collegatoTipo==='dipendente'?'👤 ':'📦 ')+s.collegatoNome:'';
-    return '<div class="card" style="margin-bottom:10px;border-left:3px solid '+colore+'" onclick="apriModificaScadenza(\''+s.id+'\')">'+
+    const responsabileLabel=s.responsabileNome?' · 🧑‍💼 '+s.responsabileNome:'';
+    const clickHandler=s.virtuale?'':'apriModificaScadenza(\''+s.id+'\')';
+    const completaBtn=s.virtuale
+      ?'<button onclick="event.stopPropagation();segnaManutenzioneVerificata(\''+s.id+'\',\''+encodeURIComponent(s.collegatoNome)+'\')" class="btn btn-p" style="width:100%;font-size:12px;padding:7px;margin-top:8px">✓ Verificato oggi</button>'
+      :'<button onclick="event.stopPropagation();scCompletaScadenza(\''+s.id+'\')" class="btn btn-p" style="width:100%;font-size:12px;padding:7px;margin-top:8px">✓ Completata'+(s.ricorrenzaMesi?' (genera prossima)':'')+'</button>';
+    return '<div class="card" style="margin-bottom:10px;border-left:3px solid '+colore+(s.virtuale?';opacity:.92':'')+'" '+(clickHandler?'onclick="'+clickHandler+'"':'')+'>'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:13px;font-weight:600">'+(tipoIcon[s.tipo]||'📌')+' '+s.titolo+'</div>'+
-          '<div style="font-size:11px;color:var(--tx2);margin-top:2px">'+new Date(s.dataScadenza+'T12:00:00').toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'})+collegatoLabel+(s.ricorrenzaMesi?' · 🔁 ogni '+s.ricorrenzaMesi+' mesi':'')+'</div>'+
+          '<div style="font-size:11px;color:var(--tx2);margin-top:2px">'+new Date(s.dataScadenza+'T12:00:00').toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'})+collegatoLabel+responsabileLabel+(s.ricorrenzaMesi?' · 🔁 ogni '+s.ricorrenzaMesi+' mesi':'')+(s.virtuale?' · dal Magazzino':'')+'</div>'+
         '</div>'+
         '<div style="font-size:12px;font-weight:700;color:'+colore+';white-space:nowrap">'+(scaduta?'Scaduta da '+Math.abs(g)+'gg':g+'gg')+'</div>'+
       '</div>'+
       (s.note?'<div style="font-size:11px;color:var(--tx3);margin-top:6px">'+s.note+'</div>':'')+
-      '<button onclick="event.stopPropagation();scCompletaScadenza(\''+s.id+'\')" class="btn btn-p" style="width:100%;font-size:12px;padding:7px;margin-top:8px">✓ Completata'+(s.ricorrenzaMesi?' (genera prossima)':'')+'</button>'+
+      completaBtn+
     '</div>';
   }).join('');
 }
@@ -9767,6 +9804,9 @@ function apriNuovaScadenza(){
   $('scData').value='';
   $('scPromemoria').value='30';
   $('scRicorrenza').value='';
+  const respSel=$('scResponsabile');
+  respSel.innerHTML='<option value="">— Nessuno —</option>'+cacheTeam.filter(t=>t.approvato&&(t.isAdmin===true||t.ruolo==='Responsabile'||t.ruolo==='Project Manager')).map(t=>'<option value="'+t.id+'">'+t.nome+' '+t.cognome+'</option>').join('');
+  respSel.value='';
   $('scNote').value='';
   $('scEliminaWrap').style.display='none';
   openMod('mScadenza');
@@ -9785,6 +9825,9 @@ function apriModificaScadenza(id){
   $('scData').value=s.dataScadenza||'';
   $('scPromemoria').value=s.promemoriaGiorni||30;
   $('scRicorrenza').value=s.ricorrenzaMesi||'';
+  const respSel=$('scResponsabile');
+  respSel.innerHTML='<option value="">— Nessuno —</option>'+cacheTeam.filter(t=>t.approvato&&(t.isAdmin===true||t.ruolo==='Responsabile'||t.ruolo==='Project Manager')).map(t=>'<option value="'+t.id+'">'+t.nome+' '+t.cognome+'</option>').join('');
+  respSel.value=s.responsabileUid||'';
   $('scNote').value=s.note||'';
   $('scEliminaWrap').style.display='block';
   openMod('mScadenza');
@@ -9806,9 +9849,12 @@ async function scSalvaScadenza(){
   }
   const now=new Date().toISOString();
   const chi=USER?USER.nome+' '+USER.cognome:'—';
+  const responsabileUid=val('scResponsabile');
+  const responsabileNome=responsabileUid?(()=>{const t=cacheTeam.find(x=>x.id===responsabileUid);return t?t.nome+' '+t.cognome:'';})():'';
   const dati={
     tipo:val('scTipo'),titolo,
     collegatoTipo:collegatoTipo||'',collegatoId,collegatoNome,
+    responsabileUid,responsabileNome,
     dataScadenza:data,
     promemoriaGiorni:parseInt(val('scPromemoria'))||30,
     ricorrenzaMesi:val('scRicorrenza')?parseInt(val('scRicorrenza')):null,
@@ -11561,6 +11607,31 @@ function renderDashboard(){
         <span style="font-size:11px;color:${color};font-weight:700">${disp}/${m.qty||1}</span>
       </div>`;
     }).join('');}
+  }
+
+  // Sezione scadenzario (solo Admin/Responsabile/Project Manager)
+  const cardSc=$('dashScadenzarioCard');
+  if(cardSc&&pvCanAccess()){
+    cardSc.style.display='block';
+    const elSc=$('dashScadenzario');
+    if(elSc){
+      const combinata=(typeof scListaCombinata==='function'?scListaCombinata():[])
+        .filter(s=>scGiorniA(s.dataScadenza)<=30)
+        .sort((a,b)=>a.dataScadenza.localeCompare(b.dataScadenza))
+        .slice(0,6);
+      if(!combinata.length){elSc.innerHTML='<div style="font-size:12px;color:var(--gn);text-align:center;padding:20px">✅ Nessuna scadenza nei prossimi 30 giorni</div>';}
+      else{elSc.innerHTML=combinata.map(s=>{
+        const g=scGiorniA(s.dataScadenza);
+        const color=g<0?'var(--rd)':g<=7?'var(--am)':'var(--gn)';
+        return`<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg2);border-radius:var(--rs)">
+          <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
+          <div style="flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.titolo}</div>
+          <span style="font-size:11px;color:${color};font-weight:700;white-space:nowrap">${g<0?Math.abs(g)+'gg fa':g+'gg'}</span>
+        </div>`;
+      }).join('');}
+    }
+  } else if(cardSc){
+    cardSc.style.display='none';
   }
 }
 
