@@ -66,6 +66,19 @@ export default async function handler(req, res) {
       if (g <= soglia) daAvvisare.push({ ...s, giorni: g });
     });
 
+    // Include anche le manutenzioni impostate sugli articoli del Magazzino
+    const magSnap = await db.collection('magazzino').get();
+    magSnap.forEach(doc => {
+      const m = doc.data();
+      if (m.eliminatoAt || !m.manutIntervallo || !m.manutUltima) return;
+      const ultima = new Date(m.manutUltima + 'T00:00:00');
+      const prossima = new Date(ultima);
+      prossima.setDate(prossima.getDate() + parseInt(m.manutIntervallo));
+      const oggi = new Date(); oggi.setHours(0, 0, 0, 0);
+      const g = Math.ceil((prossima - oggi) / 86400000);
+      if (g <= 14) daAvvisare.push({ titolo: `🔧 Verifica: ${m.nome}`, giorni: g });
+    });
+
     if (!daAvvisare.length) {
       return res.status(200).json({ ok: true, notificati: 0, messaggio: 'Nessuna scadenza da segnalare oggi' });
     }
