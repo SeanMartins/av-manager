@@ -147,18 +147,25 @@ async function calcolaGiornata(db, numero) {
     }
   });
 
-  // Calcolo punteggio di ogni rosa iscritta
+  // Calcolo punteggio di ogni rosa iscritta — uso la formazione CONGELATA al fischio
+  // d'inizio quando disponibile (ff_titolari_giornata), altrimenti quella attuale come
+  // ripiego (es. per giornate calcolate prima che questo meccanismo esistesse)
+  const congelateSnap = await db.collection('ff_titolari_giornata').where('giornata', '==', numero).get();
+  const congelate = {}; // uid -> titolari
+  congelateSnap.forEach(d => { congelate[d.data().uid] = d.data().titolari; });
+
   const roseSnap = await db.collection('ff_rose').get();
   const batch = db.batch();
   let squadreCalcolate = 0;
 
   roseSnap.forEach(doc => {
     const rosa = doc.data();
+    const titolariRuoli = congelate[doc.id] || rosa.titolari;
     const titolari = [
-      ...(rosa.titolari?.P || []),
-      ...(rosa.titolari?.D || []),
-      ...(rosa.titolari?.C || []),
-      ...(rosa.titolari?.A || []),
+      ...(titolariRuoli?.P || []),
+      ...(titolariRuoli?.D || []),
+      ...(titolariRuoli?.C || []),
+      ...(titolariRuoli?.A || []),
     ];
     if (!titolari.length) return;
     let totale = 0;
