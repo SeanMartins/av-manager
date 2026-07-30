@@ -14,6 +14,9 @@
     },
     "api/scadenzario-check.js": {
       "maxDuration": 30
+    },
+    "api/ff-freeze.js": {
+      "maxDuration": 30
     }
   },
   "crons": [
@@ -28,6 +31,10 @@
     {
       "path": "/api/scadenzario-check",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/ff-freeze",
+      "schedule": "0 */3 * * *"
     }
   ]
 }

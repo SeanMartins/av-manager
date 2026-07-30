@@ -61,7 +61,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 }
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .page{display:none;padding:16px 16px calc(80px + var(--sb))}
-.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.28z';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
+.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.30b';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
 .page.on{display:block}
 #nav{display:flex;background:var(--bg1);border-top:1px solid var(--b);padding-bottom:var(--sb);flex-shrink:0}
 .ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 6px;cursor:pointer;gap:2px;min-width:0}
@@ -302,7 +302,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div id="deskNav"></div>
     </div>
     <div style="padding:10px 16px;border-top:1px solid var(--b);font-size:9px;color:var(--tx3);text-align:center">
-      © Martins Osemwengie · MMG Logistics · v2026.07.28z
+      © Martins Osemwengie · MMG Logistics · v2026.07.30b
     </div>
   </div>
   <div id="topbar">
@@ -1097,7 +1097,8 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div id="ffDisabledMsg" class="empty" style="display:none;padding:40px 20px;text-align:center">😴 Il Fantacalcio è temporaneamente disattivato.<br>Chiedi a un Admin di riattivarlo.</div>
     <div id="ffContentWrap">
     <div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto">
-      <button class="btn btn-p" id="ffTabBtn-squadra" style="white-space:nowrap" onclick="ffTab('squadra')">⚽ La mia squadra</button>
+      <button class="btn btn-p" id="ffTabBtn-rosa" style="white-space:nowrap" onclick="ffTab('rosa')">📋 Rosa</button>
+      <button class="btn" id="ffTabBtn-squadra" style="white-space:nowrap" onclick="ffTab('squadra')">⚽ Titolari</button>
       <button class="btn" id="ffTabBtn-classifica" style="white-space:nowrap" onclick="ffTab('classifica')">🏆 Classifica</button>
       <button class="btn" id="ffTabBtn-sfide" style="white-space:nowrap" onclick="ffTab('sfide')">⚔️ Sfide</button>
       <button class="btn" id="ffTabBtn-giornata" style="white-space:nowrap" onclick="ffTab('giornata')">📅 Ultima giornata</button>
@@ -1122,14 +1123,27 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </div>
 
     <!-- TAB: La mia squadra -->
-    <div id="ffPageSquadra">
+    <!-- TAB: Rosa completa -->
+    <div id="ffPageRosa">
       <div class="card" style="margin-bottom:14px">
         <div class="ig"><label class="il">Nome squadra</label><input type="text" id="ffNomeSquadra" placeholder="Es: I Bomber di Firenze"></div>
       </div>
+      <div id="ffRosaContatori" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px"></div>
+      <div id="ffRosaWrap"></div>
+      <div style="margin-top:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">🔍 Aggiungi alla rosa (max 25: 3 P, 8 D, 8 C, 6 A)</div>
+        <input type="text" id="ffSearchPlayerRosa" placeholder="Cerca giocatore o squadra..." oninput="ffRenderRicercaGiocatoriRosa()">
+        <div id="ffRicercaGiocatoriRosa" style="max-height:260px;overflow-y:auto;margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- TAB: Titolari (formazione da 11, scelti dalla rosa) -->
+    <div id="ffPageSquadra" style="display:none">
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Scegli gli 11 titolari di questa giornata tra i giocatori già presenti nella tua Rosa.</div>
       <div id="ffFormazioneWrap"></div>
       <div style="margin-top:14px">
-        <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">🔍 Aggiungi giocatore</div>
-        <input type="text" id="ffSearchPlayer" placeholder="Cerca giocatore o squadra..." oninput="ffRenderRicercaGiocatori()">
+        <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">🔍 Aggiungi ai titolari (dalla rosa)</div>
+        <input type="text" id="ffSearchPlayer" placeholder="Cerca nella tua rosa..." oninput="ffRenderRicercaGiocatori()">
         <div id="ffRicercaGiocatori" style="max-height:260px;overflow-y:auto;margin-top:8px"></div>
       </div>
       <button class="btn btn-p btn-f" style="margin-top:16px" onclick="ffSalvaSquadra()">💾 Salva squadra</button>
@@ -14613,8 +14627,10 @@ function ffRenderToggleStato(){
 }
 let ffTeamNome={}; // uid -> nomeSquadra, popolato dalle rose per la classifica
 let ffFormazioneCorrente={P:[],D:[],C:[],A:[]};
+let ffRosaCompleta={P:[],D:[],C:[],A:[]}; // rosa completa (max 25), da cui si scelgono i titolari
 let _ffListenersStarted=false;
 const FF_SLOT={P:1,D:4,C:4,A:2}; // 11 titolari: 1 portiere, 4 difensori, 4 centrocampisti, 2 attaccanti
+const FF_SLOT_ROSA={P:3,D:8,C:8,A:6}; // rosa completa modalità Classic: 25 calciatori totali
 
 function startFfListeners(){
   if(_ffListenersStarted)return;
@@ -14622,15 +14638,18 @@ function startFfListeners(){
   DB.collection('ff_giocatori').onSnapshot(snap=>{
     cacheFfGiocatori=snap.docs.map(d=>({id:d.id,...d.data()}));
     ffRenderRicercaGiocatori();
+    ffRenderRicercaGiocatoriRosa();
   },e=>console.error('ff_giocatori listener:',e));
   if(USER){
     DB.collection('ff_rose').doc(USER.id).onSnapshot(doc=>{
       cacheFfRosaMia=doc.exists?doc.data():null;
       if(cacheFfRosaMia){
         ffFormazioneCorrente=cacheFfRosaMia.titolari||{P:[],D:[],C:[],A:[]};
+        ffRosaCompleta=cacheFfRosaMia.rosaCompleta||{P:[],D:[],C:[],A:[]};
         const nome=$('ffNomeSquadra');if(nome)nome.value=cacheFfRosaMia.nomeSquadra||'';
       }
       ffRenderFormazione();
+      ffRenderRosa();
     },e=>console.error('ff_rose mia listener:',e));
   }
   DB.collection('ff_rose').onSnapshot(snap=>{
@@ -14648,6 +14667,7 @@ function startFfListeners(){
   DB.collection('ff_giornate').orderBy('numero','desc').onSnapshot(snap=>{
     cacheFfGiornate=snap.docs.map(d=>({id:d.id,...d.data()}));
     ffRenderGiornata();
+    ffRenderFormazione();
   },e=>console.error('ff_giornate listener:',e));
   DB.collection('ff_calendario').orderBy('numero','asc').onSnapshot(snap=>{
     cacheFfCalendario=snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -14678,11 +14698,13 @@ function initFantacalcioPage(){
   }
   ffRenderFormazione();
   ffRenderRicercaGiocatori();
-  ffTab('squadra');
+  ffRenderRosa();
+  ffRenderRicercaGiocatoriRosa();
+  ffTab('rosa');
 }
 
 function ffTab(tab){
-  ['squadra','classifica','sfide','giornata'].forEach(t=>{
+  ['rosa','squadra','classifica','sfide','giornata'].forEach(t=>{
     const page=$('ffPage'+t.charAt(0).toUpperCase()+t.slice(1));
     const btn=$('ffTabBtn-'+t);
     if(page)page.style.display=(t===tab)?'block':'none';
@@ -14690,10 +14712,21 @@ function ffTab(tab){
   });
 }
 
+// La giornata più recente è "congelata" se le formazioni sono già state fotografate
+// al fischio d'inizio e non ancora ricalcolate/superate dalla prossima giornata
+function ffGiornataCongelata(){
+  const g=cacheFfGiornate[0]; // ordinata desc: la più recente
+  return !!(g&&g.congelata&&!g.sincronizzata);
+}
+
 function ffRenderFormazione(){
   const wrap=$('ffFormazioneWrap');if(!wrap)return;
+  const bloccata=ffGiornataCongelata();
   const ruoliLabel={P:'🧤 Portiere (1)',D:'🛡 Difensori (4)',C:'⚙️ Centrocampisti (4)',A:'⚔️ Attaccanti (2)'};
   let h='';
+  if(bloccata){
+    h+='<div style="background:var(--amb);border:1px solid var(--am);border-radius:var(--rs);padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--am);font-weight:600">🔒 Formazione congelata — le partite di questa giornata sono già iniziate. Potrai modificarla di nuovo per la prossima giornata.</div>';
+  }
   ['P','D','C','A'].forEach(r=>{
     h+='<div style="margin-bottom:14px">';
     h+='<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">'+ruoliLabel[r]+'</div>';
@@ -14705,13 +14738,20 @@ function ffRenderFormazione(){
         const g=cacheFfGiocatori.find(x=>x.id===pid);
         h+='<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border-radius:var(--rs);padding:8px 10px;margin-bottom:6px">'+
           '<div style="font-size:13px">'+(g?g.nome+' <span style="color:var(--tx3)">· '+g.squadra+'</span>':'⚠️ giocatore non trovato ('+pid+')')+'</div>'+
-          '<button style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:16px" onclick="ffRimuoviGiocatore(\''+r+'\',\''+pid+'\')">✕</button>'+
+          (bloccata?'':'<button style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:16px" onclick="ffRimuoviGiocatore(\''+r+'\',\''+pid+'\')">✕</button>')+
         '</div>';
       });
     }
     h+='</div>';
   });
   wrap.innerHTML=h;
+  const searchWrap=$('ffSearchPlayer');
+  if(searchWrap){
+    searchWrap.disabled=bloccata;
+    searchWrap.placeholder=bloccata?'🔒 Bloccato durante la giornata in corso':'Cerca nella tua rosa...';
+  }
+  const ricercaEl=$('ffRicercaGiocatori');
+  if(ricercaEl&&bloccata)ricercaEl.innerHTML='';
 }
 
 function ffRimuoviGiocatore(ruolo,pid){
@@ -14721,8 +14761,14 @@ function ffRimuoviGiocatore(ruolo,pid){
 }
 
 function ffAggiungiGiocatore(pid){
+  if(ffGiornataCongelata()){toast('🔒 Formazione bloccata durante la giornata in corso','r');return;}
   const g=cacheFfGiocatori.find(x=>x.id===pid);if(!g)return;
   const ruolo=g.ruolo;
+  const inRosa=(ffRosaCompleta[ruolo]||[]).includes(pid);
+  if(!inRosa){
+    toast('Questo giocatore non è nella tua Rosa — aggiungilo prima da lì','r');
+    return;
+  }
   const attuali=ffFormazioneCorrente[ruolo]||[];
   if(attuali.includes(pid))return;
   if(attuali.length>=FF_SLOT[ruolo]){
@@ -14741,14 +14787,16 @@ function ffRenderRicercaGiocatori(){
   const el=$('ffRicercaGiocatori');if(!el)return;
   const q=(($('ffSearchPlayer')||{}).value||'').toLowerCase().trim();
   const selezionati=new Set(['P','D','C','A'].flatMap(r=>ffFormazioneCorrente[r]||[]));
-  let lista=cacheFfGiocatori.filter(g=>!selezionati.has(g.id));
+  const inRosa=new Set(['P','D','C','A'].flatMap(r=>ffRosaCompleta[r]||[]));
+  // I titolari si scelgono SOLO tra i giocatori già presenti nella propria Rosa
+  let lista=cacheFfGiocatori.filter(g=>inRosa.has(g.id)&&!selezionati.has(g.id));
   if(q)lista=lista.filter(g=>(g.nome||'').toLowerCase().includes(q)||(g.squadra||'').toLowerCase().includes(q));
-  lista=lista.slice(0,60); // limite per non appesantire il rendering
-  if(!cacheFfGiocatori.length){
-    el.innerHTML='<div class="empty">Elenco giocatori non ancora caricato — chiedi a un Admin di premere "Aggiorna elenco giocatori Serie A"</div>';
+  lista=lista.slice(0,60);
+  if(!inRosa.size){
+    el.innerHTML='<div class="empty">La tua Rosa è vuota — vai prima nella scheda "📋 Rosa" e aggiungi i tuoi 25 calciatori</div>';
     return;
   }
-  if(!lista.length){el.innerHTML='<div class="empty">Nessun risultato</div>';return;}
+  if(!lista.length){el.innerHTML='<div class="empty">Nessun risultato (o hai già usato tutti i giocatori della rosa in questo ruolo)</div>';return;}
   const ruoloIcon={P:'🧤',D:'🛡',C:'⚙️',A:'⚔️'};
   el.innerHTML=lista.map(g=>
     '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--b);cursor:pointer" onclick="ffAggiungiGiocatore(\''+g.id+'\')">'+
@@ -14756,6 +14804,102 @@ function ffRenderRicercaGiocatori(){
       '<span style="color:var(--ac2);font-size:16px">+</span>'+
     '</div>'
   ).join('');
+}
+
+// ── ROSA COMPLETA (modalità Classic: 3 P, 8 D, 8 C, 6 A = 25 calciatori) ──
+
+function ffRenderRosa(){
+  const contatori=$('ffRosaContatori');
+  const ruoliLabel={P:'🧤 Portieri',D:'🛡 Difensori',C:'⚙️ Centrocampisti',A:'⚔️ Attaccanti'};
+  if(contatori){
+    const totale=['P','D','C','A'].reduce((s,r)=>s+(ffRosaCompleta[r]||[]).length,0);
+    contatori.innerHTML=['P','D','C','A'].map(r=>{
+      const n=(ffRosaCompleta[r]||[]).length;
+      const pieno=n>=FF_SLOT_ROSA[r];
+      return '<div class="sc"><div class="sn" style="font-size:16px;color:'+(pieno?'var(--gn)':'var(--tx)')+'">'+n+'/'+FF_SLOT_ROSA[r]+'</div><div class="sl" style="font-size:9px">'+ruoliLabel[r].split(' ')[1]+'</div></div>';
+    }).join('')+'<div style="grid-column:1/-1;text-align:center;font-size:11px;color:var(--tx3);margin-top:4px">Totale rosa: '+totale+' / 25</div>';
+  }
+  const wrap=$('ffRosaWrap');if(!wrap)return;
+  let h='';
+  ['P','D','C','A'].forEach(r=>{
+    h+='<div style="margin-bottom:14px">';
+    h+='<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">'+ruoliLabel[r]+' ('+(ffRosaCompleta[r]||[]).length+'/'+FF_SLOT_ROSA[r]+')</div>';
+    const ids=ffRosaCompleta[r]||[];
+    if(!ids.length){
+      h+='<div class="empty" style="padding:10px">Nessun giocatore selezionato</div>';
+    } else {
+      ids.forEach(pid=>{
+        const g=cacheFfGiocatori.find(x=>x.id===pid);
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border-radius:var(--rs);padding:8px 10px;margin-bottom:6px">'+
+          '<div style="font-size:13px">'+(g?g.nome+' <span style="color:var(--tx3)">· '+g.squadra+'</span>':'⚠️ giocatore non trovato ('+pid+')')+'</div>'+
+          '<button style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:16px" onclick="ffRimuoviGiocatoreRosa(\''+r+'\',\''+pid+'\')">✕</button>'+
+        '</div>';
+      });
+    }
+    h+='</div>';
+  });
+  wrap.innerHTML=h;
+}
+
+function ffRimuoviGiocatoreRosa(ruolo,pid){
+  ffRosaCompleta[ruolo]=(ffRosaCompleta[ruolo]||[]).filter(x=>x!==pid);
+  // Se il giocatore rimosso dalla rosa era anche titolare, va tolto anche da lì
+  if(ffFormazioneCorrente[ruolo])ffFormazioneCorrente[ruolo]=ffFormazioneCorrente[ruolo].filter(x=>x!==pid);
+  ffRenderRosa();
+  ffRenderRicercaGiocatoriRosa();
+  ffRenderFormazione();
+  ffRenderRicercaGiocatori();
+  ffSalvaRosa();
+}
+
+function ffAggiungiGiocatoreRosa(pid){
+  const g=cacheFfGiocatori.find(x=>x.id===pid);if(!g)return;
+  const ruolo=g.ruolo;
+  const attuali=ffRosaCompleta[ruolo]||[];
+  if(attuali.includes(pid))return;
+  if(attuali.length>=FF_SLOT_ROSA[ruolo]){
+    toast('Hai già raggiunto il massimo per questo ruolo in rosa ('+FF_SLOT_ROSA[ruolo]+')','r');
+    return;
+  }
+  const giaPresente=['P','D','C','A'].some(r=>(ffRosaCompleta[r]||[]).includes(pid));
+  if(giaPresente)return;
+  ffRosaCompleta[ruolo]=[...attuali,pid];
+  ffRenderRosa();
+  ffRenderRicercaGiocatoriRosa();
+  ffRenderRicercaGiocatori(); // ora questo giocatore è disponibile anche per i titolari
+  ffSalvaRosa();
+}
+
+function ffRenderRicercaGiocatoriRosa(){
+  const el=$('ffRicercaGiocatoriRosa');if(!el)return;
+  const q=(($('ffSearchPlayerRosa')||{}).value||'').toLowerCase().trim();
+  const inRosa=new Set(['P','D','C','A'].flatMap(r=>ffRosaCompleta[r]||[]));
+  let lista=cacheFfGiocatori.filter(g=>!inRosa.has(g.id));
+  if(q)lista=lista.filter(g=>(g.nome||'').toLowerCase().includes(q)||(g.squadra||'').toLowerCase().includes(q));
+  lista=lista.slice(0,60);
+  if(!cacheFfGiocatori.length){
+    el.innerHTML='<div class="empty">Elenco giocatori non ancora caricato — chiedi a un Admin di premere "Aggiorna elenco giocatori Serie A"</div>';
+    return;
+  }
+  if(!lista.length){el.innerHTML='<div class="empty">Nessun risultato</div>';return;}
+  const ruoloIcon={P:'🧤',D:'🛡',C:'⚙️',A:'⚔️'};
+  el.innerHTML=lista.map(g=>
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--b);cursor:pointer" onclick="ffAggiungiGiocatoreRosa(\''+g.id+'\')">'+
+      '<div style="font-size:13px">'+ruoloIcon[g.ruolo]+' '+g.nome+' <span style="color:var(--tx3);font-size:11px">· '+g.squadra+'</span></div>'+
+      '<span style="color:var(--ac2);font-size:16px">+</span>'+
+    '</div>'
+  ).join('');
+}
+
+async function ffSalvaRosa(){
+  if(!USER)return;
+  const nome=val('ffNomeSquadra')||(USER.nome+' Team');
+  try{
+    await DB.collection('ff_rose').doc(USER.id).set({
+      uid:USER.id,nomeSquadra:nome,rosaCompleta:ffRosaCompleta,
+      updatedAt:new Date().toISOString()
+    },{merge:true});
+  }catch(e){toast('Errore salvataggio rosa: '+e.message,'r');}
 }
 
 async function ffSalvaSquadra(){
@@ -14771,7 +14915,7 @@ async function ffSalvaSquadra(){
     return;
   }
   await DB.collection('ff_rose').doc(USER.id).set({
-    uid:USER.id,nomeSquadra:nome,titolari:ffFormazioneCorrente,
+    uid:USER.id,nomeSquadra:nome,titolari:ffFormazioneCorrente,rosaCompleta:ffRosaCompleta,
     updatedAt:new Date().toISOString()
   },{merge:true});
   toast('✓ Squadra salvata!');
