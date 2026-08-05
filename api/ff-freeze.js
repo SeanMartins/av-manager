@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════════
 // FANTACALCIO MMG — Congela le formazioni al fischio d'inizio
 // ══════════════════════════════════════════════════════════════
-// Chiamata da: Vercel Cron (ogni ora, vedi vercel.json) + trigger manuale con
+// Chiamata da: Vercel Cron (una volta al giorno, vedi vercel.json — limite del piano Hobby) + trigger manuale con
 // ?key=FF_SYNC_SECRET per test (riusa lo stesso segreto di ff-sync.js).
 //
 // Cosa fa: controlla l'orario di inizio della PRIMA partita della giornata Serie A
