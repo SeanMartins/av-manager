@@ -61,7 +61,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 }
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .page{display:none;padding:16px 16px calc(80px + var(--sb))}
-.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.30h';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
+.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.30i';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
 .page.on{display:block}
 #nav{display:flex;background:var(--bg1);border-top:1px solid var(--b);padding-bottom:var(--sb);flex-shrink:0}
 .ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 6px;cursor:pointer;gap:2px;min-width:0}
@@ -281,7 +281,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div style="font-size:12px;color:var(--tx2);text-align:center;margin-top:10px">Inserisci l'email con cui ti sei registrato</div>
     </div>
   </div>
-  <div style="font-size:9px;color:var(--tx3);text-align:center;margin-top:20px">v2026.07.30h</div>
+  <div style="font-size:9px;color:var(--tx3);text-align:center;margin-top:20px">v2026.07.30i</div>
 </div>
 
 <!-- APP -->
@@ -303,7 +303,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div id="deskNav"></div>
     </div>
     <div style="padding:10px 16px;border-top:1px solid var(--b);font-size:9px;color:var(--tx3);text-align:center">
-      © Martins Osemwengie · MMG Logistics · v2026.07.30h
+      © Martins Osemwengie · MMG Logistics · v2026.07.30i
     </div>
   </div>
   <div id="topbar">
@@ -7693,7 +7693,16 @@ function plAddToList(id,nomeHint){
   if(!m&&!nomeHint){toast('"'+id+'" non trovato in magazzino','a');return;}
   const art=m||{id,nome:nomeHint||id,cat:'—',marca:'—',ser:id,qty:1};
   const exist=plArticoli.find(x=>(x.id||x.ser)===(art.id||art.ser));
-  if(exist){exist.qtyPrep=(exist.qtyPrep||1)+1;toast('✓ '+art.nome+' (×'+exist.qtyPrep+')');}
+  if(exist){
+    const info=plDisponibilitaEDoveUsato(art);
+    const nuovaQty=(exist.qtyPrep||1)+1;
+    if(nuovaQty>info.qtaDisp){
+      const doveMsg=info.luoghi.length?' — già impiegati in: '+info.luoghi.join(', '):'';
+      toast('⚠️ Hai solo '+info.qtaDisp+' disponibili di '+art.nome+doveMsg,'r');
+    }
+    exist.qtyPrep=nuovaQty;
+    toast('✓ '+art.nome+' (×'+exist.qtyPrep+')');
+  }
   else{
     const info=plDisponibilitaEDoveUsato(art);
     const doveMsg=info.luoghi.length?' — già impiegati in: '+info.luoghi.join(', '):'';
