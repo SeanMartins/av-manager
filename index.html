@@ -61,7 +61,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 }
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .page{display:none;padding:16px 16px calc(80px + var(--sb))}
-.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.30o';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
+.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.30q';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
 .page.on{display:block}
 #nav{display:flex;background:var(--bg1);border-top:1px solid var(--b);padding-bottom:var(--sb);flex-shrink:0}
 .ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 6px;cursor:pointer;gap:2px;min-width:0}
@@ -281,7 +281,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div style="font-size:12px;color:var(--tx2);text-align:center;margin-top:10px">Inserisci l'email con cui ti sei registrato</div>
     </div>
   </div>
-  <div style="font-size:9px;color:var(--tx3);text-align:center;margin-top:20px">v2026.07.30o</div>
+  <div style="font-size:9px;color:var(--tx3);text-align:center;margin-top:20px">v2026.07.30q</div>
 </div>
 
 <!-- APP -->
@@ -303,7 +303,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div id="deskNav"></div>
     </div>
     <div style="padding:10px 16px;border-top:1px solid var(--b);font-size:9px;color:var(--tx3);text-align:center">
-      © Martins Osemwengie · MMG Logistics · v2026.07.30o
+      © Martins Osemwengie · MMG Logistics · v2026.07.30q
     </div>
   </div>
   <div id="topbar">
@@ -451,6 +451,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
             <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="magQrBulkUpdateCount();openMod('mMagQrBulk')">◼ QR Bulk</button>
             <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="apriUnisciArticoli()">🔗 Unisci articoli</button>
             <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="apriAbilitaNumerato()">🔢 Attiva numerato</button>
+            <button class="btn btn-f" style="padding:7px 10px;font-size:12px;border-color:var(--rd);color:var(--rd)" onclick="apriControlloAnomalie()">🔍 Controllo anomalie</button>
             <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="magEsportaExcel()">📥 Esporta Excel</button>
             <button class="btn btn-f" style="padding:7px 10px;font-size:12px" onclick="mostraCestinoMagazzino()">🗑️ Cestino</button>
           </div>
@@ -472,7 +473,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <!-- Tab Statistiche -->
       <div id="magTabStats" style="display:none">
         <div style="display:flex;gap:8px;margin-bottom:12px">
-          <select id="statsPeriodo" onchange="renderStatsMAg()" style="flex:1;font-size:12px;padding:8px 10px">
+          <select id="statsPeriodo" onchange="renderStatusMag()" style="flex:1;font-size:12px;padding:8px 10px">
             <option value="1">Ultimo mese</option>
             <option value="3">Ultimi 3 mesi</option>
             <option value="6">Ultimi 6 mesi</option>
@@ -2444,6 +2445,17 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <button class="btn btn-f" onclick="closeMod('mAbilitaNumerato')">Annulla</button>
       <button class="btn btn-p btn-f" onclick="confermaAbilitaNumerato()">Attiva su selezionati</button>
     </div>
+  </div>
+</div>
+
+<!-- CONTROLLO ANOMALIE MAGAZZINO -->
+<div class="mol" id="mControlloAnomalie" onclick="if(event.target===this)closeMod('mControlloAnomalie')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:6px">🔍 Controllo anomalie</div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">Trova articoli dove la quantità "in uso" nei lavori aperti supera quella totale in magazzino — segno che qualcosa non torna: materiale non segnato come rientrato, doppioni, o riferimenti vecchi rimasti da unioni passate.</div>
+    <div id="anomalieList"><div class="empty">Caricamento...</div></div>
+    <button class="btn btn-f" style="margin-top:12px" onclick="closeMod('mControlloAnomalie')">Chiudi</button>
   </div>
 </div>
 
@@ -5349,6 +5361,71 @@ async function confermaUnisciArticoli(){
 // ── ATTIVA "NUMERATO" IN BLOCCO ──
 let anSelezionati=[];
 
+// ── CONTROLLO ANOMALIE MAGAZZINO ──
+function apriControlloAnomalie(){
+  const el=$('anomalieList');
+  el.innerHTML='<div class="empty">⏳ Scansione in corso...</div>';
+  openMod('mControlloAnomalie');
+
+  setTimeout(()=>{
+    const attivi=cacheMag.filter(m=>!m.eliminatoAt);
+
+    // 1) Articoli dove "in uso" (per nome) supera la quantità totale — impossibile,
+    // segno di materiale mai segnato come rientrato o riferimenti vecchi
+    const inUsoPerNome={};
+    cacheDich.filter(d=>!d.rientroData).forEach(d=>{
+      (d.articoli||[]).forEach(a=>{
+        const nkey=(a.nome||'').toLowerCase().trim();
+        if(!nkey)return;
+        if(!inUsoPerNome[nkey])inUsoPerNome[nkey]={qty:0,lavori:[]};
+        inUsoPerNome[nkey].qty+=(a.qty||1);
+        inUsoPerNome[nkey].lavori.push((d.nome||'—')+(d.location?' ('+d.location+')':'')+' ×'+(a.qty||1)+(d.data?' — '+d.data:''));
+      });
+    });
+
+    const superaTotale=attivi.filter(m=>{
+      const uso=inUsoPerNome[(m.nome||'').toLowerCase().trim()];
+      return uso&&uso.qty>(m.qty||1);
+    }).map(m=>({m,uso:inUsoPerNome[(m.nome||'').toLowerCase().trim()]}));
+
+    // 2) Articoli con lo stesso nome duplicato in più schede (non ancora unite)
+    const nomeConteggio={};
+    attivi.forEach(m=>{
+      const k=(m.nome||'').toLowerCase().trim();
+      if(!nomeConteggio[k])nomeConteggio[k]=[];
+      nomeConteggio[k].push(m);
+    });
+    const duplicati=Object.values(nomeConteggio).filter(arr=>arr.length>1);
+
+    let h='';
+    if(!superaTotale.length&&!duplicati.length){
+      h='<div class="empty">✅ Nessuna anomalia trovata — tutto torna</div>';
+    } else {
+      if(superaTotale.length){
+        h+='<div style="font-size:12px;font-weight:700;color:var(--rd);margin-bottom:8px">🔴 '+superaTotale.length+' articoli con "in uso" superiore al totale</div>';
+        superaTotale.forEach(({m,uso})=>{
+          h+='<div class="card" style="margin-bottom:8px;border-left:3px solid var(--rd)">'+
+            '<div style="font-size:13px;font-weight:600">'+m.nome+'</div>'+
+            '<div style="font-size:11px;color:var(--tx2);margin-top:2px">Totale in magazzino: '+(m.qty||1)+' · Risulta in uso: '+uso.qty+'</div>'+
+            '<div style="font-size:10px;color:var(--tx3);margin-top:4px">'+uso.lavori.slice(0,5).join('<br>')+(uso.lavori.length>5?'<br>+'+(uso.lavori.length-5)+' altri':'')+'</div>'+
+            '<button onclick="closeMod(\'mControlloAnomalie\');apriModificaArticolo(\''+m.id+'\')" class="btn btn-f" style="width:100%;font-size:11px;padding:6px;margin-top:8px">✏️ Apri articolo</button>'+
+          '</div>';
+        });
+      }
+      if(duplicati.length){
+        h+='<div style="font-size:12px;font-weight:700;color:var(--am);margin:14px 0 8px">🟡 '+duplicati.length+' nomi con più schede separate (da unire?)</div>';
+        duplicati.forEach(arr=>{
+          h+='<div class="card" style="margin-bottom:8px;border-left:3px solid var(--am)">'+
+            '<div style="font-size:13px;font-weight:600">'+arr[0].nome+' <span style="color:var(--tx3);font-weight:400">× '+arr.length+' schede</span></div>'+
+            '<div style="font-size:11px;color:var(--tx2);margin-top:2px">Quantità: '+arr.map(m=>m.qty||1).join(' + ')+'</div>'+
+          '</div>';
+        });
+      }
+    }
+    el.innerHTML=h;
+  },50);
+}
+
 function apriAbilitaNumerato(){
   anSelezionati=[];
   $('anSearch').value='';
@@ -5608,6 +5685,9 @@ async function generaSchedaTecnica(artId){
     if(wrap)wrap.innerHTML='<div class="empty" style="padding:16px;text-align:center;color:var(--rd)">❌ Errore: '+e.message+'</div><button class="btn btn-f" style="font-size:12px;margin-top:8px;width:100%" onclick="generaSchedaTecnica(\''+artId+'\')">Riprova</button>';
   }
 }
+
+// Alias: la tabella desktop del Magazzino chiama "apriStorico", stesso comportamento
+function apriStorico(artId){mostraStorico(artId);}
 
 async function mostraStorico(artId){
   const m=cacheMag.find(x=>x.id===artId);if(!m)return;
@@ -7530,6 +7610,18 @@ function plSuggerisci(){
     '</div>';
   }).join('');
   box.style.display='block';
+}
+
+function plAddManual(){
+  const raw=(val('plManualId')||'').trim();
+  if(!raw){toast('Scrivi un nome o ID','r');return;}
+  const m=cacheMag.find(x=>!x.eliminatoAt&&(x.id===raw||(x.ser||'').toLowerCase()===raw.toLowerCase()||(x.nome||'').toLowerCase()===raw.toLowerCase()));
+  if(!m){toast('"'+raw+'" non trovato in magazzino — scegli dai suggerimenti mentre scrivi','r');return;}
+  $('plManualId').value='';
+  const box=$('plSuggest');if(box)box.style.display='none';
+  if(m.componibile){apriKitComponibile(m.id);return;}
+  if(m.numerato){apriNumerato(m.id);return;}
+  plAddToList(m.id,m.nome);
 }
 
 function plSeleziona(id){
