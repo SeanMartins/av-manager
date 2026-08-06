@@ -61,7 +61,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 }
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .page{display:none;padding:16px 16px calc(80px + var(--sb))}
-.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.30k';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
+.page::after{content:'© Martins Osemwengie · MMG Logistics · v2026.07.30l';display:block;text-align:center;font-size:10px;color:var(--tx3);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--b)}
 .page.on{display:block}
 #nav{display:flex;background:var(--bg1);border-top:1px solid var(--b);padding-bottom:var(--sb);flex-shrink:0}
 .ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 6px;cursor:pointer;gap:2px;min-width:0}
@@ -281,7 +281,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div style="font-size:12px;color:var(--tx2);text-align:center;margin-top:10px">Inserisci l'email con cui ti sei registrato</div>
     </div>
   </div>
-  <div style="font-size:9px;color:var(--tx3);text-align:center;margin-top:20px">v2026.07.30k</div>
+  <div style="font-size:9px;color:var(--tx3);text-align:center;margin-top:20px">v2026.07.30l</div>
 </div>
 
 <!-- APP -->
@@ -303,7 +303,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <div id="deskNav"></div>
     </div>
     <div style="padding:10px 16px;border-top:1px solid var(--b);font-size:9px;color:var(--tx3);text-align:center">
-      © Martins Osemwengie · MMG Logistics · v2026.07.30k
+      © Martins Osemwengie · MMG Logistics · v2026.07.30l
     </div>
   </div>
   <div id="topbar">
@@ -4916,13 +4916,12 @@ function _renderMagInner(){
   fil.forEach(m=>{window._magMap[m.id]=m.nome;});
   $('nArt').textContent=cacheMagVisibili.length;
 
-  // Calcola quantità in uso per ogni articolo dai lavori aperti
-  // Chiave = ID articolo magazzino (univoco) — evita confusione tra articoli con stesso nome
+  // Calcola quantità in uso per ogni articolo dai lavori aperti — stessa logica di
+  // corrispondenza usata ovunque in app (id, poi ser, poi nome solo se manca l'id)
   const inUsoMap={};
   cacheDich.filter(d=>!d.rientroData).forEach(d=>{
     (d.articoli||[]).forEach(a=>{
-      // Usa ID come chiave primaria se disponibile
-      const key=a.id||('nome:'+( a.nome||'').toLowerCase().trim());
+      const key=a.id||(a.ser?'ser:'+a.ser:'nome:'+(a.nome||'').toLowerCase().trim());
       if(!inUsoMap[key])inUsoMap[key]={qty:0,lavori:[]};
       inUsoMap[key].qty+=(a.qty||1);
       if(!inUsoMap[key].lavori.find(l=>l.id===d.id))
@@ -4930,19 +4929,16 @@ function _renderMagInner(){
     });
   });
 
-  // Helper: trova qty in uso per articolo magazzino
+  // Helper: trova qty in uso per articolo magazzino (id → ser → nome, in quest'ordine)
   const getInUso=m=>{
-    // Prima cerca per ID (univoco)
     if(inUsoMap[m.id]) return inUsoMap[m.id].qty;
-    // Fallback per seriale
-    if(m.ser&&inUsoMap[m.ser]) return inUsoMap[m.ser].qty;
-    // Fallback per nome
+    if(m.ser&&inUsoMap['ser:'+m.ser]) return inUsoMap['ser:'+m.ser].qty;
     const nkey='nome:'+(m.nome||'').toLowerCase().trim();
     return inUsoMap[nkey]?.qty||0;
   };
   const getLavoriInUso=m=>{
     if(inUsoMap[m.id]) return inUsoMap[m.id].lavori;
-    if(m.ser&&inUsoMap[m.ser]) return inUsoMap[m.ser].lavori;
+    if(m.ser&&inUsoMap['ser:'+m.ser]) return inUsoMap['ser:'+m.ser].lavori;
     const nkey='nome:'+(m.nome||'').toLowerCase().trim();
     return inUsoMap[nkey]?.lavori||[];
   };
@@ -7743,14 +7739,15 @@ function plRemove(i){plArticoli.splice(i,1);renderPlItems();}
 // Calcola disponibilità reale di un articolo (escludendo il lavoro in modifica) e dove
 // il resto è già impiegato, per gli avvisi quando si supera la quantità disponibile
 function plDisponibilitaEDoveUsato(art){
-  const key=art.id||art.ser||art.nome;
   const qtaTot=art.qty||1;
   let inUso=0;
   const luoghi=[];
   cacheDich.filter(d=>!d.rientroData&&d.id!==plEditingId).forEach(d=>{
     (d.articoli||[]).forEach(a=>{
-      const k=a.id||a.ser||a.nome;
-      if(k===key){
+      // Stessa identica logica di corrispondenza di getInUsoGlobale, per essere
+      // sempre coerenti con quello che mostra il badge "Esaurito" nel Magazzino
+      const match=a.id===art.id||(a.ser&&art.ser&&a.ser===art.ser)||(!a.id&&(a.nome||'').toLowerCase().trim()===(art.nome||'').toLowerCase().trim());
+      if(match){
         const q=a.qty||1;
         inUso+=q;
         luoghi.push((d.nome||'lavoro senza nome')+(d.location?' ('+d.location+')':'')+' ×'+q);
