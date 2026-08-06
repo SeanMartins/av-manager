@@ -17,6 +17,9 @@
     },
     "api/ff-freeze.js": {
       "maxDuration": 30
+    },
+    "api/scheda-tecnica.js": {
+      "maxDuration": 60
     }
   },
   "crons": [
