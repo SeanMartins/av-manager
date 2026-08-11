@@ -90,12 +90,16 @@ export default async function handler(req, res) {
       .map(d => d.id);
 
     const tokens = [];
+    const tokenOwner = []; // stesso indice di "tokens" — a quale uid appartiene ciascun token
     for (const uid of managerUids) {
       const tDoc = await db.collection('fcm_tokens').doc(uid).get();
-      if (tDoc.exists) (tDoc.data().tokens || []).forEach(t => tokens.push(t));
+      if (tDoc.exists) {
+        (tDoc.data().tokens || []).forEach(t => { tokens.push(t); tokenOwner.push(uid); });
+      }
     }
 
     let inviati = 0;
+    let tokenRimossi = 0;
     if (tokens.length) {
       const scadute = daAvvisare.filter(s => s.giorni < 0).length;
       const titolo = scadute > 0
@@ -111,6 +115,27 @@ export default async function handler(req, res) {
         webpush: { fcmOptions: { link: '/' } },
       });
       inviati = resp.successCount;
+
+      // Pulizia: rimuove i token che Firebase segnala come non più validi (device
+      // disinstallato, permesso revocato, token scaduto) — è la causa più comune di
+      // notifiche duplicate/triple, perché un utente accumula più token "morti" nel
+      // tempo oltre a quello vero e proprio attualmente valido
+      const daRimuovere = {}; // uid -> [token,...]
+      resp.responses.forEach((r, i) => {
+        if (!r.success) {
+          const codice = r.error?.code || '';
+          if (codice.includes('registration-token-not-registered') || codice.includes('invalid-registration-token') || codice.includes('invalid-argument')) {
+            const uid = tokenOwner[i];
+            (daRimuovere[uid] = daRimuovere[uid] || []).push(tokens[i]);
+          }
+        }
+      });
+      for (const [uid, tokenList] of Object.entries(daRimuovere)) {
+        await db.collection('fcm_tokens').doc(uid).update({
+          tokens: admin.firestore.FieldValue.arrayRemove(...tokenList)
+        });
+        tokenRimossi += tokenList.length;
+      }
     }
 
     res.status(200).json({
@@ -118,6 +143,7 @@ export default async function handler(req, res) {
       scadenzeSegnalate: daAvvisare.length,
       destinatari: tokens.length,
       notificheInviate: inviati,
+      tokenNonValidiRimossi: tokenRimossi,
     });
   } catch (e) {
     console.error('scadenzario-check error:', e);
