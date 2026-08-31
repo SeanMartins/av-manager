@@ -120,12 +120,17 @@ async function calcolaGiornata(db, numero) {
   const giocatori = {};
   giocatoriSnap.forEach(d => { giocatori[d.id] = { id: d.id, ...d.data() }; });
 
+  // Voto base reale (caricato a mano dall'Admin dopo la giornata, vedi ff_voti su Firestore).
+  // Se non ancora caricato per questa giornata, degrado in sicurezza a "presenza semplificata" (1 punto fisso).
+  const votiDoc = await db.collection('ff_voti').doc(String(numero)).get();
+  const voti = votiDoc.exists ? (votiDoc.data().voti || {}) : {};
+
   const puntiGiocatore = {}; // playerId -> punti giornata
 
   Object.entries(eventi).forEach(([pid, ev]) => {
     const g = giocatori[pid];
     if (!g) return;
-    let punti = 1; // presenza semplificata (partecipazione all'evento)
+    let punti = voti[pid] ?? 1; // voto reale se caricato, altrimenti presenza semplificata
     punti += ev.goals * 3;
     punti += ev.assists * 1;
     punti -= ev.yellow * 0.5;
@@ -139,7 +144,7 @@ async function calcolaGiornata(db, numero) {
     if (!g.squadraId) return;
     const haCleanSheet = cleanSheet[g.squadraId];
     if (haCleanSheet === undefined) return; // squadra non ha giocato questa giornata
-    if (!(g.id in puntiGiocatore)) puntiGiocatore[g.id] = 1; // presenza base
+    if (!(g.id in puntiGiocatore)) puntiGiocatore[g.id] = voti[g.id] ?? 1; // voto reale se caricato, altrimenti presenza base
     if ((g.ruolo === 'P' || g.ruolo === 'D') && haCleanSheet) puntiGiocatore[g.id] += 1;
     if (g.ruolo === 'P') {
       // Regola ufficiale Fantacalcio: -1 per OGNI gol subito, non ogni 2
