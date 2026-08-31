@@ -15777,6 +15777,66 @@ function ffMatchGiocatorePerNome(nomeRaw){
   return candidati.length===1?candidati[0]:null;
 }
 
+// Riconosce due formati: il template semplice (riga 1 con colonne Nome/Voto) e l'export
+// ufficiale di fantacalcio.it (un blocco per squadra: riga col solo nome squadra, poi
+// intestazione "Cod./Ruolo/Nome/Voto/...", poi una riga per giocatore — righe "ALL" escluse
+// perché sono l'allenatore, non un giocatore rosterizzabile).
+function ffParseVotiRows(rows){
+  const headerRow0=(rows[0]||[]).map(h=>String(h).toLowerCase().trim());
+  const findCol=(hdr,...keys)=>hdr.findIndex(h=>keys.some(k=>h.includes(k)));
+  const iVotoSemplice=findCol(headerRow0,'voto');
+  const iNomeSemplice=findCol(headerRow0,'nome');
+
+  if(iVotoSemplice>=0&&iNomeSemplice>=0){
+    const iId=findCol(headerRow0,'playerid','id');
+    const righe=[];
+    rows.slice(1).forEach(r=>{
+      const votoRaw=String(r[iVotoSemplice]??'').replace(',','.').trim();
+      if(!votoRaw)return;
+      const voto=parseFloat(votoRaw);
+      if(isNaN(voto))return;
+      let g=null;
+      if(iId>=0&&r[iId])g=cacheFfGiocatori.find(x=>x.id===String(r[iId]).trim());
+      if(!g&&iNomeSemplice>=0)g=ffMatchGiocatorePerNome(r[iNomeSemplice]);
+      righe.push({playerId:g?g.id:null,nome:g?g.nome:String(iNomeSemplice>=0?r[iNomeSemplice]:r[iId]),voto,riconosciuto:!!g,nuovo:null});
+    });
+    return righe;
+  }
+
+  // Formato fantacalcio.it: blocchi ripetuti per squadra
+  const righe=[];
+  let squadraCorrente=null;
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i]||[];
+    const c0=String(r[0]??'').trim();
+    if(!c0)continue;
+    if(c0==='Cod.')continue; // intestazione colonne, ripetuta per ogni squadra
+    const restoVuoto=r.slice(1).every(x=>x===''||x===undefined||x===null);
+    if(restoVuoto){
+      // scarta le righe di titolo/copyright in cima al file, non sono nomi squadra
+      if(!/fantacalcio|riprodott|uso personale|^voti /i.test(c0)) squadraCorrente=c0;
+      continue;
+    }
+    const ruolo=String(r[1]??'').trim().toUpperCase();
+    if(ruolo==='ALL')continue; // allenatore, non un giocatore
+    const nome=String(r[2]??'').trim();
+    const votoRaw=String(r[3]??'').replace(',','.').trim();
+    if(!nome||!votoRaw)continue;
+    const voto=parseFloat(votoRaw);
+    if(isNaN(voto))continue;
+    let g=cacheFfGiocatori.find(x=>ffNormNome(x.nome)===ffNormNome(nome)&&ffNormNome(x.squadra||'')===ffNormNome(squadraCorrente||''));
+    if(!g)g=ffMatchGiocatorePerNome(nome);
+    righe.push({
+      playerId:g?g.id:null,
+      nome:g?g.nome:nome,
+      voto,
+      riconosciuto:!!g,
+      nuovo:g?null:{nome,squadra:squadraCorrente,ruolo:['P','D','C','A'].includes(ruolo)?ruolo:'C',cod:String(c0)}
+    });
+  }
+  return righe;
+}
+
 function ffHandleUploadVotiExcel(input){
   const file=input.files[0];if(!file)return;
   const giornata=parseInt(val('ffVotiGiornata'));
@@ -15787,22 +15847,8 @@ function ffHandleUploadVotiExcel(input){
       const wb=XLSX.read(e.target.result,{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      const headerRow=(rows[0]||[]).map(h=>String(h).toLowerCase().trim());
-      const findCol=(...keys)=>headerRow.findIndex(h=>keys.some(k=>h.includes(k)));
-      const iId=findCol('playerid','id'),iNome=findCol('nome'),iVoto=findCol('voto');
-      if(iVoto<0){toast('Colonna "Voto" non trovata nel file','r');return;}
-      if(iId<0&&iNome<0){toast('Serve una colonna "Nome" o "PlayerId" nel file','r');return;}
-      ffVotiRows=[];
-      rows.slice(1).forEach(r=>{
-        const votoRaw=String(r[iVoto]??'').replace(',','.').trim();
-        if(!votoRaw)return; // non ha giocato, salta la riga
-        const voto=parseFloat(votoRaw);
-        if(isNaN(voto))return;
-        let g=null;
-        if(iId>=0&&r[iId])g=cacheFfGiocatori.find(x=>x.id===String(r[iId]).trim());
-        if(!g&&iNome>=0)g=ffMatchGiocatorePerNome(r[iNome]);
-        ffVotiRows.push({playerId:g?g.id:null,nome:g?g.nome:String(iNome>=0?r[iNome]:r[iId]),voto,riconosciuto:!!g});
-      });
+      ffVotiRows=ffParseVotiRows(rows);
+      if(!ffVotiRows.length){toast('Nessun voto trovato — formato file non riconosciuto','r');return;}
       ffRenderVotiPreview(giornata);
     }catch(err){
       toast('Errore lettura file: '+err.message,'r');
@@ -15862,31 +15908,50 @@ async function ffHandleUploadVotiPdf(input){
 function ffRenderVotiPreview(giornata){
   const el=$('ffVotiPreview');if(!el)return;
   if(!ffVotiRows.length){el.innerHTML='<div class="empty">Nessun voto riconosciuto nel file</div>';return;}
-  const nonRiconosciuti=ffVotiRows.filter(r=>!r.playerId).length;
-  let h='<div style="font-size:12px;color:var(--tx2);margin:10px 0 6px">Giornata '+giornata+' — '+ffVotiRows.length+' voti letti'+(nonRiconosciuti?' ('+nonRiconosciuti+' giocatori non riconosciuti, verranno ignorati)':'')+'</div>';
+  const nuovi=ffVotiRows.filter(r=>!r.playerId&&r.nuovo).length;
+  const persi=ffVotiRows.filter(r=>!r.playerId&&!r.nuovo).length;
+  let h='<div style="font-size:12px;color:var(--tx2);margin:10px 0 6px">Giornata '+giornata+' — '+ffVotiRows.length+' voti letti'+
+    (nuovi?' · <b>'+nuovi+' nuovi giocatori</b> non ancora in database (verranno aggiunti)':'')+
+    (persi?' · '+persi+' non riconosciuti (verranno ignorati)':'')+'</div>';
   h+='<div style="max-height:280px;overflow-y:auto;border:1px solid var(--b);border-radius:var(--rs)">';
   ffVotiRows.forEach((r,i)=>{
-    h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--b);'+(r.playerId?'':'opacity:.5')+'">'+
-      '<div style="flex:1;font-size:12px">'+r.nome+(r.playerId?'':' ⚠️ non riconosciuto')+'</div>'+
+    const attenua=!r.playerId&&!r.nuovo;
+    const etichetta=r.playerId?'':(r.nuovo?' 🆕 nuovo — '+r.nuovo.squadra+', '+r.nuovo.ruolo:' ⚠️ non riconosciuto');
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--b);'+(attenua?'opacity:.5':'')+'">'+
+      '<div style="flex:1;font-size:12px">'+r.nome+etichetta+'</div>'+
       '<input type="number" step="0.5" value="'+r.voto+'" style="width:60px;padding:4px 6px" onchange="ffVotiRows['+i+'].voto=parseFloat(this.value)">'+
     '</div>';
   });
   h+='</div>';
-  h+='<button class="btn btn-p btn-f" style="margin-top:10px" onclick="ffConfermaVotiGiornata('+giornata+')">✓ Conferma e salva voti Giornata '+giornata+'</button>';
+  h+='<button class="btn btn-p btn-f" style="margin-top:10px" onclick="ffConfermaVotiGiornata('+giornata+')">✓ Conferma'+(nuovi?' (aggiunge '+nuovi+' giocatori)':'')+' e salva voti Giornata '+giornata+'</button>';
   el.innerHTML=h;
 }
 
 async function ffConfermaVotiGiornata(giornata){
-  const validi=ffVotiRows.filter(r=>r.playerId);
+  const validi=ffVotiRows.filter(r=>r.playerId||r.nuovo);
   if(!validi.length){toast('Nessun voto valido da salvare','r');return;}
   const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ [Voti] Salvataggio in corso...';
   try{
+    // Crea prima i giocatori mancanti (dati certi presi dal file: nome/squadra/ruolo),
+    // così i loro voti possono essere collegati a un playerId reale
+    const nuovi=validi.filter(r=>!r.playerId&&r.nuovo);
+    if(nuovi.length){
+      const batchNew=DB.batch();
+      nuovi.forEach(r=>{
+        const id='fcit_'+r.nuovo.cod;
+        r.playerId=id;
+        batchNew.set(DB.collection('ff_giocatori').doc(id),{
+          id, nome:r.nuovo.nome, squadra:r.nuovo.squadra, ruolo:r.nuovo.ruolo
+        },{merge:true});
+      });
+      await batchNew.commit();
+    }
     const voti={};
     validi.forEach(r=>{voti[r.playerId]=r.voto;});
     await DB.collection('ff_voti').doc(String(giornata)).set({giornata,voti,caricatoAt:new Date().toISOString(),caricatoDa:USER.id},{merge:true});
     // Sblocca il ricalcolo: senza questo "Forza calcolo punteggi" salterebbe la giornata perché già segnata come sincronizzata
     await DB.collection('ff_giornate').doc(String(giornata)).set({sincronizzata:false},{merge:true});
-    if(msg)msg.textContent='✓ [Voti] '+validi.length+' voti salvati per la Giornata '+giornata+' — ora premi "Forza calcolo punteggi" per ricalcolare con i voti reali';
+    if(msg)msg.textContent='✓ [Voti] '+validi.length+' voti salvati per la Giornata '+giornata+(nuovi.length?' ('+nuovi.length+' nuovi giocatori aggiunti al database)':'')+' — ora premi "Forza calcolo punteggi" per ricalcolare con i voti reali';
     toast('✓ Voti salvati');
     ffVotiRows=[];
     const prev=$('ffVotiPreview');if(prev)prev.innerHTML='';
