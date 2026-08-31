@@ -15842,12 +15842,16 @@ function ffParseVotiRows(rows){
     if(isNaN(voto))continue;
     let g=cacheFfGiocatori.find(x=>ffNormNome(x.nome)===ffNormNome(nome)&&ffNormNome(x.squadra||'')===ffNormNome(squadraCorrente||''));
     if(!g)g=ffMatchGiocatorePerNome(nome);
+    // Il giocatore esiste già ma con una squadra diversa da quella del file → trasferimento:
+    // propongo l'aggiornamento invece di lasciare il database disallineato
+    const trasferito=(g&&squadraCorrente&&ffNormNome(g.squadra||'')!==ffNormNome(squadraCorrente))?{da:g.squadra||'—',a:squadraCorrente}:null;
     righe.push({
       playerId:g?g.id:null,
       nome:g?g.nome:nome,
       voto,
       riconosciuto:!!g,
-      nuovo:g?null:{nome,squadra:squadraCorrente,ruolo:['P','D','C','A'].includes(ruolo)?ruolo:'C',cod:String(c0)}
+      nuovo:g?null:{nome,squadra:squadraCorrente,ruolo:['P','D','C','A'].includes(ruolo)?ruolo:'C',cod:String(c0)},
+      trasferito
     });
   }
   return righe;
@@ -15926,20 +15930,25 @@ function ffRenderVotiPreview(giornata){
   if(!ffVotiRows.length){el.innerHTML='<div class="empty">Nessun voto riconosciuto nel file</div>';return;}
   const nuovi=ffVotiRows.filter(r=>!r.playerId&&r.nuovo).length;
   const persi=ffVotiRows.filter(r=>!r.playerId&&!r.nuovo).length;
+  const trasferiti=ffVotiRows.filter(r=>r.trasferito).length;
   let h='<div style="font-size:12px;color:var(--tx2);margin:10px 0 6px">Giornata '+giornata+' — '+ffVotiRows.length+' voti letti'+
     (nuovi?' · <b>'+nuovi+' nuovi giocatori</b> non ancora in database (verranno aggiunti)':'')+
+    (trasferiti?' · <b>'+trasferiti+' trasferimenti</b> rilevati (squadra verrà aggiornata)':'')+
     (persi?' · '+persi+' non riconosciuti (verranno ignorati)':'')+'</div>';
   h+='<div style="max-height:280px;overflow-y:auto;border:1px solid var(--b);border-radius:var(--rs)">';
   ffVotiRows.forEach((r,i)=>{
     const attenua=!r.playerId&&!r.nuovo;
-    const etichetta=r.playerId?'':(r.nuovo?' 🆕 nuovo — '+r.nuovo.squadra+', '+r.nuovo.ruolo:' ⚠️ non riconosciuto');
+    const etichetta=r.nuovo?' 🆕 nuovo — '+r.nuovo.squadra+', '+r.nuovo.ruolo
+      :r.trasferito?' 🔄 trasferito: '+r.trasferito.da+' → '+r.trasferito.a
+      :r.playerId?''
+      :' ⚠️ non riconosciuto';
     h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--b);'+(attenua?'opacity:.5':'')+'">'+
       '<div style="flex:1;font-size:12px">'+r.nome+etichetta+'</div>'+
       '<input type="number" step="0.5" value="'+r.voto+'" style="width:60px;padding:4px 6px" onchange="ffVotiRows['+i+'].voto=parseFloat(this.value)">'+
     '</div>';
   });
   h+='</div>';
-  h+='<button class="btn btn-p btn-f" style="margin-top:10px" onclick="ffConfermaVotiGiornata('+giornata+')">✓ Conferma'+(nuovi?' (aggiunge '+nuovi+' giocatori)':'')+' e salva voti Giornata '+giornata+'</button>';
+  h+='<button class="btn btn-p btn-f" style="margin-top:10px" onclick="ffConfermaVotiGiornata('+giornata+')">✓ Conferma'+(nuovi?' (aggiunge '+nuovi+' giocatori)':'')+(trasferiti?' (aggiorna '+trasferiti+' squadre)':'')+' e salva voti Giornata '+giornata+'</button>';
   el.innerHTML=h;
 }
 
@@ -15962,12 +15971,25 @@ async function ffConfermaVotiGiornata(giornata){
       });
       await batchNew.commit();
     }
+    // Aggiorna la squadra dei giocatori già in database ma trasferiti secondo il file —
+    // così i prossimi caricamenti (e le prossime giornate) li riconoscono subito
+    const trasferiti=validi.filter(r=>r.trasferito&&r.playerId);
+    if(trasferiti.length){
+      const batchMossi=DB.batch();
+      trasferiti.forEach(r=>{
+        batchMossi.update(DB.collection('ff_giocatori').doc(r.playerId),{squadra:r.trasferito.a});
+      });
+      await batchMossi.commit();
+    }
     const voti={};
     validi.forEach(r=>{voti[r.playerId]=r.voto;});
     await DB.collection('ff_voti').doc(String(giornata)).set({giornata,voti,caricatoAt:new Date().toISOString(),caricatoDa:USER.id},{merge:true});
     // Sblocca il ricalcolo: senza questo "Forza calcolo punteggi" salterebbe la giornata perché già segnata come sincronizzata
     await DB.collection('ff_giornate').doc(String(giornata)).set({sincronizzata:false},{merge:true});
-    if(msg)msg.textContent='✓ [Voti] '+validi.length+' voti salvati per la Giornata '+giornata+(nuovi.length?' ('+nuovi.length+' nuovi giocatori aggiunti al database)':'')+' — ora premi "Forza calcolo punteggi" per ricalcolare con i voti reali';
+    if(msg)msg.textContent='✓ [Voti] '+validi.length+' voti salvati per la Giornata '+giornata+
+      (nuovi.length?' · '+nuovi.length+' nuovi giocatori aggiunti':'')+
+      (trasferiti.length?' · '+trasferiti.length+' squadre aggiornate':'')+
+      ' — ora premi "Forza calcolo punteggi" per ricalcolare con i voti reali';
     toast('✓ Voti salvati');
     ffVotiRows=[];
     const prev=$('ffVotiPreview');if(prev)prev.innerHTML='';
