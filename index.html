@@ -24,6 +24,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -1147,6 +1148,15 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
         <button class="btn" style="font-size:12px" onclick="ffForzaSync()">⚡ Forza calcolo punteggi</button>
         <button class="btn" style="font-size:12px" onclick="ffGeneraCalendarioSfide()">⚔️ Genera calendario sfide</button>
       </div>
+      <div style="font-size:11px;color:var(--tx3);margin:14px 0 10px;padding-top:10px;border-top:1px solid var(--b)">📊 Voto base (pagella) da Gazzetta/fonte a scelta — non disponibile nell'API gratuita, va caricato a mano dopo ogni giornata. Carica Excel (affidabile) o PDF (riconoscimento automatico da rivedere sempre prima di confermare).</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <label class="il" style="margin:0">Giornata</label>
+        <input type="number" id="ffVotiGiornata" min="1" style="width:70px" placeholder="N.">
+        <button class="btn" style="font-size:12px" onclick="ffScaricaTemplateVoti()">📋 Scarica template</button>
+        <label class="btn" style="font-size:12px;cursor:pointer">📥 Carica Excel voti<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="ffHandleUploadVotiExcel(this)"></label>
+        <label class="btn" style="font-size:12px;cursor:pointer">📄 Carica PDF voti<input type="file" accept=".pdf" style="display:none" onchange="ffHandleUploadVotiPdf(this)"></label>
+      </div>
+      <div id="ffVotiPreview"></div>
       <div id="ffAdminMsg" style="font-size:11px;color:var(--tx3);margin-top:8px"></div>
     </div>
 
@@ -2995,6 +3005,9 @@ const AUTH = firebase.auth();
 async function authHdr(){
   const t=AUTH.currentUser?await AUTH.currentUser.getIdToken():null;
   return t?{'Authorization':'Bearer '+t}:{};
+}
+if(typeof pdfjsLib!=='undefined'){
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
 // ── STATE ──
@@ -15723,6 +15736,162 @@ async function ffConfirmImportGiocatori(){
     ffImportRows=[];
   }catch(e){
     if(msg)msg.textContent='❌ [Import Excel] Errore: '+e.message;
+    toast('Errore: '+e.message,'r');
+  }
+}
+
+// ── VOTI GIORNATA (base reale al posto della presenza fissa, caricati a mano) ──
+
+function ffScaricaTemplateVoti(){
+  if(!cacheFfGiocatori.length){toast('Nessun giocatore in elenco — importa prima i giocatori','r');return;}
+  const header=['PlayerId','Nome','Squadra','Ruolo','Voto'];
+  const rows=cacheFfGiocatori.slice()
+    .sort((a,b)=>(a.squadra||'').localeCompare(b.squadra||'')||(a.nome||'').localeCompare(b.nome||''))
+    .map(g=>[g.id,g.nome,g.squadra||'',g.ruolo||'','']);
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([header,...rows]);
+  ws['!cols']=[{wch:10},{wch:26},{wch:16},{wch:8},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws,'Voti');
+  XLSX.writeFile(wb,'Template_Voti_Giornata.xlsx');
+  toast('📋 Template scaricato — compila la colonna Voto, lascia vuoto chi non ha giocato');
+}
+
+let ffVotiRows=[]; // {playerId, nome, voto, riconosciuto}
+
+function ffNormNome(s){
+  const senzaAccenti=String(s||'').toLowerCase().normalize('NFD').split('').filter(c=>{
+    const code=c.charCodeAt(0);
+    return code<0x300||code>0x36f; // esclude i segni diacritici combinanti (es. l'accento separato da NFD)
+  }).join('');
+  return senzaAccenti.replace(/[^a-z0-9 ]/g,'').trim();
+}
+
+function ffMatchGiocatorePerNome(nomeRaw){
+  const target=ffNormNome(nomeRaw);
+  if(!target)return null;
+  let g=cacheFfGiocatori.find(x=>ffNormNome(x.nome)===target);
+  if(g)return g;
+  // fallback: match sul solo cognome (ultima parola) — utile se la fonte usa "Iniziale. Cognome"
+  const targetCognome=target.split(' ').pop();
+  const candidati=cacheFfGiocatori.filter(x=>ffNormNome(x.nome).split(' ').pop()===targetCognome);
+  return candidati.length===1?candidati[0]:null;
+}
+
+function ffHandleUploadVotiExcel(input){
+  const file=input.files[0];if(!file)return;
+  const giornata=parseInt(val('ffVotiGiornata'));
+  if(!giornata){toast('Inserisci il numero di giornata prima di caricare','r');input.value='';return;}
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      const headerRow=(rows[0]||[]).map(h=>String(h).toLowerCase().trim());
+      const findCol=(...keys)=>headerRow.findIndex(h=>keys.some(k=>h.includes(k)));
+      const iId=findCol('playerid','id'),iNome=findCol('nome'),iVoto=findCol('voto');
+      if(iVoto<0){toast('Colonna "Voto" non trovata nel file','r');return;}
+      if(iId<0&&iNome<0){toast('Serve una colonna "Nome" o "PlayerId" nel file','r');return;}
+      ffVotiRows=[];
+      rows.slice(1).forEach(r=>{
+        const votoRaw=String(r[iVoto]??'').replace(',','.').trim();
+        if(!votoRaw)return; // non ha giocato, salta la riga
+        const voto=parseFloat(votoRaw);
+        if(isNaN(voto))return;
+        let g=null;
+        if(iId>=0&&r[iId])g=cacheFfGiocatori.find(x=>x.id===String(r[iId]).trim());
+        if(!g&&iNome>=0)g=ffMatchGiocatorePerNome(r[iNome]);
+        ffVotiRows.push({playerId:g?g.id:null,nome:g?g.nome:String(iNome>=0?r[iNome]:r[iId]),voto,riconosciuto:!!g});
+      });
+      ffRenderVotiPreview(giornata);
+    }catch(err){
+      toast('Errore lettura file: '+err.message,'r');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value='';
+}
+
+async function ffHandleUploadVotiPdf(input){
+  const file=input.files[0];if(!file)return;
+  const giornata=parseInt(val('ffVotiGiornata'));
+  if(!giornata){toast('Inserisci il numero di giornata prima di caricare','r');input.value='';return;}
+  const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ [Voti PDF] Estrazione testo in corso...';
+  try{
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    const righe=[];
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p);
+      const content=await page.getTextContent();
+      // I PDF non hanno un concetto di "riga": raggruppo gli elementi di testo per coordinata Y
+      const perY={};
+      content.items.forEach(it=>{
+        const y=Math.round(it.transform[5]);
+        (perY[y]=perY[y]||[]).push(it);
+      });
+      Object.keys(perY).sort((a,b)=>b-a).forEach(y=>{
+        const testo=perY[y].sort((a,b)=>a.transform[4]-b.transform[4]).map(i=>i.str).join(' ').trim();
+        if(testo)righe.push(testo);
+      });
+    }
+    // Euristica: in ogni riga cerco un numero 1-10 (il voto) e un giocatore noto come sottostringa
+    ffVotiRows=[];
+    const vistiId=new Set();
+    righe.forEach(riga=>{
+      const numMatch=riga.match(/\b([1-9](?:[.,]\d)?|10)\b/);
+      if(!numMatch)return;
+      const voto=parseFloat(numMatch[1].replace(',','.'));
+      if(voto<1||voto>10)return;
+      const rigaNorm=ffNormNome(riga.replace(numMatch[0],' '));
+      const match=cacheFfGiocatori.find(g=>g.id&&!vistiId.has(g.id)&&rigaNorm.includes(ffNormNome(g.nome).split(' ').pop()));
+      if(match){
+        vistiId.add(match.id);
+        ffVotiRows.push({playerId:match.id,nome:match.nome,voto,riconosciuto:true});
+      }
+    });
+    if(msg)msg.textContent='⚠️ [Voti PDF] '+ffVotiRows.length+' voti riconosciuti — il riconoscimento da PDF non è affidabile al 100%, controlla ogni riga prima di confermare';
+    ffRenderVotiPreview(giornata);
+  }catch(err){
+    if(msg)msg.textContent='❌ [Voti PDF] Errore: '+err.message;
+    toast('Errore lettura PDF: '+err.message,'r');
+  }
+  input.value='';
+}
+
+function ffRenderVotiPreview(giornata){
+  const el=$('ffVotiPreview');if(!el)return;
+  if(!ffVotiRows.length){el.innerHTML='<div class="empty">Nessun voto riconosciuto nel file</div>';return;}
+  const nonRiconosciuti=ffVotiRows.filter(r=>!r.playerId).length;
+  let h='<div style="font-size:12px;color:var(--tx2);margin:10px 0 6px">Giornata '+giornata+' — '+ffVotiRows.length+' voti letti'+(nonRiconosciuti?' ('+nonRiconosciuti+' giocatori non riconosciuti, verranno ignorati)':'')+'</div>';
+  h+='<div style="max-height:280px;overflow-y:auto;border:1px solid var(--b);border-radius:var(--rs)">';
+  ffVotiRows.forEach((r,i)=>{
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--b);'+(r.playerId?'':'opacity:.5')+'">'+
+      '<div style="flex:1;font-size:12px">'+r.nome+(r.playerId?'':' ⚠️ non riconosciuto')+'</div>'+
+      '<input type="number" step="0.5" value="'+r.voto+'" style="width:60px;padding:4px 6px" onchange="ffVotiRows['+i+'].voto=parseFloat(this.value)">'+
+    '</div>';
+  });
+  h+='</div>';
+  h+='<button class="btn btn-p btn-f" style="margin-top:10px" onclick="ffConfermaVotiGiornata('+giornata+')">✓ Conferma e salva voti Giornata '+giornata+'</button>';
+  el.innerHTML=h;
+}
+
+async function ffConfermaVotiGiornata(giornata){
+  const validi=ffVotiRows.filter(r=>r.playerId);
+  if(!validi.length){toast('Nessun voto valido da salvare','r');return;}
+  const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ [Voti] Salvataggio in corso...';
+  try{
+    const voti={};
+    validi.forEach(r=>{voti[r.playerId]=r.voto;});
+    await DB.collection('ff_voti').doc(String(giornata)).set({giornata,voti,caricatoAt:new Date().toISOString(),caricatoDa:USER.id},{merge:true});
+    // Sblocca il ricalcolo: senza questo "Forza calcolo punteggi" salterebbe la giornata perché già segnata come sincronizzata
+    await DB.collection('ff_giornate').doc(String(giornata)).set({sincronizzata:false},{merge:true});
+    if(msg)msg.textContent='✓ [Voti] '+validi.length+' voti salvati per la Giornata '+giornata+' — ora premi "Forza calcolo punteggi" per ricalcolare con i voti reali';
+    toast('✓ Voti salvati');
+    ffVotiRows=[];
+    const prev=$('ffVotiPreview');if(prev)prev.innerHTML='';
+  }catch(e){
+    if(msg)msg.textContent='❌ [Voti] Errore: '+e.message;
     toast('Errore: '+e.message,'r');
   }
 }

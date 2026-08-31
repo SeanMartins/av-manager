@@ -239,6 +239,12 @@ service cloud.firestore {
       allow read: if isApproved();
       allow write: if isManager();
     }
+    // Voto base reale caricato a mano dall'Admin per ogni giornata (Excel/PDF) — usato da
+    // ff-sync.js al posto della presenza fissa quando disponibile. Sola lettura per il team.
+    match /ff_voti/{id} {
+      allow read: if isApproved();
+      allow write: if isManager();
+    }
     // Rose dei partecipanti: tutti leggono tutte le rose (serve per classifica e sfide),
     // ma ognuno scrive SOLO il proprio documento (id documento = proprio uid);
     // i manager possono comunque intervenire se serve correggere qualcosa
