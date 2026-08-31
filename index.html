@@ -15771,9 +15771,25 @@ function ffMatchGiocatorePerNome(nomeRaw){
   if(!target)return null;
   let g=cacheFfGiocatori.find(x=>ffNormNome(x.nome)===target);
   if(g)return g;
-  // fallback: match sul solo cognome (ultima parola) — utile se la fonte usa "Iniziale. Cognome"
-  const targetCognome=target.split(' ').pop();
-  const candidati=cacheFfGiocatori.filter(x=>ffNormNome(x.nome).split(' ').pop()===targetCognome);
+  const parti=target.split(' ');
+  const ultima=parti[parti.length-1];
+  // Fantacalcio.it disambigua i cognomi comuni con "Cognome Iniziale" (es. "Martinez L." per
+  // Lautaro Martínez, "Martinez Jo." per Josep Martinez) — se l'ultima parola è cortissima (1-3
+  // lettere) è quasi certamente un'iniziale del nome, non un cognome: cerco chi ha quel cognome
+  // E il nome che inizia con quell'iniziale
+  if(parti.length>=2&&ultima.length<=3){
+    const cognomeTarget=parti.slice(0,-1).join(' ');
+    const candidatiIniziale=cacheFfGiocatori.filter(x=>{
+      const px=ffNormNome(x.nome).split(' ');
+      if(px.length<2)return false;
+      const cognomeX=px[px.length-1];
+      const nomeX=px.slice(0,-1).join(' ');
+      return cognomeX===cognomeTarget&&nomeX.startsWith(ultima);
+    });
+    if(candidatiIniziale.length===1)return candidatiIniziale[0];
+  }
+  // fallback: match sul solo cognome (ultima parola), solo se univoco nel database
+  const candidati=cacheFfGiocatori.filter(x=>ffNormNome(x.nome).split(' ').pop()===ultima);
   return candidati.length===1?candidati[0]:null;
 }
 
