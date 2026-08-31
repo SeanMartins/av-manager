@@ -1,0 +1,278 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ══════════════════════════════════════════
+    // HELPER — letture del profilo di chi sta facendo la richiesta
+    // ══════════════════════════════════════════
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function profileExists() {
+      return isSignedIn() && exists(/databases/$(database)/documents/team/$(request.auth.uid));
+    }
+
+    function myProfile() {
+      return get(/databases/$(database)/documents/team/$(request.auth.uid)).data;
+    }
+
+    function isApproved() {
+      return profileExists() && myProfile().approvato == true;
+    }
+
+    // Responsabile, Project Manager o flag isAdmin: gruppo con accesso gestionale completo
+    function isManager() {
+      return isApproved() && (
+        myProfile().isAdmin == true ||
+        myProfile().ruolo == 'Responsabile' ||
+        myProfile().ruolo == 'Project Manager'
+      );
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ══════════════════════════════════════════
+    // TEAM — identità di ognuno
+    // ══════════════════════════════════════════
+    match /team/{uid} {
+      // Solo utenti autenticati possono leggere l'elenco team (email, telefoni, ruoli sono dati
+      // personali — niente lettura pubblica). Il controllo "email già in uso" in fase di
+      // registrazione è demandato a Firebase Auth stesso (auth/email-already-in-use),
+      // non a una query Firestore pre-login.
+      allow read: if isSignedIn();
+      // Un utente può creare il proprio documento SOLO in fase di registrazione,
+      // e solo con approvato:false (non può auto-approvarsi né auto-promuoversi admin)
+      allow create: if isOwner(uid)
+        && request.resource.data.approvato == false
+        && request.resource.data.get('isAdmin', false) == false;
+      // Un utente può aggiornare SOLO il proprio documento, e MAI i campi sensibili
+      // (approvato, isAdmin, ruolo) — quelli li tocca solo un manager
+      allow update: if isManager()
+        || (isOwner(uid)
+            && request.resource.data.approvato == resource.data.approvato
+            && request.resource.data.get('isAdmin', false) == resource.data.get('isAdmin', false)
+            && request.resource.data.ruolo == resource.data.ruolo);
+      allow delete: if isManager();
+    }
+
+    // ══════════════════════════════════════════
+    // PRESENZE — ognuno legge/scrive solo le proprie, i manager vedono tutto
+    // ══════════════════════════════════════════
+    match /presenze/{id} {
+      // Lettura aperta a tutto il team approvato: la sezione "Team oggi" mostra la
+      // presenza di tutti a tutti — la scrittura resta invece riservata a se stessi/manager
+      allow read: if isApproved();
+      allow create: if isManager() || (isSignedIn() && request.resource.data.uid == request.auth.uid);
+      allow update, delete: if isManager() || (isSignedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    // ══════════════════════════════════════════
+    // FERIE / PERMESSI / STRAORDINARI — dati personali sensibili
+    // Solo i manager possono creare/modificare (inseriti dal Responsabile, come da app);
+    // ogni dipendente legge solo i propri, i manager leggono tutto
+    // ══════════════════════════════════════════
+    match /ferie_permessi/{id} {
+      allow read: if isManager() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow write: if isManager();
+    }
+    match /straordinari/{id} {
+      allow read: if isManager() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow write: if isManager();
+    }
+    match /ore_conferme/{id} {
+      allow read: if isManager() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      // Richiede isApproved() (non solo isSignedIn()) per coerenza con il resto delle
+      // regole: un utente registrato ma non ancora approvato non deve poter scrivere qui
+      allow write: if isApproved() && request.resource.data.uid == request.auth.uid;
+    }
+
+    // ══════════════════════════════════════════
+    // PREVENTIVI, CLIENTI, LISTINO, PACCHETTI — riservati ai manager
+    // (stesso gruppo di pvCanAccess() già usato lato app)
+    // ══════════════════════════════════════════
+    match /preventivi/{id} {
+      allow read, write: if isManager();
+    }
+    match /clienti/{id} {
+      allow read, write: if isManager();
+    }
+    match /fornitori/{id} {
+      allow read, write: if isManager();
+    }
+    match /scadenzario/{id} {
+      allow read, write: if isManager();
+    }
+    match /listino/{id} {
+      allow read, write: if isManager();
+    }
+    match /pacchetti/{id} {
+      allow read, write: if isManager();
+    }
+
+    // ══════════════════════════════════════════
+    // OPERATIVO CONDIVISO — leggibile da tutto il team approvato,
+    // scrivibile/modificabile da chi è approvato; l'eliminazione definitiva
+    // resta riservata ai manager per evitare che un singolo utente possa
+    // cancellare per errore (o intenzionalmente) i dati di tutti
+    // ══════════════════════════════════════════
+    match /magazzino/{id} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isManager();
+    }
+    match /mezzi_aziendali/{id} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isManager();
+    }
+    match /mat_install/{id} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isManager();
+    }
+    match /mat_nuovi/{id} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isManager();
+    }
+    match /mat_venduti/{id} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isManager();
+    }
+    match /lavori_cal/{id} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isManager();
+    }
+    match /lavori/{id} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isManager();
+    }
+    match /agenda/{id} {
+      allow read: if isApproved();
+      allow write: if isManager();
+    }
+    match /locations/{id} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isManager();
+      match /fotos/{photoId} {
+        allow read, write: if isApproved();
+      }
+    }
+    match /forum/{id} {
+      allow read: if isApproved();
+      allow create: if isApproved() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isManager() || (isApproved() && resource.data.uid == request.auth.uid);
+      match /replies/{replyId} {
+        allow read: if isApproved();
+        allow create: if isApproved() && request.resource.data.uid == request.auth.uid;
+        allow update, delete: if isManager() || (isApproved() && resource.data.uid == request.auth.uid);
+      }
+    }
+    match /chat/{id} {
+      allow read, write: if isApproved();
+      match /msgs/{msgId} {
+        allow read: if isApproved();
+        allow create: if isApproved() && request.resource.data.uid == request.auth.uid;
+        allow update, delete: if isManager() || (isApproved() && resource.data.uid == request.auth.uid);
+      }
+    }
+    match /notifiche_resp/{id} {
+      allow read, write: if isManager();
+    }
+    match /fcm_tokens/{id} {
+      // Token notifiche push: ognuno gestisce/legge solo il proprio (il client fa un
+      // get() sul proprio documento prima di aggiungere un nuovo token — con "read"
+      // riservato ai soli manager questa lettura falliva in silenzio per chiunque non
+      // fosse manager, e le notifiche push non venivano mai attivate per il resto del team)
+      allow read: if isManager() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow create, update, delete: if isSignedIn() && (resource == null || resource.data.uid == request.auth.uid) && request.resource.data.uid == request.auth.uid;
+    }
+
+    // ══════════════════════════════════════════
+    // CESPITI — beni strumentali aziendali
+    // Il singolo cespite è leggibile da chiunque abbia il link/QR (cespite.html fa
+    // sempre e solo un get() per id, mai una query sull'intera collezione), ma la
+    // LISTA/collezione completa (valori, seriali, costi di acquisto di tutti i beni)
+    // resta riservata ai manager: "read: if true" copriva anche list, permettendo a
+    // chiunque di scaricare l'intero inventario cespiti senza autenticarsi.
+    // Scrittura solo manager.
+    // ══════════════════════════════════════════
+    match /ces_nuovi/{id} {
+      allow get: if true;
+      allow list: if isManager();
+      allow write: if isManager();
+    }
+    match /ces_venduti/{id} {
+      allow get: if true;
+      allow list: if isManager();
+      allow write: if isManager();
+    }
+    match /ces_install/{id} {
+      allow get: if true;
+      allow list: if isManager();
+      allow write: if isManager();
+    }
+
+    // ══════════════════════════════════════════
+    // IMPOSTAZIONI APP — es. attivazione/disattivazione sezioni sperimentali (Fantacalcio)
+    // Letto da tutto il team approvato (serve per nascondere/mostrare voci di menu),
+    // modificabile solo dai manager
+    // ══════════════════════════════════════════
+    match /settings/{id} {
+      allow read: if isApproved();
+      allow write: if isManager();
+    }
+
+    // ══════════════════════════════════════════
+    // FANTACALCIO MMG — sezione svago, aperta a tutto il team approvato
+    // ══════════════════════════════════════════
+    // Elenco giocatori Serie A: lettura per tutti (serve a comporre la squadra),
+    // scrittura riservata ai manager (import listone / aggiornamento rose)
+    match /ff_giocatori/{id} {
+      allow read: if isApproved();
+      allow write: if isManager();
+    }
+    // Rose dei partecipanti: tutti leggono tutte le rose (serve per classifica e sfide),
+    // ma ognuno scrive SOLO il proprio documento (id documento = proprio uid);
+    // i manager possono comunque intervenire se serve correggere qualcosa
+    match /ff_rose/{uid} {
+      allow read: if isApproved();
+      allow write: if isManager() || (isApproved() && isOwner(uid));
+    }
+    // Punteggi calcolati per giornata: scritti dal server (account di servizio, che
+    // scavalca queste regole) — qui serve solo la lettura per tutto il team;
+    // consentita anche la scrittura ai manager per eventuali correzioni manuali
+    match /ff_punteggi_giornata/{id} {
+      allow read: if isApproved();
+      allow write: if isManager();
+    }
+    // Fotografia delle formazioni congelate al fischio d'inizio di ogni giornata:
+    // scritta dal server (account di servizio), lettura aperta al team
+    match /ff_titolari_giornata/{id} {
+      allow read: if isApproved();
+      allow write: if isManager();
+    }
+    // Stato di sincronizzazione delle giornate: stessa logica di cui sopra
+    match /ff_giornate/{id} {
+      allow read: if isApproved();
+      allow write: if isManager();
+    }
+    // Calendario scontri diretti: lettura per tutti, generazione riservata ai manager
+    match /ff_calendario/{id} {
+      allow read: if isApproved();
+      allow write: if isManager();
+    }
+
+    // Tutto il resto: negato di default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

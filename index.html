@@ -2990,6 +2990,12 @@ firebase.initializeApp({
 });
 const DB = firebase.firestore();
 const AUTH = firebase.auth();
+// Header Authorization per le chiamate alle nostre API in api/*.js — provano che la
+// richiesta arriva da un utente loggato dell'app, non da uno sconosciuto su internet
+async function authHdr(){
+  const t=AUTH.currentUser?await AUTH.currentUser.getIdToken():null;
+  return t?{'Authorization':'Bearer '+t}:{};
+}
 
 // ── STATE ──
 let USER=null,punchedIn=false,punchStart=null,punchDocId=null;
@@ -5672,7 +5678,7 @@ async function generaSchedaTecnica(artId){
   if(wrap)wrap.innerHTML='<div class="empty" style="padding:16px;text-align:center">⏳ Ricerca in corso su modello "'+m.nome+'"...</div>';
   try{
     const resp=await fetch('/api/scheda-tecnica',{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',headers:{'Content-Type':'application/json',...(await authHdr())},
       body:JSON.stringify({nome:m.nome,marca:m.marca,modello:m.ser,categoria:m.cat})
     });
     const data=await resp.json();
@@ -10286,7 +10292,7 @@ async function scTestaNotifiche(){
   if(!key)return;
   const msg=$('scTestMsg');if(msg)msg.textContent='⏳ Controllo in corso...';
   try{
-    const resp=await fetch('/api/scadenzario-check?key='+encodeURIComponent(key));
+    const resp=await fetch('/api/scadenzario-check',{headers:{'Authorization':'Bearer '+key}});
     const data=await resp.json();
     if(data.error)throw new Error(data.error);
     if(msg)msg.textContent='✓ '+(data.scadenzeSegnalate||0)+' scadenze segnalate a '+(data.destinatari||0)+' destinatari ('+(data.notificheInviate||0)+' notifiche inviate'+(data.tokenNonValidiRimossi?', '+data.tokenNonValidiRimossi+' token non validi ripuliti':'')+')';
@@ -11693,7 +11699,7 @@ async function eseguiBackupManuale(){
   if(!key)return;
   const msg=$('backupMsg');if(msg)msg.textContent='⏳ Backup in corso...';
   try{
-    const resp=await fetch('/api/backup?key='+encodeURIComponent(key));
+    const resp=await fetch('/api/backup',{headers:{'Authorization':'Bearer '+key}});
     const data=await resp.json();
     if(data.error)throw new Error(data.error);
     const tot=Object.values(data.conteggi||{}).reduce((s,n)=>s+n,0);
@@ -13185,7 +13191,7 @@ async function avviaAnalisiAI(){
 
     const response=await fetch('/api/ai-analyze',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json',...(await authHdr())},
       body:JSON.stringify({
         model:'claude-sonnet-4-5',
         max_tokens:2000,
@@ -15724,7 +15730,7 @@ async function ffConfirmImportGiocatori(){
 async function ffAggiornaGiocatori(){
   const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ [Elenco giocatori] Recupero elenco squadre...';
   try{
-    const respTeams=await fetch('/api/ff-players?mode=teams');
+    const respTeams=await fetch('/api/ff-players?mode=teams',{headers:await authHdr()});
     const dataTeams=await respTeams.json();
     if(dataTeams.error)throw new Error(dataTeams.error);
     const squadre=dataTeams.squadre||[];
@@ -15735,7 +15741,7 @@ async function ffAggiornaGiocatori(){
       const sq=squadre[i];
       if(msg)msg.textContent='⏳ [Elenco giocatori] ('+(i+1)+'/'+squadre.length+') Recupero rosa '+sq.nome+'...';
       try{
-        const resp=await fetch('/api/ff-players?mode=squad&teamId='+sq.id);
+        const resp=await fetch('/api/ff-players?mode=squad&teamId='+sq.id,{headers:await authHdr()});
         const data=await resp.json();
         if(data.error){
           console.warn('Rosa non recuperata per',sq.nome,data.error);
@@ -15777,7 +15783,7 @@ async function ffForzaSyncConfirm(){
   closeMod('mFfSyncSecret');
   const msg=$('ffAdminMsg');if(msg)msg.textContent='⏳ [Calcolo punteggi] Sincronizzazione in corso...';
   try{
-    const resp=await fetch('/api/ff-sync?key='+encodeURIComponent(key));
+    const resp=await fetch('/api/ff-sync',{headers:{'Authorization':'Bearer '+key}});
     const data=await resp.json();
     if(data.error)throw new Error(data.error);
     if(msg)msg.textContent='✓ [Calcolo punteggi] Sincronizzato — giornata attuale: '+data.giornataAttuale+' · '+(data.risultati||[]).length+' giornate elaborate';
