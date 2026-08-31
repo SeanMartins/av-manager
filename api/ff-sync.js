@@ -142,8 +142,9 @@ async function calcolaGiornata(db, numero) {
     if (!(g.id in puntiGiocatore)) puntiGiocatore[g.id] = 1; // presenza base
     if ((g.ruolo === 'P' || g.ruolo === 'D') && haCleanSheet) puntiGiocatore[g.id] += 1;
     if (g.ruolo === 'P') {
+      // Regola ufficiale Fantacalcio: -1 per OGNI gol subito, non ogni 2
       const subiti = golSubitiSquadra[g.squadraId] || 0;
-      puntiGiocatore[g.id] -= Math.floor(subiti / 2);
+      puntiGiocatore[g.id] -= subiti;
     }
   });
 
