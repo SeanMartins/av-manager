@@ -2,7 +2,7 @@
 // FANTACALCIO MMG — Congela le formazioni al fischio d'inizio
 // ══════════════════════════════════════════════════════════════
 // Chiamata da: Vercel Cron (una volta al giorno, vedi vercel.json — limite del piano Hobby) + trigger manuale con
-// ?key=FF_SYNC_SECRET per test (riusa lo stesso segreto di ff-sync.js).
+// header Authorization: Bearer <FF_SYNC_SECRET> per test (riusa lo stesso segreto di ff-sync.js).
 //
 // Cosa fa: controlla l'orario di inizio della PRIMA partita della giornata Serie A
 // in corso. Se è già iniziata e non è stata ancora fatta una "fotografia" delle
@@ -49,9 +49,10 @@ async function fdFetch(path) {
 export default async function handler(req, res) {
   const isCron = req.headers['x-vercel-cron'] === '1' || req.headers['user-agent']?.includes('vercel-cron');
   if (!isCron) {
-    const key = req.query?.key;
+    const authHeader = req.headers.authorization || '';
+    const key = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (key !== process.env.FF_SYNC_SECRET) {
-      return res.status(401).json({ error: 'Non autorizzato: parametro key mancante o errato' });
+      return res.status(401).json({ error: 'Non autorizzato: header Authorization: Bearer <secret> mancante o errato' });
     }
   }
 

@@ -1,9 +1,17 @@
+import { requireUser } from './_auth.js';
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: { message: 'Method not allowed' } });
+
+  // Richiede un utente autenticato dell'app: questo endpoint chiama un'API a
+  // pagamento (Anthropic) e senza questo controllo chiunque trovasse l'URL
+  // potrebbe consumare credito illimitatamente.
+  try {
+    await requireUser(req);
+  } catch (e) {
+    return res.status(e.statusCode || 401).json({ error: { message: e.message } });
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: { message: 'ANTHROPIC_API_KEY non configurata' } });

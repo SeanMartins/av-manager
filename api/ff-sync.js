@@ -192,15 +192,15 @@ async function calcolaGiornata(db, numero) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   // Protezione trigger manuale: la cron di Vercel invia un header interno che salta questo controllo
   const isCron = req.headers['x-vercel-cron'] === '1' || req.headers['user-agent']?.includes('vercel-cron');
   if (!isCron) {
-    const secret = req.query?.key || (req.body && req.body.key);
+    const authHeader = req.headers.authorization || '';
+    const secret = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (secret !== process.env.FF_SYNC_SECRET) {
-      return res.status(401).json({ error: 'Non autorizzato: parametro key mancante o errato' });
+      return res.status(401).json({ error: 'Non autorizzato: header Authorization: Bearer <secret> mancante o errato' });
     }
   }
 

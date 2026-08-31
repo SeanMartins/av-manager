@@ -12,6 +12,8 @@
 //
 // Variabile d'ambiente richiesta: FOOTBALL_DATA_TOKEN
 
+import { requireUser } from './_auth.js';
+
 function mapRuolo(position) {
   const p = (position || '').toLowerCase();
   if (p.includes('keeper')) return 'P';
@@ -33,8 +35,16 @@ async function fdFetch(path, token) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // Richiede un utente autenticato dell'app: senza questo controllo chiunque
+  // trovasse l'URL potrebbe consumare il limite di 10 richieste/minuto del
+  // piano gratuito football-data.org al posto del team.
+  try {
+    await requireUser(req);
+  } catch (e) {
+    return res.status(e.statusCode || 401).json({ error: e.message });
+  }
 
   const token = process.env.FOOTBALL_DATA_TOKEN;
   if (!token) return res.status(500).json({ error: 'FOOTBALL_DATA_TOKEN non configurata su Vercel' });

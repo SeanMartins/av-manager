@@ -56,9 +56,10 @@ const COLLECTIONS = [
 export default async function handler(req, res) {
   const isCron = req.headers['x-vercel-cron'] === '1' || req.headers['user-agent']?.includes('vercel-cron');
   if (!isCron) {
-    const key = req.query.key;
+    const authHeader = req.headers.authorization || '';
+    const key = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (!process.env.BACKUP_SECRET || key !== process.env.BACKUP_SECRET) {
-      return res.status(401).json({ error: 'Chiave mancante o errata (parametro ?key=)' });
+      return res.status(401).json({ error: 'Chiave mancante o errata (header Authorization: Bearer <secret>)' });
     }
   }
 
