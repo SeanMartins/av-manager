@@ -20,6 +20,15 @@
     },
     "api/scheda-tecnica.js": {
       "maxDuration": 60
+    },
+    "api/gcal-auth-start.js": {
+      "maxDuration": 10
+    },
+    "api/gcal-auth-callback.js": {
+      "maxDuration": 15
+    },
+    "api/gcal-sync.js": {
+      "maxDuration": 20
     }
   },
   "crons": [

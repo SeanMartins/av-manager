@@ -205,7 +205,7 @@ export default async function handler(req, res) {
   if (!isCron) {
     const authHeader = req.headers.authorization || '';
     const secret = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    if (secret !== process.env.FF_SYNC_SECRET) {
+    if (!process.env.FF_SYNC_SECRET || secret !== process.env.FF_SYNC_SECRET) {
       return res.status(401).json({ error: 'Non autorizzato: header Authorization: Bearer <secret> mancante o errato' });
     }
   }
