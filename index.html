@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01g';
+const APP_VERSION='v2026.11.01h';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -599,6 +599,67 @@ body.desktop-mode #toast{bottom:24px;left:calc(50% + 120px)}
 .pl-note{font-size:var(--text-xs);color:var(--color-accent-text);font-weight:var(--weight-medium)}
 .pl-del:hover{color:var(--color-danger);background:var(--color-danger-subtle)}
 .msug-link{display:flex;justify-content:space-between;gap:8px;width:100%;border:none;text-align:left;cursor:pointer;font-family:inherit}
+
+/* ── STATO DEI LAVORI (legenda) ── */
+:root{--st-preventivo:#C2610C;--st-confermato:var(--color-accent);--st-incorso:#2F6A3E;--st-rientrato:#8F877B}
+:root[data-theme='dark']{--st-preventivo:#E8913A;--st-incorso:#7FBF8E}
+@media (prefers-color-scheme:dark){:root:not([data-theme='light']){--st-preventivo:#E8913A;--st-incorso:#7FBF8E}}
+.stb{display:inline-flex;align-items:center;gap:6px;font-size:var(--text-xs);font-weight:var(--weight-medium);color:var(--color-text);white-space:nowrap}
+.stb-dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex-shrink:0;background:currentColor}
+.st-preventivo .stb-dot{background:var(--st-preventivo)}
+.st-confermato .stb-dot{background:var(--st-confermato)}
+.st-incorso .stb-dot{background:var(--st-incorso)}
+.st-rientrato .stb-dot{background:var(--st-rientrato)}
+.prep{display:inline-flex;align-items:center;gap:4px;font-size:var(--text-xs);color:var(--color-text-secondary);white-space:nowrap}
+.prep>span[aria-hidden],.cal-prep,.prep-ic{font-size:14px;line-height:1;font-family:system-ui,sans-serif}
+.btn-danger-text{color:var(--color-danger)}
+.btn-danger-text:hover:not(:disabled){background:var(--color-danger-subtle)}
+
+/* ── CALENDARIO ── */
+.cal-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+.cal-nav{display:flex;align-items:center;gap:6px;min-width:0}
+.cal-arrow{border-color:var(--color-border-strong)}
+.cal-tit{min-width:0;text-align:center;padding:0 4px}
+.cal-title{font-size:var(--text-xl)}
+.cal-legend{margin-bottom:12px;font-size:13px}
+.cal-legend>summary{cursor:pointer;color:var(--color-text-secondary);font-weight:var(--weight-medium);width:max-content;padding:4px 0}
+.cal-legend-body{display:flex;flex-direction:column;gap:8px;padding:10px 12px;margin-top:6px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md)}
+.cal-legend-row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.cal-dow{margin-bottom:4px}
+.cal-dow>div{text-align:center;font-size:11px;font-weight:var(--weight-semibold);color:var(--color-text-tertiary);padding:4px 0}
+.cal-cell{min-height:56px;display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:5px;border-radius:var(--radius-md);background:var(--color-surface);border:1px solid var(--color-border);text-align:left;cursor:pointer;color:inherit;font:inherit;min-width:0;overflow:hidden;position:relative}
+.cal-cell:hover{border-color:var(--color-border-strong)}
+.cal-cell:focus-visible{outline-offset:1px}
+.cal-empty{background:none;border:none;cursor:default}
+.cal-cell.weekend{background:var(--color-surface-sunken)}
+.cal-cell.festivo{background:var(--color-accent-subtle)}
+.cal-cell.oggi{border-color:var(--color-accent);box-shadow:inset 0 0 0 1px var(--color-accent)}
+.cal-num{font-size:12px;font-weight:var(--weight-medium);font-variant-numeric:tabular-nums}
+.cal-cell.oggi .cal-num{color:var(--color-accent-text);font-weight:700}
+.cal-cell.weekend .cal-num{color:var(--color-text-tertiary)}
+.cal-fest{font-size:9px;color:var(--color-accent-text);font-weight:var(--weight-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-dots{display:flex;gap:3px;flex-wrap:wrap;align-items:center;margin-top:auto}
+.cal-dot{width:7px;height:7px;border-radius:50%;box-shadow:0 0 0 1px var(--color-surface)}
+.cal-alert{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:var(--color-danger);color:var(--color-surface);font-size:9px;font-weight:700;line-height:1}
+.cal-nome{display:none;font-size:11px;font-weight:var(--weight-medium);padding:1px 5px;border-left:3px solid;border-radius:2px;background:var(--color-surface-sunken);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-nome.has-problem{background:var(--color-danger-subtle);color:var(--color-danger)}
+.cal-prep{margin-right:3px;color:var(--color-text-secondary)}
+.cal-more{font-size:10px;color:var(--color-text-tertiary)}
+/* Dettaglio del giorno */
+.cal-detail{margin-top:14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:14px}
+.cal-detail-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.cal-job{padding:12px;background:var(--color-surface-2);border:1px solid var(--color-border);border-left:4px solid;border-radius:var(--radius-md);margin-bottom:10px}
+.cal-job-title{font-size:var(--text-md);font-weight:var(--weight-semibold);margin:0 0 6px}
+.cal-job-badges{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-bottom:6px}
+.cal-note{display:block;width:100%;margin:8px 0 0;padding:8px 10px;background:var(--color-warning-subtle);border:none;border-left:3px solid var(--color-warning);border-radius:0 6px 6px 0;text-align:left;cursor:pointer;color:inherit;font:inherit}
+.cal-note-head{display:flex;justify-content:space-between;font-size:11px;font-weight:var(--weight-semibold);color:var(--color-warning);text-transform:uppercase;letter-spacing:var(--tracking-caps)}
+.cal-note-txt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12px;color:var(--color-text);margin-top:4px}
+.cal-docs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.cal-doc{font-size:12px;padding:3px 9px;border-radius:var(--radius-full);border:1px solid var(--color-border-strong);color:var(--color-accent-text);text-decoration:none}
+.cal-job-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.cal-stato-edit{margin-top:6px}
+@media(max-width:420px){.cal-title{font-size:var(--text-lg)}.cal-cell{min-height:48px;padding:4px}}
 
 /* ── FORUM ── */
 .fcard{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color var(--duration-fast) var(--ease-out)}
@@ -1180,42 +1241,57 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- CALENDARIO LAVORI -->
     <div class="page" id="p-calendario">
-      <!-- Header navigazione -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <button class="btn" style="padding:8px 16px;font-size:18px" onclick="calSpostaM(-1)">‹</button>
-          <div>
-            <div style="font-size:18px;font-weight:700" id="calTitolo">—</div>
-            <div style="font-size:11px;color:var(--tx2)" id="calSottotitolo">—</div>
+      <div class="cal-head">
+        <div class="cal-nav">
+          <button type="button" class="icon-btn cal-arrow" onclick="calSpostaM(-1)" aria-label="Mese precedente">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="cal-tit">
+            <h1 class="page-title cal-title" id="calTitolo" aria-live="polite">—</h1>
+            <div class="page-sub" id="calSottotitolo" style="margin:0">—</div>
           </div>
-          <button class="btn" style="padding:8px 16px;font-size:18px" onclick="calSpostaM(1)">›</button>
+          <button type="button" class="icon-btn cal-arrow" onclick="calSpostaM(1)" aria-label="Mese successivo">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
         </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <!-- Legenda inline su desktop -->
-          <div id="calLegenda" style="display:flex;gap:8px;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#9ca3af"></div>Preventivo</div>
-            <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#ef4444"></div>Confermato</div>
-            <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#eab308"></div>Da finire</div>
-            <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#22c55e"></div>Preparato</div>
-            <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#7c3aed"></div>In corso</div>
-            <div style="display:flex;align-items:center;gap:4px;font-size:10px"><div style="width:8px;height:8px;border-radius:50%;background:#000"></div>Rientrato</div>
-          </div>
-          <button id="btnNuovoLavoro" class="btn btn-p" style="padding:8px 14px;font-size:12px;display:none" onclick="apriNuovoLavoroCal()">+ Lavoro</button>
-        </div>
+        <button type="button" id="btnNuovoLavoro" class="btn btn-p btn-sm" style="display:none" onclick="apriNuovoLavoroCal()">+ Lavoro</button>
       </div>
+
+      <!-- Legenda: il colore è lo stato; la preparazione è un'icona; il rosso indica un problema -->
+      <details class="cal-legend" id="calLegenda">
+        <summary>Legenda</summary>
+        <div class="cal-legend-body">
+          <div class="cal-legend-row">
+            <span class="stb st-preventivo"><span class="stb-dot" aria-hidden="true"></span>Preventivo</span>
+            <span class="stb st-confermato"><span class="stb-dot" aria-hidden="true"></span>Confermato</span>
+            <span class="stb st-incorso"><span class="stb-dot" aria-hidden="true"></span>In corso</span>
+            <span class="stb st-rientrato"><span class="stb-dot" aria-hidden="true"></span>Rientrato</span>
+          </div>
+          <div class="cal-legend-row">
+            <span class="prep"><span aria-hidden="true">○</span> Da preparare</span>
+            <span class="prep"><span aria-hidden="true">◐</span> Da finire</span>
+            <span class="prep"><span aria-hidden="true">●</span> Preparato</span>
+          </div>
+          <div class="cal-legend-row">
+            <span class="bdg br">Problema</span>
+            <span class="hint" style="margin:0">materiale mancante, rientro scaduto, materiale oltre la disponibilità, preparazione non finita a 24h</span>
+          </div>
+        </div>
+      </details>
 
       <!-- Layout: griglia + pannello dettaglio affiancati su desktop -->
       <div id="calLayout" style="display:block">
-        <!-- Griglia calendario -->
         <div id="calGriglia"></div>
         <!-- Dettaglio giorno (mobile: sotto, desktop: pannello laterale) -->
-        <div id="calGiornoDetail" style="display:none;margin-top:14px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-            <div style="font-size:14px;font-weight:600" id="calGiornoTitolo">—</div>
-            <button onclick="chiudiDettaglioGiorno()" style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:20px;padding:4px">✕</button>
+        <section id="calGiornoDetail" class="cal-detail" style="display:none" aria-labelledby="calGiornoTitolo">
+          <div class="cal-detail-head">
+            <h2 class="dcard-title" id="calGiornoTitolo">—</h2>
+            <button type="button" class="icon-btn icon-btn-sm" onclick="chiudiDettaglioGiorno()" aria-label="Chiudi il dettaglio del giorno">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
           </div>
           <div id="calGiornoList"></div>
-        </div>
+        </section>
       </div>
     </div>
 
@@ -10336,6 +10412,7 @@ function toggleNota(id){
     txt.style.cssText='font-size:12px;color:var(--tx);margin-top:4px;display:block';
     if(ico)ico.textContent='▲';
   }
+  txt.closest('button')?.setAttribute('aria-expanded',isExpanded?'false':'true');
 }
 
 function dichModifica(id){
@@ -12529,22 +12606,89 @@ async function revocaSessione(uid){
 let splStream=null, splAnimFrame=null, splAnalyser=null, splPeak=-Infinity;
 
 // ── COLORI STATO LAVORO ──
+// ══ STATO DEI LAVORI (legenda decisa il 01/11/2026) ══
+// Il colore indica SOLO lo stato del lavoro:
+//   Preventivo = arancio · Confermato = accento (blu) · In corso = verde · Rientrato = grigio
+// La preparazione è un'etichetta con icona, non un colore:
+//   ○ Da preparare · ◐ Da finire · ● Preparato
+// Il rosso compare solo per i problemi:
+//   materiale mancante al rientro · lavoro passato senza rientro ·
+//   materiale oltre la disponibilità · preparazione non finita a 24h dall'inizio
+const STATI_LAVORO={
+  preventivo:{label:'Preventivo',color:'var(--st-preventivo)'},
+  confermato:{label:'Confermato',color:'var(--st-confermato)'},
+  incorso:{label:'In corso',color:'var(--st-incorso)'},
+  rientrato:{label:'Rientrato',color:'var(--st-rientrato)'}
+};
+const PREP_LAVORO={
+  dapreparare:{icon:'○',label:'Da preparare'},
+  dafinire:{icon:'◐',label:'Da finire'},
+  preparato:{icon:'●',label:'Preparato'}
+};
+function _isoGiorno(off){const d=new Date();d.setDate(d.getDate()+(off||0));return toLocalISO(d);}
+
+// Conflitti di materiale: per ogni lavoro preparato non rientrato, controlla giorno per giorno
+// se la somma delle quantità dello stesso articolo nei lavori attivi supera quella a magazzino.
+// Ricalcolato al massimo ogni 3 secondi (il calendario chiama getStatoLavoro molte volte).
+let _conflittiCache={t:0,k:'',set:new Set()};
+function lavoriInConflitto(){
+  const k=cacheDich.length+'|'+cacheMag.length;
+  if(Date.now()-_conflittiCache.t<3000&&_conflittiCache.k===k)return _conflittiCache.set;
+  const aperti=cacheDich.filter(d=>!d.eliminatoAt&&!d.rientroData&&d.data&&(d.articoli||[]).length);
+  const chiave=a=>a.id||('nome:'+(a.nome||'').toLowerCase().trim());
+  const magPer={};cacheMag.filter(m=>!m.eliminatoAt).forEach(m=>{magPer[m.id]=m;magPer['nome:'+(m.nome||'').toLowerCase().trim()]=m;});
+  const set=new Set();
+  aperti.forEach(j=>{
+    const fine=j.dataFine||j.data;
+    for(let d=new Date(j.data+'T12:00:00');toLocalISO(d)<=fine&&!set.has(j.id);d.setDate(d.getDate()+1)){
+      const g=toLocalISO(d);
+      const attivi=aperti.filter(x=>x.data<=g&&(x.dataFine||x.data)>=g);
+      if(attivi.length<2)continue;
+      const tot={};
+      attivi.forEach(x=>(x.articoli||[]).forEach(a=>{const c=chiave(a);tot[c]=(tot[c]||0)+(a.qty||1);}));
+      if((j.articoli||[]).some(a=>{const m=magPer[chiave(a)];return m&&tot[chiave(a)]>(m.qty||1);}))set.add(j.id);
+    }
+  });
+  _conflittiCache={t:Date.now(),k,set};
+  return set;
+}
+
+// Restituisce {key,label,color, prep:{key,icon,label}|null, problemi:[testi]}
 function getStatoLavoro(lav){
-  const oggi=toLocalISO(new Date());
-  if(lav._fonte==='cal'||lav.createdBy!==undefined&&lav.articoli===undefined){
-    const s=lav.stato||'confermato';
-    if(s==='preventivo')  return{color:'#9ca3af',pallino:'⚪',label:'⚪ Preventivo',bg:'rgba(156,163,175,.1)',bd:'#9ca3af'};
-    if(s==='confermato')  return{color:'#ef4444',pallino:'🔴',label:'🔴 Confermato',bg:'rgba(239,68,68,.1)',bd:'#ef4444'};
-    if(lav.rientroData)   return{color:'#000000',pallino:'⚫',label:'⚫ Rientrato',bg:'rgba(0,0,0,.1)',bd:'#000000'};
-    if(lav.data&&lav.data<oggi) return{color:'#7c3aed',pallino:'🟣',label:'🟣 In corso',bg:'rgba(124,58,237,.1)',bd:'#7c3aed'};
-    return{color:'#ef4444',pallino:'🔴',label:'🔴 Confermato',bg:'rgba(239,68,68,.1)',bd:'#ef4444'};
+  const oggi=_isoGiorno(0),domani=_isoGiorno(1);
+  const isCal=lav._fonte==='cal'||(lav.createdBy!==undefined&&lav.articoli===undefined);
+  const inizio=lav.data||'',fine=lav.dataFine||lav.data||'';
+  const problemi=[];
+  let key;
+  if(lav.rientroData)key='rientrato';
+  else if(isCal&&(lav.stato==='preventivo'))key='preventivo';
+  else if(inizio&&inizio<=oggi)key='incorso';
+  else key='confermato';
+
+  // Preparazione
+  let prep=null;
+  if(isCal){
+    if(key!=='preventivo'&&key!=='rientrato')prep=PREP_LAVORO[lav.stato==='in_preparazione'?'dafinire':'dapreparare'];
+  } else if(key!=='rientrato'){
+    prep=(lav.daFinire||(lav.note||'').trim())?PREP_LAVORO.dafinire:(lav.articoli&&lav.articoli.length?PREP_LAVORO.preparato:PREP_LAVORO.dapreparare);
   }
-  // Lavori preparati (dich)
-  if(lav.rientroData)     return{color:'#000000',pallino:'⚫',label:'⚫ Rientrato',bg:'rgba(0,0,0,.1)',bd:'#000000'};
-  if(lav.data&&lav.data<oggi) return{color:'#7c3aed',pallino:'🟣',label:'🟣 In corso',bg:'rgba(124,58,237,.1)',bd:'#7c3aed'};
-  if(lav.daFinire||(lav.note||'').trim()) return{color:'#eab308',pallino:'🟡',label:'🟡 Da finire',bg:'rgba(234,179,8,.1)',bd:'#eab308'};
-  if(lav.articoli&&lav.articoli.length>0) return{color:'#22c55e',pallino:'🟢',label:'🟢 Preparato',bg:'rgba(34,197,94,.1)',bd:'#22c55e'};
-  return{color:'#9ca3af',pallino:'⚪',label:'⚪ Da preparare',bg:'rgba(156,163,175,.08)',bd:'#9ca3af'};
+
+  // Problemi (rosso)
+  if(lav.rientroData&&lav.rientrato===false)problemi.push('Materiale mancante al rientro');
+  if(!lav.rientroData&&key!=='preventivo'&&fine&&fine<oggi&&!(isCal&&lav.stato==='in_preparazione'))problemi.push('Passato senza rientro');
+  if(!isCal&&!lav.rientroData&&lavoriInConflitto().has(lav.id))problemi.push('Materiale oltre la disponibilità');
+  if(prep&&prep!==PREP_LAVORO.preparato&&!(isCal&&lav.stato==='in_preparazione')&&inizio&&inizio<=domani&&fine>=oggi)problemi.push('Preparazione non finita');
+
+  const st=STATI_LAVORO[key];
+  const prepKey=prep?Object.keys(PREP_LAVORO).find(k=>PREP_LAVORO[k]===prep):null;
+  return{key,label:st.label,color:st.color,prep:prep?{key:prepKey,...prep}:null,problemi};
+}
+// Badge HTML: stato colorato + etichetta di preparazione + eventuali problemi in rosso
+function statoLavoroHtml(s,opts={}){
+  let h=`<span class="stb st-${s.key}"><span class="stb-dot" aria-hidden="true"></span>${s.label}</span>`;
+  if(s.prep&&!opts.noPrep)h+=`<span class="prep prep-${s.prep.key}"><span aria-hidden="true">${s.prep.icon}</span> ${s.prep.label}</span>`;
+  s.problemi.forEach(p=>{h+=`<span class="bdg br">${p}</span>`;});
+  return h;
 }
 // ── DASHBOARD KPI ──
 function apriTurniDaConfermare(){
@@ -12644,6 +12788,7 @@ function renderDashboard(){
           <span class="ditem-title">${esc(l.nome||'—')}</span>
           <span class="ditem-sub">${esc(l.tecnico||'—')} · ${esc(l.location||'—')}</span>
         </span>
+        ${s.problemi.length?`<span class="bdg br" title="${s.problemi.join(', ')}">${s.problemi.length===1?s.problemi[0]:s.problemi.length+' problemi'}</span>`:''}
         <span class="ditem-meta">${fmtData(l.data,{day:'2-digit',month:'short'})}</span>
       </div>`;
     }).join('');
@@ -12661,6 +12806,7 @@ function renderDashboard(){
           <span class="ditem-title">${esc(l.nome||'—')}</span>
           <span class="ditem-sub">${esc(l.tecnicoNome||'Nessun tecnico')}</span>
         </span>
+        ${s.problemi.length?`<span class="bdg br" title="${s.problemi.join(', ')}">${s.problemi.length===1?s.problemi[0]:s.problemi.length+' problemi'}</span>`:''}
         <span class="ditem-meta">${fmtData(l.data,{day:'2-digit',month:'short'})}</span>
       </div>`;
     }).join('');
@@ -13235,38 +13381,39 @@ function renderCalendario(){
   const giorniMese=new Date(calAnno,calMese+1,0).getDate();
   const oggi=toLocalISO(new Date());
 
-  let h='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">';
-  GG_H.forEach(g=>h+=`<div style="text-align:center;font-size:10px;font-weight:600;color:var(--tx3);padding:4px 0">${g}</div>`);
-  h+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">';
-  for(let i=0;i<offsetLun;i++)h+='<div style="min-height:52px"></div>';
+  const GG_LUNGHI=['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+  let h='<div class="cal-grid cal-dow" aria-hidden="true">';
+  GG_H.forEach(g=>h+=`<div>${g}</div>`);
+  h+='</div><div class="cal-grid" role="grid" aria-label="'+MESI[calMese]+' '+calAnno+'">';
+  for(let i=0;i<offsetLun;i++)h+='<div class="cal-cell cal-empty" aria-hidden="true"></div>';
 
   for(let g=1;g<=giorniMese;g++){
     const dataGISO=`${calAnno}-${pad(calMese+1)}-${pad(g)}`;
     const isOggi=dataGISO===oggi;
-    const isWeekend=new Date(calAnno,calMese,g).getDay()===0||new Date(calAnno,calMese,g).getDay()===6;
+    const dow=new Date(calAnno,calMese,g).getDay();
+    const isWeekend=dow===0||dow===6;
     const festivita=getFestivitaItaliane(calAnno).find(f=>f.data===dataGISO);
     const isFestivo=!!festivita;
     const lavoriG=byDay[g]||[];
-    const colorMap={pianificato:'#f59e0b',preparato:'#6c63ff',rientrato:'#64748b'};
-    const dots=lavoriG.slice(0,3).map(d=>{
-      const s=getStatoLavoro(d);
-      return`<div style="width:6px;height:6px;border-radius:50%;background:${s.color}"></div>`;
-    }).join('');
-    // Nomi lavori visibili su desktop
-    const nomiDesk=lavoriG.slice(0,4).map(d=>{
-      const s=getStatoLavoro(d);
-      return`<div class="cal-nome" style="display:none;font-size:10px;font-weight:500;color:#fff;background:${s.color};border-radius:3px;padding:1px 5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.nome||'—')}</div>`;
+    const stati=lavoriG.map(d=>getStatoLavoro(d));
+    const conProblemi=stati.filter(st=>st.problemi.length).length;
+    const dots=stati.slice(0,4).map(st=>`<span class="cal-dot" style="background:${st.color}"></span>`).join('');
+    // Nomi dei lavori (visibili su desktop): bordo nel colore di stato, testo normale (leggibile in entrambi i temi)
+    const nomiDesk=lavoriG.slice(0,4).map((d,i)=>{
+      const st=stati[i];
+      return `<div class="cal-nome${st.problemi.length?' has-problem':''}" style="border-left-color:${st.color}">${st.prep?`<span class="cal-prep" aria-hidden="true">${st.prep.icon}</span>`:''}${esc(d.nome||'—')}</div>`;
     }).join('');
     const canAdd=(isResponsabile()||isAdmin())&&!isWeekend&&!isFestivo;
-    h+=`<div onclick="calApriGiorno(${g})" ${canAdd?`ondblclick="calNuovoGiorno(${g})"`:''}
-      class="cal-cell" title="${isFestivo?festivita.nome:''}"
-      style="min-height:52px;border-radius:6px;background:${isOggi?'var(--acb)':isFestivo?'rgba(239,68,68,.07)':isWeekend?'rgba(255,255,255,.02)':'var(--bg1)'};border:1px solid ${isOggi?'var(--ac)':isFestivo?'rgba(239,68,68,.25)':'var(--b)'};padding:4px 5px;cursor:pointer;position:relative">
-      <div style="font-size:11px;font-weight:${isOggi?700:400};color:${isOggi?'var(--ac2)':isFestivo?'var(--rd)':isWeekend?'var(--tx3)':'var(--tx)'}">${g}</div>
-      ${isFestivo?`<div style="font-size:8px;color:var(--rd);font-weight:600;line-height:1.2;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🎌 ${esc(festivita.nome)}</div>`:''}
-      <div class="cal-dots" style="display:flex;gap:2px;flex-wrap:wrap;margin-top:3px">${dots}</div>
+    const etichetta=GG_LUNGHI[(dow+6)%7]+' '+g+' '+MESI[calMese]+(isOggi?', oggi':'')+(isFestivo?', '+festivita.nome:'')+': '+
+      (lavoriG.length?lavoriG.length+(lavoriG.length===1?' lavoro':' lavori'):'nessun lavoro')+(conProblemi?', '+conProblemi+' con problemi':'');
+    const cls=['cal-cell',isOggi?'oggi':'',isFestivo?'festivo':'',isWeekend?'weekend':'',conProblemi?'problema':''].filter(Boolean).join(' ');
+    h+=`<button type="button" class="${cls}" onclick="calApriGiorno(${g})" ${canAdd?`ondblclick="calNuovoGiorno(${g})"`:''} aria-label="${esc(etichetta)}"${isOggi?' aria-current="date"':''}>
+      <span class="cal-num">${g}</span>
+      ${isFestivo?`<span class="cal-fest">${esc(festivita.nome)}</span>`:''}
+      <span class="cal-dots">${dots}${conProblemi?'<span class="cal-alert" aria-hidden="true">!</span>':''}</span>
       ${nomiDesk}
-      ${lavoriG.length>4?`<div style="font-size:9px;color:var(--tx3);margin-top:2px">+${lavoriG.length-4} altri</div>`:''}
-    </div>`;
+      ${lavoriG.length>4?`<span class="cal-more">+${lavoriG.length-4} altri</span>`:''}
+    </button>`;
   }
   h+='</div>';
   const el=$('calGriglia');if(el)el.innerHTML=h;
@@ -13275,7 +13422,7 @@ function renderCalendario(){
   if(document.body.classList.contains('desktop-mode')){
     const det=$('calGiornoDetail');
     if(det&&!det.querySelector('[id^="calGiornoList"]')?.innerHTML){
-      $('calGiornoList').innerHTML='<div style="text-align:center;color:var(--tx3);padding:40px 0;font-size:13px">← Clicca su un giorno per vedere i lavori</div>';
+      $('calGiornoList').innerHTML='<div class="dempty">Scegli un giorno per vedere i lavori</div>';
       det.style.display='block';
     }
   }
@@ -13293,8 +13440,8 @@ function chiudiDettaglioGiorno(){
   const det=$('calGiornoDetail');
   if(!det)return;
   if(document.body.classList.contains('desktop-mode')){
-    // Su desktop mostra placeholder
-    det.innerHTML='<div style="text-align:center;color:var(--tx3);padding:40px 0;font-size:13px">← Clicca su un giorno per vedere i lavori</div>';
+    $('calGiornoTitolo').textContent='Dettaglio del giorno';
+    $('calGiornoList').innerHTML='<div class="dempty">Scegli un giorno per vedere i lavori</div>';
   } else {
     det.style.display='none';
   }
@@ -13309,8 +13456,8 @@ function calApriGiorno(g){
 
   // Cerca in lavori_cal e in lavori (dich)
   const tuttiLavori=[
-    ...cacheLavoriCal.map(l=>({...l,_fonte:'cal'})),
-    ...cacheDich.map(l=>({...l,_fonte:'dich'}))
+    ...cacheLavoriCal.filter(l=>!l.eliminatoAt).map(l=>({...l,_fonte:'cal'})),
+    ...cacheDich.filter(l=>!l.eliminatoAt).map(l=>({...l,_fonte:'dich'}))
   ];
   const lavoriG=tuttiLavori.filter(lav=>{
     if(!lav.data)return false;
@@ -13326,70 +13473,52 @@ function calApriGiorno(g){
   let h='';
 
   if(!lavoriG.length){
-    h='<div class="empty">Nessun lavoro in questo giorno</div>';
-    if(canEdit)h+=`<button class="btn btn-p btn-f" style="margin-top:10px" onclick="apriNuovoLavoroCal('${dataStr}')">+ Aggiungi lavoro</button>`;
+    h='<div class="dempty">Nessun lavoro in questo giorno</div>';
+    if(canEdit)h+=`<button type="button" class="btn btn-p btn-f" onclick="apriNuovoLavoroCal('${dataStr}')">+ Aggiungi lavoro</button>`;
   } else {
     lavoriG.forEach(lav=>{
       const s=getStatoLavoro(lav);
-      const color=s.color;
-      const statoLabel=s.label;
-      const nPezzi=(lav.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
+      const nPezzi=(lav.articoli||[]).reduce((t,a)=>t+(a.qty||1),0);
       const dataUsc=fmtData(lav.data,{day:'2-digit',month:'short'});
       const dataRient=lav.dataFine?fmtData(lav.dataFine,{day:'2-digit',month:'short'}):'—';
       const isPianificato=lav._fonte==='cal';
       const isMioLavoro=lav.tecnicoUid===USER?.id||lav.uid===USER?.id;
       const lavId=lav.id;
-
-      // Nota espandibile
-      const noteHtml=lav.note?
-        `<div style="margin:6px 0;padding:6px 10px;background:rgba(245,158,11,.1);border-left:3px solid #f59e0b;border-radius:0 4px 4px 0;cursor:pointer" onclick="toggleNota('cal_${lavId}')">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:10px;font-weight:600;color:#f59e0b;text-transform:uppercase;letter-spacing:.4px">📝 Nota</span>
-            <span id="nota_ico_cal_${lavId}" style="font-size:10px;color:#f59e0b">▼</span>
-          </div>
-          <div id="nota_txt_cal_${lavId}" style="font-size:11px;color:var(--tx);margin-top:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${esc(lav.note)}</div>
-        </div>`:
-        '';
-
+      const nome=esc(lav.nome||'—');
+      const noteHtml=lav.note?`<button type="button" class="cal-note" onclick="toggleNota('cal_${lavId}')" aria-expanded="false">
+          <span class="cal-note-head"><span>Nota</span><span id="nota_ico_cal_${lavId}" aria-hidden="true">▼</span></span>
+          <span id="nota_txt_cal_${lavId}" class="cal-note-txt">${esc(lav.note)}</span>
+        </button>`:'';
       const docsHtml=(lav.documenti&&lav.documenti.length)?
-        `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px">
-          ${lav.documenti.map(doc=>`<a href="${esc(doc.url)}" target="_blank" style="font-size:10px;background:var(--bg3);color:var(--ac2);border:1px solid var(--ac);border-radius:8px;padding:2px 8px;text-decoration:none;display:inline-flex;align-items:center;gap:3px">📄 ${esc(doc.nome)}</a>`).join('')}
-        </div>`:'';
-
-      h+=`<div style="padding:12px;background:var(--bg2);border-radius:var(--rs);margin-bottom:8px;border-left:3px solid ${color}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
-          <div style="flex:1">
-            <div style="font-size:14px;font-weight:700">${esc(lav.nome||'—')}</div>
-            <div style="font-size:11px;color:var(--tx2);margin-top:3px">
-              ${lav.location?'📍 '+lav.location+' · ':''}👤 ${lav.tecnico||lav.tecnicoNome||'—'}
-            </div>
-            <div style="font-size:11px;color:var(--tx2);margin-top:2px">
-              📅 ${dataUsc} → ${dataRient}${nPezzi>0?' · 📦 '+nPezzi+' pz':''}
-            </div>
-            ${lav.modificatoDa?`<div style="font-size:10px;color:var(--tx3);margin-top:2px">✏️ Ultima modifica: ${esc(lav.modificatoDa)} · ${new Date(lav.modificatoIl).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>`:''}
-          </div>
-          <span style="font-size:10px;background:${color}22;color:${color};border:1px solid ${color};border-radius:10px;padding:2px 7px;flex-shrink:0;white-space:nowrap">${statoLabel}</span>
+        `<div class="cal-docs">${lav.documenti.map(doc=>`<a class="cal-doc" href="${esc(doc.url)}" target="_blank" rel="noopener">${esc(doc.nome)}</a>`).join('')}</div>`:'';
+      h+=`<article class="cal-job" style="border-left-color:${s.color}">
+        <div class="cal-job-top">
+          <h3 class="cal-job-title">${nome}</h3>
         </div>
+        <div class="cal-job-badges">${statoLavoroHtml(s)}</div>
+        <div class="ditem-sub">${lav.location?esc(lav.location)+' · ':''}${esc(lav.tecnico||lav.tecnicoNome||'Nessun tecnico')}</div>
+        <div class="ditem-sub">${dataUsc} → ${dataRient}${nPezzi>0?' · '+nPezzi+' pezzi':''}</div>
+        ${lav.modificatoDa?`<div class="mmod">Ultima modifica: ${esc(lav.modificatoDa)} · ${new Date(lav.modificatoIl).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>`:''}
         ${noteHtml}
         ${docsHtml}
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
-          ${isPianificato&&(canEdit||isMioLavoro)?`<button class="btn btn-p" style="padding:7px 12px;font-size:12px" onclick="preparaLavoroDaCal('${lavId}')">📋 Prepara</button>`:''}
-          ${isPianificato&&canEdit?`<button class="btn" style="padding:7px 12px;font-size:12px" onclick="modificaLavoroCal('${lavId}')">✏️ Modifica</button>`:''}
-          ${isPianificato&&canEdit?`<button class="btn" style="padding:7px 12px;font-size:12px;border-color:var(--rd);color:var(--rd)" onclick="calSostituisciLavoro('${lavId}')">🔄 Sostituisci</button>`:''}
-          ${isPianificato&&canEdit?`<button class="btn" style="padding:7px 12px;font-size:12px;border-color:var(--rd);color:var(--rd)" onclick="magLavElimina('${lavId}','${encUri(lav.nome||'')}')">🗑️ Elimina</button>`:''}
-          ${!isPianificato?`<button class="btn" style="padding:7px 12px;font-size:12px" onclick="goPage('dichiarazione')">📁 Archivio</button>`:''}
+        <div class="cal-job-actions">
+          ${isPianificato&&(canEdit||isMioLavoro)?`<button type="button" class="btn btn-p btn-sm" onclick="preparaLavoroDaCal('${lavId}')">Prepara</button>`:''}
+          ${isPianificato&&canEdit?`<button type="button" class="btn btn-sm" onclick="modificaLavoroCal('${lavId}')">Modifica</button>`:''}
+          ${isPianificato&&canEdit?`<button type="button" class="btn btn-sm" onclick="calSostituisciLavoro('${lavId}')">Sostituisci</button>`:''}
+          ${isPianificato&&canEdit?`<button type="button" class="btn btn-sm btn-danger-text" onclick="magLavElimina('${lavId}','${encUri(lav.nome||'')}')" aria-label="Elimina ${nome}">Elimina</button>`:''}
+          ${!isPianificato?`<button type="button" class="btn btn-sm" onclick="goPage('dichiarazione')">Apri archivio</button>`:''}
         </div>
         ${isPianificato&&canEdit?`
-        <div style="margin-top:8px">
-          <div style="font-size:10px;color:var(--tx3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">Cambia stato:</div>
-          <div style="display:flex;gap:5px;flex-wrap:wrap">
-            <button onclick="calCambiaStato('${lavId}','preventivo')" style="font-size:10px;padding:3px 8px;border-radius:8px;border:1px solid #9ca3af;background:${lav.stato==='preventivo'?'rgba(156,163,175,.2)':'none'};color:#9ca3af;cursor:pointer">⚪ Preventivo</button>
-            <button onclick="calCambiaStato('${lavId}','confermato')" style="font-size:10px;padding:3px 8px;border-radius:8px;border:1px solid #ef4444;background:${lav.stato==='confermato'||!lav.stato?'rgba(239,68,68,.2)':'none'};color:#ef4444;cursor:pointer">🔴 Confermato</button>
+        <div class="cal-stato-edit">
+          <div class="nav-label" style="padding:8px 0 6px" id="cs_${lavId}">Stato del lavoro</div>
+          <div class="seg seg-sm" role="radiogroup" aria-labelledby="cs_${lavId}">
+            <button type="button" class="seg-btn${lav.stato==='preventivo'?' on':''}" role="radio" aria-checked="${lav.stato==='preventivo'}" onclick="calCambiaStato('${lavId}','preventivo')"><span class="stb-dot" style="background:var(--st-preventivo)" aria-hidden="true"></span> Preventivo</button>
+            <button type="button" class="seg-btn${lav.stato!=='preventivo'?' on':''}" role="radio" aria-checked="${lav.stato!=='preventivo'}" onclick="calCambiaStato('${lavId}','confermato')"><span class="stb-dot" style="background:var(--st-confermato)" aria-hidden="true"></span> Confermato</button>
           </div>
         </div>`:''}
-      </div>`;
+      </article>`;
     });
-    if(canEdit)h+=`<button class="btn btn-f btn-p" style="margin-top:4px;width:100%;font-size:12px" onclick="apriNuovoLavoroCal('${dataStr}')">+ Aggiungi lavoro</button>`;
+    if(canEdit)h+=`<button type="button" class="btn btn-f" onclick="apriNuovoLavoroCal('${dataStr}')">+ Aggiungi lavoro</button>`;
   }
 
   $('calGiornoList').innerHTML=h;
