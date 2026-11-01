@@ -10645,7 +10645,8 @@ function calcolaPasqua(anno){
 function getFestivitaItaliane(anno){
   const pasqua=calcolaPasqua(anno);
   const pasquetta=new Date(pasqua);pasquetta.setDate(pasqua.getDate()+1);
-  const toISO=(d)=>d.toISOString().slice(0,10);
+  // Data locale: toISOString() usa UTC e in Italia spostava Pasqua al sabato e Pasquetta alla domenica
+  const toISO=(d)=>toLocalISO(d);
   return [
     {data:anno+'-01-01',nome:'Capodanno'},
     {data:anno+'-01-06',nome:'Epifania'},
