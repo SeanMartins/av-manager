@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01d';
+const APP_VERSION='v2026.11.01e';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -354,13 +354,82 @@ textarea{resize:vertical;min-height:88px;line-height:var(--leading-normal)}
 .cbox{width:22px;height:22px;border-radius:6px;border:1px solid var(--color-border-input);background:var(--color-surface-2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
 .cbox.on{background:var(--color-success);border-color:var(--color-success)}
 .cbox.on::after{content:'✓';font-size:13px;color:var(--color-surface);font-weight:700}
-/* Orologio presenze */
-.clk{font-size:50px;font-weight:300;letter-spacing:-2px;text-align:center;margin-bottom:3px;font-variant-numeric:tabular-nums}
-.clks{font-size:13px;color:var(--color-text-secondary);text-align:center;margin-bottom:18px}
-.pbtn{width:100%;padding:16px;border-radius:var(--radius-lg);font-size:var(--text-md);font-weight:var(--weight-semibold);cursor:pointer;border:none}
+/* ── PRESENZE: timbratura ── */
+.desk-only{display:none!important}
+body.desktop-mode .desk-only{display:flex!important}
+.punch{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px 16px 16px}
+.clk{font-size:52px;font-weight:300;letter-spacing:-.03em;text-align:center;line-height:1.1;font-variant-numeric:tabular-nums}
+.clks{font-size:var(--text-sm);color:var(--color-text-secondary);text-align:center;margin:4px 0 18px}
+.punch-luogo{margin-bottom:14px;transition:opacity var(--duration-base) var(--ease-out)}
+.punch-lbl{text-align:center}
+#luogoChips{justify-content:center}
+.pbtn{width:100%;min-height:52px;padding:14px;border-radius:var(--radius-lg);font-size:var(--text-md);font-weight:var(--weight-semibold);cursor:pointer;border:1px solid transparent;transition:background-color var(--duration-fast) var(--ease-out)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.pin{background:var(--color-success-subtle);color:var(--color-success);border:1px solid var(--color-success)}
-.pout{background:var(--color-danger-subtle);color:var(--color-danger);border:1px solid var(--color-danger)}
+/* Entrata = azione principale (accento); uscita = neutra: non è un errore */
+.pin{background:var(--color-accent);color:var(--color-on-accent)}
+.pin:hover{background:var(--color-accent-hover)}
+.pout{background:var(--color-surface-2);color:var(--color-text);border-color:var(--color-border-strong)}
+.pout:hover{background:var(--color-surface-hover)}
+.pbtn-pausa{margin-top:8px;background:var(--color-warning-subtle);color:var(--color-warning);border-color:transparent}
+.pbtn-pausa.in-pausa{background:var(--color-success-subtle);color:var(--color-success)}
+/* Timeline del turno */
+.tl{margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border)}
+.tl-head{padding:0 0 8px}
+.tl-item{display:flex;align-items:center;gap:10px;font-size:var(--text-sm);padding:4px 0}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--color-success)}
+.tl-dot.pausa{background:var(--color-warning)}
+.tl-dot.live{animation:pulse 1.4s ease-in-out infinite}
+.tl-live{color:var(--color-warning)}
+.tl-muted{color:var(--color-text-secondary)}
+.tl-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:10px;border-top:1px solid var(--color-border);font-size:13px;color:var(--color-text-secondary)}
+.tl-tot{font-size:var(--text-lg);font-weight:var(--weight-semibold);color:var(--color-text);font-variant-numeric:tabular-nums}
+/* Sezioni, badge e piccoli controlli */
+h2.stl{margin:0}
+.sec-actions{display:flex;gap:8px;align-items:center}
+.live-dot{width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:5px;animation:pulse 2s ease-in-out infinite}
+.sel-sm{width:auto;min-height:36px;padding:6px 32px 6px 10px;font-size:var(--text-sm);background-position:right 8px center}
+.sn-warn{color:var(--color-warning)}
+.bn{background:var(--color-surface-sunken);color:var(--color-text-secondary);border:1px solid var(--color-border)}
+.bdg-xs{font-size:10px;padding:1px 6px}
+.pres-nome{font-size:var(--text-sm);font-weight:var(--weight-medium);display:flex;align-items:center;gap:6px}
+.pres-dove{font-size:var(--text-xs);color:var(--color-accent-text);margin-top:1px}
+.btn-done{background:var(--color-success-subtle);color:var(--color-success);border-color:transparent}
+.btn-done:disabled{opacity:1}
+/* "Le mie ore": tabella del mese */
+.otable-wrap{overflow-x:auto;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface);margin-bottom:14px}
+.otable{width:100%;border-collapse:collapse;min-width:340px;font-size:13px}
+.otable th{padding:9px 8px;font-size:var(--text-xs);font-weight:var(--weight-semibold);color:var(--color-text-secondary);text-align:left;background:var(--color-surface-sunken);border-bottom:1px solid var(--color-border)}
+.otable td{padding:9px 8px;border-bottom:1px solid var(--color-border);vertical-align:top}
+.otable tfoot th,.otable tfoot td{border-top:1px solid var(--color-border-strong);border-bottom:none;background:var(--color-surface-sunken);font-size:13px;color:var(--color-text)}
+.otable .o-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.otable .o-ok{text-align:center;width:32px}
+.o-dd{font-weight:var(--weight-medium);white-space:nowrap}
+.o-fest{font-size:11px;color:var(--color-accent-text);margin-top:1px}
+.o-luogo{color:var(--color-text-secondary);font-size:12px}
+.o-strong{font-weight:var(--weight-semibold)}
+.o-warn{color:var(--color-warning)}
+.o-check{color:var(--color-success);font-weight:700}
+.orow{cursor:pointer}
+.orow:hover{background:var(--color-surface-hover)}
+.orow:focus-visible{outline-offset:-2px}
+.orow.weekend .o-dd,.orow.vuoto .o-dd{color:var(--color-text-tertiary)}
+.orow.festivo{background:var(--color-accent-subtle)}
+/* Tabelle desktop (Team e simili) */
+.dtable-wrap{border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow-x:auto;margin-bottom:8px;background:var(--color-surface)}
+.dtable{width:100%;border-collapse:collapse;font-size:13px}
+.dtable th{padding:10px 14px;font-size:var(--text-xs);font-weight:var(--weight-semibold);color:var(--color-text-secondary);text-align:left;background:var(--color-surface-sunken);border-bottom:1px solid var(--color-border);white-space:nowrap}
+.dtable td{padding:10px 14px;border-bottom:1px solid var(--color-border);vertical-align:middle}
+.dtable tbody tr:last-child td{border-bottom:none}
+.dtable tbody tr:hover{background:var(--color-surface-hover)}
+.t-right{text-align:right}
+.t-person{display:flex;align-items:center;gap:10px}
+.t-strong{display:block;font-weight:var(--weight-semibold);white-space:nowrap}
+.t-sub{display:block;font-size:var(--text-xs);color:var(--color-text-secondary);white-space:nowrap}
+.t-muted{color:var(--color-text-tertiary);font-size:12px}
+.t-link{color:var(--color-text-secondary);text-decoration:none}
+.t-link:hover{color:var(--color-accent-text);text-decoration:underline}
+.t-actions{display:inline-flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap}
+.t-actions .btn{white-space:nowrap}
 /* Modali (bottom sheet su mobile, centrati su desktop) */
 .mol{display:none;position:fixed;inset:0;z-index:400;background:var(--color-overlay);align-items:flex-end;justify-content:center}
 .mol.on{display:flex}
@@ -611,66 +680,63 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- PRESENZE -->
     <div class="page on" id="p-presenze">
-      <div class="clk" id="clock">--:--:--</div>
-      <div class="clks" id="pstat">Non timbrato</div>
-      <div id="luogoWrap" style="margin-bottom:12px">
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:7px;font-weight:500;text-align:center">Dove ti trovi?</div>
-        <div class="chips" id="luogoChips" style="justify-content:center">
-          <span class="chip on" onclick="pickChip(this,'luogo')">🏢 In sede</span>
-          <span class="chip" onclick="pickChip(this,'luogo')">🔧 Assistenza</span>
-          <span class="chip" onclick="pickChip(this,'luogo')">✈️ Trasferta</span>
-          <span class="chip" onclick="pickChip(this,'luogo')">🤒 Malattia</span>
-          <span class="chip" onclick="pickChip(this,'luogo');mostraLuogoCustom()">📍 Altro</span>
+      <div class="page-head desk-only"><div><h1 class="page-title">Presenze</h1></div></div>
+      <section class="punch" aria-label="Timbratura">
+        <div class="clk" id="clock" aria-hidden="true">--:--:--</div>
+        <div class="clks" id="pstat" role="status">Non timbrato</div>
+        <div id="luogoWrap" class="punch-luogo">
+          <div class="il punch-lbl" id="luogoLbl">Dove ti trovi?</div>
+          <div class="chips" id="luogoChips" role="radiogroup" aria-labelledby="luogoLbl">
+            <button type="button" class="chip on" role="radio" aria-checked="true" data-value="🏢 In sede" onclick="pickChip(this,'luogo')">In sede</button>
+            <button type="button" class="chip" role="radio" aria-checked="false" data-value="🔧 Assistenza" onclick="pickChip(this,'luogo')">Assistenza</button>
+            <button type="button" class="chip" role="radio" aria-checked="false" data-value="✈️ Trasferta" onclick="pickChip(this,'luogo')">Trasferta</button>
+            <button type="button" class="chip" role="radio" aria-checked="false" data-value="🤒 Malattia" onclick="pickChip(this,'luogo')">Malattia</button>
+            <button type="button" class="chip" role="radio" aria-checked="false" data-value="📍 Altro" onclick="pickChip(this,'luogo')">Altro</button>
+          </div>
+          <div id="luogoExtra" style="display:none;margin-top:10px">
+            <input type="text" id="luogoCustom" aria-label="Dettaglio del luogo" placeholder="Scrivi il luogo...">
+          </div>
         </div>
-        <div id="luogoExtra" style="display:none;margin-top:8px">
-          <input type="text" id="luogoCustom" placeholder="Scrivi il luogo..." oninput="aggiornaLuogoCustom()">
+        <button type="button" class="pbtn pin" id="pbtn" onclick="punch()">Timbra entrata</button>
+        <button type="button" class="pbtn pbtn-pausa" id="pauseBtn" onclick="togglePausa()" style="display:none">Inizia pausa</button>
+        <!-- Timeline del turno -->
+        <div id="turnoTimeline" class="tl" style="display:none">
+          <div class="nav-label tl-head">Turno di oggi</div>
+          <div id="timelineItems"></div>
+          <div class="tl-foot">
+            <span>Ore lavorate nette</span>
+            <span class="tl-tot" id="oreNette">0h 0m</span>
+          </div>
         </div>
-      </div>
-      <!-- Bottoni timbratura -->
-      <button class="pbtn pin" id="pbtn" onclick="punch()">⏱ Timbra entrata</button>
-      <button class="pbtn" id="pauseBtn" onclick="togglePausa()" style="display:none;margin-top:8px;background:var(--amb);color:var(--am);border:1px solid rgba(245,158,11,.3)">☕ Pausa</button>
-      <!-- Timeline turno -->
-      <div id="turnoTimeline" style="display:none;margin-top:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);padding:12px">
-        <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Turno di oggi</div>
-        <div id="timelineItems"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--b)">
-          <span style="font-size:12px;color:var(--tx2)">Ore lavorate nette</span>
-          <span style="font-size:15px;font-weight:700;color:var(--gn)" id="oreNette">0h 0m</span>
-        </div>
-      </div>
-      <div class="sg3" style="margin-top:12px">
+      </section>
+      <div class="sg3" style="margin-top:16px">
         <div class="sc"><div class="sn" id="nOre">0h</div><div class="sl">Ore oggi</div></div>
-        <div class="sc"><div class="sn" id="nPresenti">0</div><div class="sl">Presenti</div></div>
+        <div class="sc"><div class="sn" id="nPresenti">0</div><div class="sl">Presenti ora</div></div>
         <div class="sc"><div class="sn" id="nTeam">0</div><div class="sl">Team</div></div>
       </div>
-      <div class="sec"><div class="stl">Team oggi</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span class="bdg bg">● Live</span>
-          <button class="btn" style="padding:5px 10px;font-size:12px" onclick="apriGestTimb()">✏️ Modifica</button>
+      <div class="sec">
+        <h2 class="stl">Team oggi</h2>
+        <div class="sec-actions">
+          <span class="bdg bg"><span class="live-dot" aria-hidden="true"></span>Live</span>
+          <button type="button" class="btn btn-sm" onclick="apriGestTimb()">Modifica</button>
         </div>
       </div>
       <div class="card" id="teamToday"><div class="empty">Caricamento...</div></div>
 
       <!-- LE MIE ORE -->
-      <div class="sec" style="margin-top:16px">
-        <div class="stl">📊 Le mie ore</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <select id="mieOreMese" onchange="renderMieOre()" style="font-size:12px;padding:5px 8px"></select>
-        </div>
+      <div class="sec" style="margin-top:20px">
+        <h2 class="stl">Le mie ore</h2>
+        <select id="mieOreMese" class="sel-sm" aria-label="Mese" onchange="renderMieOre()"></select>
       </div>
-      <!-- Stats mese -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+      <div class="sg3">
         <div class="sc"><div class="sn" id="moOreLav">0h</div><div class="sl">Lavorate</div></div>
         <div class="sc"><div class="sn" id="moOreStd">0h</div><div class="sl">Standard</div></div>
-        <div class="sc"><div class="sn" id="moOreStraord" style="color:var(--am)">0h</div><div class="sl">Straord.</div></div>
+        <div class="sc"><div class="sn sn-warn" id="moOreStraord">0h</div><div class="sl">Straordinari</div></div>
       </div>
-      <!-- Bottone conferma mese -->
       <div id="moConfermaWrap" style="margin-bottom:12px;display:none">
-        <button id="moConfermaBtn" class="btn btn-f btn-p" style="width:100%;padding:12px;font-size:14px" onclick="confermaMese()">
-          ✅ Conferma ore del mese
-        </button>
+        <button type="button" id="moConfermaBtn" class="btn btn-f btn-p btn-lg" onclick="confermaMese()">Conferma ore del mese</button>
       </div>
-      <!-- Tabella giorni -->
+      <p class="hint" style="margin:0 0 8px">Tocca un giorno per aggiungere o correggere la timbratura.</p>
       <div id="mieOreTable"></div>
     </div>
 
@@ -1255,8 +1321,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- TEAM -->
     <div class="page" id="p-team">
-      <div class="sec"><div class="stl">👥 Team</div></div>
-      <!-- Vista mobile -->
+      <!-- Vista mobile (il titolo è nella topbar) -->
       <div id="teamListMobile" class="card"><div class="empty">Caricamento...</div></div>
       <!-- Vista desktop -->
       <div id="teamListDesktop" style="display:none"></div>
@@ -3371,7 +3436,8 @@ function avatarInner(p){
   // Per avatar costruiti come stringhe HTML (liste, chat, ecc.): ritorna {style, content}
   // da inserire nel markup, mostrando la foto profilo se presente, altrimenti le iniziali
   if(p&&p.fotoUrl){
-    return{style:`background-image:url('${p.fotoUrl}');background-size:cover;background-position:center`,content:''};
+    const u=String(p.fotoUrl).replace(/["'()\\\s<>]/g,c=>encodeURIComponent(c));
+    return{style:`background-image:url('${u}');background-size:cover;background-position:center`,content:''};
   }
   return{style:'',content:iniziali(p)};
 }
@@ -3456,7 +3522,7 @@ function pickChip(el,group){
     selRole=el.textContent.trim();
   }
   if(group==='luogo'){
-    selLuogo=el.textContent.trim();
+    selLuogo=el.dataset.value||el.textContent.trim();
     luogoMostraDettaglio(selLuogo,$('luogoExtra'),$('luogoCustom'),true);
   }
 }
@@ -3476,6 +3542,7 @@ function aggiornaLuogoCustom(){}
 const LUOGO_TIPI=['🏢 In sede','🔧 Assistenza','✈️ Trasferta','📍 Altro','🤒 Malattia'];
 const LUOGO_ALTRO='📍 Altro';
 const luogoChiave=s=>String(s||'').replace(/^[^\p{L}]+/u,'').replace(/\s*\(specifica\)\s*$/i,'').trim().toLowerCase();
+function luogoTesto(luogo){return String(luogo||'').replace(/^[^\p{L}\p{N}]+/u,'').trim();}
 function luogoRichiedeDettaglio(tipo){return /assistenza|trasferta|altro/i.test(tipo||'');}
 function luogoDettaglioObbligatorio(tipo){return /altro/i.test(tipo||'');}
 function luogoPlaceholder(tipo){
@@ -3960,7 +4027,7 @@ async function punch(){
     if(luogoDettaglioObbligatorio(selLuogo)&&!extra){toast('Specifica il luogo per "Altro"','r');$('luogoCustom')?.focus();return;}
     const luogo=luogoComponi(selLuogo,extra);
     punchedIn=true;punchStart=Date.now();inPausa=false;pause=[];
-    btn.className='pbtn pout';btn.textContent='⏹ Timbra uscita';
+    btn.className='pbtn pout';btn.textContent='Timbra uscita';
     const isSpeciale=luogo.includes('Malattia');
     pauseBtn.style.display=isSpeciale?'none':'block';
     stat.innerHTML='Entrata timbrata alle '+t+' <span class="lbdg">'+esc(luogo)+'</span>';
@@ -3969,7 +4036,7 @@ async function punch(){
       punchDocId=ref.id;
       localStorage.setItem('av_punch',JSON.stringify({docId:ref.id,entrata:nowArr.toISOString(),luogo,pause:[],inPausa:false,pauseStart:null}));
     }catch(e){console.error(e);}
-    $('luogoWrap').style.opacity='0.4';$('luogoWrap').style.pointerEvents='none';
+    $('luogoWrap').style.opacity='0.4';$('luogoWrap').style.pointerEvents='none';$('luogoWrap').inert=true;
     $('turnoTimeline').style.display='block';
     updateTimeline();
     toast('✓ Entrata — '+luogo);
@@ -3980,21 +4047,27 @@ async function punch(){
       inPausa=false;pauseStart=null;
     }
     punchedIn=false;
-    btn.className='pbtn pin';btn.textContent='⏱ Timbra entrata';
-    pauseBtn.style.display='none';pauseBtn.textContent='☕ Pausa';
-    pauseBtn.style.background='var(--amb)';pauseBtn.style.color='var(--am)';
+    btn.className='pbtn pin';btn.textContent='Timbra entrata';
+    pauseBtn.style.display='none';setPausaBtn(false);
     stat.textContent='Uscita timbrata alle '+t;
     updateTimeline();
     try{if(punchDocId)await DB.collection('presenze').doc(punchDocId).update({uscita:nowArr.toISOString(),pause});}
     catch(e){console.error(e);}
     punchDocId=null;punchStart=null;
     localStorage.removeItem('av_punch');
-    $('luogoWrap').style.opacity='1';$('luogoWrap').style.pointerEvents='auto';
+    $('luogoWrap').style.opacity='1';$('luogoWrap').style.pointerEvents='auto';$('luogoWrap').inert=false;
     $('nOre').textContent='0h';
     toast('✓ Uscita timbrata');
   }
 }
 
+// Pulsante pausa: "Inizia pausa" / "Termina pausa" (stile in .pbtn-pausa / .in-pausa)
+function setPausaBtn(inCorso){
+  const b=$('pauseBtn');if(!b)return;
+  b.textContent=inCorso?'Termina pausa':'Inizia pausa';
+  b.classList.toggle('in-pausa',!!inCorso);
+  b.setAttribute('aria-pressed',inCorso?'true':'false');
+}
 async function togglePausa(){
   if(!punchedIn)return;
   const btn=$('pauseBtn');
@@ -4002,9 +4075,8 @@ async function togglePausa(){
   if(!inPausa){
     // INIZIO PAUSA
     inPausa=true;pauseStart=now.toISOString();
-    btn.textContent='▶ Fine pausa';
-    btn.style.background='var(--gnb)';btn.style.color='var(--gn)';
-    $('pstat').innerHTML='In pausa dalle '+t;
+    setPausaBtn(true);
+    $('pstat').textContent='In pausa dalle '+t;
     // Salva stato pausa in localStorage
     const saved=localStorage.getItem('av_punch');
     if(saved){try{const s=JSON.parse(saved);s.inPausa=true;s.pauseStart=pauseStart;s.pause=pause;localStorage.setItem('av_punch',JSON.stringify(s));}catch(e){}}
@@ -4014,8 +4086,7 @@ async function togglePausa(){
     inPausa=false;
     const p={inizio:pauseStart,fine:now.toISOString()};
     pause.push(p);pauseStart=null;
-    btn.textContent='☕ Pausa';
-    btn.style.background='var(--amb)';btn.style.color='var(--am)';
+    setPausaBtn(false);
     const durMs=new Date(p.fine)-new Date(p.inizio);
     const durMin=Math.round(durMs/60000);
     $('pstat').innerHTML='Fine pausa alle '+t+' · pausa '+durMin+' min';
@@ -4047,24 +4118,15 @@ function updateTimeline(){
   let h='';
   // Entrata
   const ent=new Date(punchStart);
-  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
-    '<div style="width:10px;height:10px;border-radius:50%;background:var(--gn);flex-shrink:0"></div>'+
-    '<span style="font-size:13px;color:var(--tx)">🟢 Entrata <strong>'+pad(ent.getHours())+':'+pad(ent.getMinutes())+'</strong></span>'+
-  '</div>';
+  h+='<div class="tl-item"><span class="tl-dot in" aria-hidden="true"></span><span>Entrata <strong>'+pad(ent.getHours())+':'+pad(ent.getMinutes())+'</strong></span></div>';
   // Pause
   (pause||[]).forEach((p,i)=>{
     const durMin=Math.round((new Date(p.fine)-new Date(p.inizio))/60000);
-    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
-      '<div style="width:10px;height:10px;border-radius:50%;background:var(--am);flex-shrink:0"></div>'+
-      '<span style="font-size:13px;color:var(--tx)">☕ Pausa '+(i+1)+': <strong>'+fmt(p.inizio)+'</strong> → <strong>'+fmt(p.fine)+'</strong> <span style="color:var(--tx2)">('+durMin+' min)</span></span>'+
-    '</div>';
+    h+='<div class="tl-item"><span class="tl-dot pausa" aria-hidden="true"></span><span>Pausa '+(i+1)+': <strong>'+fmt(p.inizio)+'</strong> → <strong>'+fmt(p.fine)+'</strong> <span class="tl-muted">('+durMin+' min)</span></span></div>';
   });
   // Pausa in corso
   if(inPausa&&pauseStart){
-    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
-      '<div style="width:10px;height:10px;border-radius:50%;background:var(--am);flex-shrink:0;animation:pulse 1s infinite"></div>'+
-      '<span style="font-size:13px;color:var(--am)">☕ Pausa in corso dalle <strong>'+fmt(pauseStart)+'</strong>...</span>'+
-    '</div>';
+    h+='<div class="tl-item tl-live"><span class="tl-dot pausa live" aria-hidden="true"></span><span>Pausa in corso dalle <strong>'+fmt(pauseStart)+'</strong></span></div>';
   }
   tl.innerHTML=h;
   // Ore nette
@@ -4084,18 +4146,12 @@ function restorePunch(){
     // Ripristina pausa in corso se presente
     inPausa=p.inPausa||false;
     pauseStart=p.pauseStart||null;
-    const btn=$('pbtn');if(btn){btn.className='pbtn pout';btn.textContent='⏹ Timbra uscita';}
+    const btn=$('pbtn');if(btn){btn.className='pbtn pout';btn.textContent='Timbra uscita';}
     const pauseBtn=$('pauseBtn');
     if(pauseBtn){
       const isMalattia=(p.luogo||'').includes('Malattia');
       pauseBtn.style.display=isMalattia?'none':'block';
-      if(inPausa){
-        pauseBtn.textContent='▶ Fine pausa';
-        pauseBtn.style.background='var(--gnb)';pauseBtn.style.color='var(--gn)';
-      } else {
-        pauseBtn.textContent='☕ Pausa';
-        pauseBtn.style.background='var(--amb)';pauseBtn.style.color='var(--am)';
-      }
+      setPausaBtn(inPausa);
     }
     const e=new Date(p.entrata);
     const stat=$('pstat');
@@ -4107,7 +4163,7 @@ function restorePunch(){
         stat.innerHTML='Entrata alle '+pad(e.getHours())+':'+pad(e.getMinutes())+' <span class="lbdg">'+esc(p.luogo||'')+'</span>';
       }
     }
-    $('luogoWrap').style.opacity='0.4';$('luogoWrap').style.pointerEvents='none';
+    $('luogoWrap').style.opacity='0.4';$('luogoWrap').style.pointerEvents='none';$('luogoWrap').inert=true;
     $('turnoTimeline').style.display='block';
     updateTimeline();
     const msg=inPausa?'🔄 Turno ripristinato · in pausa':'🔄 Turno ripristinato · '+pause.length+' pause salvate';
@@ -4129,7 +4185,7 @@ function renderPresenze(){
     const av=avatarInner(m);
     const tp=todayP.find(p=>p.uid===m.id);
     const luogo=tp&&tp.luogo?tp.luogo:'';
-    const bc=tp?(tp.uscita?'ba':'bg'):'bp';
+    const bc=tp?(tp.uscita?'bn':'bg'):'bn';
     const bl=tp?(tp.uscita?'Uscito':'Presente'):'Assente';
     let orario='';
     if(tp){
@@ -4145,31 +4201,30 @@ function renderPresenze(){
         const lordeH=((u-ent)/3600000);
         const netteH=Math.max(0,lordeH-pauseMs/3600000);
         if(puoVedereOrari){
-          orario='🟢 '+eS+' → 🔴 '+uS+' · '+netteH.toFixed(1)+'h nette';
-          if(pauses.length>0) orario+=' <span style="font-size:10px;color:var(--am)">☕'+pauses.length+'</span>';
+          orario=eS+' → '+uS+' · '+netteH.toFixed(1)+'h nette';
+          if(pauses.length>0) orario+=' · '+pauses.length+(pauses.length===1?' pausa':' pause');
         } else {
-          orario='✅ Turno completato'+(luogo?' · '+luogo.replace(/[🏢🔧✈️📍🤒]/u,'').trim():'');
-          if(pauses.length>0) orario+=' <span style="font-size:10px;color:var(--am)">☕'+pauses.length+' pause</span>';
+          orario='Turno completato';
+          if(pauses.length>0) orario+=' · '+pauses.length+(pauses.length===1?' pausa':' pause');
         }
       } else {
         if(puoVedereOrari){
-          orario='🟢 Entrata '+eS;
-          if(pauses.length>0) orario+=' <span style="font-size:10px;color:var(--am)">☕'+pauses.length+' pause</span>';
-          if(pauseMin>0) orario+=' <span style="font-size:10px;color:var(--tx3)">('+pauseMin+'min)</span>';
+          orario='Entrata '+eS;
+          if(pauses.length>0) orario+=' · '+pauses.length+(pauses.length===1?' pausa':' pause')+(pauseMin>0?' ('+pauseMin+' min)':'');
         } else {
-          orario='🟢 Al lavoro'+(luogo?' · '+luogo.replace(/[🏢🔧✈️📍🤒]/u,'').trim():'');
-          if(pauses.length>0) orario+=' <span style="font-size:10px;color:var(--am)">☕ In pausa</span>';
+          orario='Al lavoro';
+          if(pauses.length>0) orario+=' · '+pauses.length+(pauses.length===1?' pausa fatta':' pause fatte');
         }
       }
     }
     h+='<div class="row"><div class="av '+avC[i%4]+'" style="'+av.style+'">'+av.content+'</div>'+
       '<div style="flex:1;min-width:0">'+
-        '<div style="font-size:14px;font-weight:500;display:flex;align-items:center;gap:5px">'+
-          m.nome+' '+m.cognome+
-          (m.ruolo==='Collaboratore esterno'?'<span style="font-size:10px;background:rgba(168,85,247,.15);color:#c084fc;padding:1px 7px;border-radius:10px">ext</span>':'')+
+        '<div class="pres-nome">'+
+          esc(m.nome)+' '+esc(m.cognome)+
+          (m.ruolo==='Collaboratore esterno'?'<span class="bdg bn bdg-xs">Esterno</span>':'')+
         '</div>'+
-        '<div class="pres-luogo">'+(orario||m.ruolo)+'</div>'+
-        (luogo?'<div style="font-size:11px;color:var(--ac2);margin-top:1px">'+luogo+'</div>':'')+
+        '<div class="pres-luogo">'+esc(orario||m.ruolo)+'</div>'+
+        (luogo?'<div class="pres-dove">'+esc(luogoTesto(luogo))+'</div>':'')+
       '</div>'+
       '<span class="bdg '+bc+'">'+bl+'</span></div>';
   });
@@ -4199,106 +4254,64 @@ function renderTeamDesktop(){
   const oggi=toLocalISO(new Date());
   const avC=['a1','a2','a3','a4'];
   const canManage=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
+  const ora=iso=>new Date(iso).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
 
-  // Calcola presenze oggi per ogni membro
+  // Presenze di oggi per membro
   const presenzeOggi={};
   cachePresenze.filter(p=>p.entrata&&toLocalISO(new Date(p.entrata))===oggi).forEach(p=>{
     presenzeOggi[p.uid]={luogo:p.luogo,entrata:p.entrata,uscita:p.uscita};
   });
 
   // Raggruppa per ruolo
-  const ruoliOrdine=['Responsabile','Project Manager','Dipendente','Collaboratore esterno'];
+  const ruoliOrdine=['Responsabile','Project Manager','Tecnico AV','Magazziniere','Collaboratore esterno'];
   const perRuolo={};
-  cacheTeam.forEach(m=>{
-    const r=m.ruolo||'Altro';
-    if(!perRuolo[r])perRuolo[r]=[];
-    perRuolo[r].push(m);
-  });
+  cacheTeam.forEach(m=>{const r=m.ruolo||'Altro';(perRuolo[r]=perRuolo[r]||[]).push(m);});
 
-  const th='padding:10px 14px;font-size:11px;font-weight:600;color:var(--tx2);text-align:left;border-bottom:2px solid var(--b);white-space:nowrap';
-  const td='padding:10px 14px;border-bottom:1px solid var(--b);font-size:13px;vertical-align:middle';
+  if(!cacheTeam.length){el.innerHTML='<div class="empty">Nessun membro del team</div>';return;}
 
-  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <div style="display:flex;gap:12px">
-      <div class="sc" style="padding:12px 20px;text-align:center">
-        <div style="font-size:22px;font-weight:800;color:var(--ac2)">${cacheTeam.length}</div>
-        <div style="font-size:11px;color:var(--tx2)">Totale team</div>
-      </div>
-      <div class="sc" style="padding:12px 20px;text-align:center">
-        <div style="font-size:22px;font-weight:800;color:var(--gn)">${Object.keys(presenzeOggi).filter(uid=>!presenzeOggi[uid].uscita).length}</div>
-        <div style="font-size:11px;color:var(--tx2)">Presenti ora</div>
-      </div>
-      <div class="sc" style="padding:12px 20px;text-align:center">
-        <div style="font-size:22px;font-weight:800;color:var(--am)">${cacheTeam.filter(m=>!m.approvato).length}</div>
-        <div style="font-size:11px;color:var(--tx2)">In attesa approvazione</div>
-      </div>
-    </div>
-    ${canManage?`<button class="btn btn-p" style="padding:9px 16px;font-size:13px" onclick="apriGestioneUtenti()">⚙️ Gestione utenti</button>`:''}
+  const nPresenti=Object.values(presenzeOggi).filter(p=>!p.uscita).length;
+  const nAttesa=cacheTeam.filter(m=>!m.approvato).length;
+  let h=`<div class="page-head">
+    <div><h1 class="page-title">Team</h1><p class="page-sub">${cacheTeam.length} persone · ${nPresenti} presenti ora${nAttesa?' · '+nAttesa+' in attesa di approvazione':''}</p></div>
+    ${canManage?`<button type="button" class="btn btn-p" onclick="apriGestioneUtenti()">Gestione utenti</button>`:''}
   </div>`;
 
-  // Tabella per ogni gruppo
-  const allRuoli=[...new Set([...ruoliOrdine,...Object.keys(perRuolo)])].filter(r=>perRuolo[r]?.length);
-
-  allRuoli.forEach(ruolo=>{
-    const membri=perRuolo[ruolo]||[];
-    h+=`<div style="font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">${ruolo} (${membri.length})</div>`;
-    h+=`<div style="border-radius:var(--r);border:1px solid var(--b);overflow:hidden;margin-bottom:4px">
-    <table style="width:100%;border-collapse:collapse;background:var(--bg1)">
-      <thead><tr style="background:var(--bg2)">
-        <th style="${th}">Dipendente</th>
-        <th style="${th}">Email</th>
-        <th style="${th}">Telefono</th>
-        <th style="${th};text-align:center">Presenza oggi</th>
-        <th style="${th};text-align:center">Stato</th>
-        ${canManage?`<th style="${th};text-align:center">Azioni</th>`:''}
+  const ruoli=[...new Set([...ruoliOrdine,...Object.keys(perRuolo)])].filter(r=>perRuolo[r]?.length);
+  ruoli.forEach(ruolo=>{
+    const membri=perRuolo[ruolo];
+    h+=`<h2 class="nav-label" style="padding-left:0">${esc(ruolo)} (${membri.length})</h2>
+    <div class="dtable-wrap"><table class="dtable">
+      <thead><tr>
+        <th scope="col">Dipendente</th><th scope="col">Email</th><th scope="col">Telefono</th>
+        <th scope="col">Presenza oggi</th><th scope="col">Stato</th>
+        ${canManage?'<th scope="col" class="t-right">Azioni</th>':''}
       </tr></thead><tbody>`;
-
     membri.forEach((m,i)=>{
       const av=avatarInner(m);
       const pres=presenzeOggi[m.id];
-      const isPresente=pres&&!pres.uscita;
-      const isUscito=pres&&pres.uscita;
-      const rb=i%2===0?'var(--bg1)':'var(--bg2)';
-      let presHtml='<span style="color:var(--tx3);font-size:11px">— Assente</span>';
-      if(isPresente){
-        const ora=new Date(pres.entrata).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
-        presHtml=`<span style="color:var(--gn);font-size:11px">🟢 Dal ${ora}${pres.luogo?' · '+esc(pres.luogo):''}</span>`;
-      } else if(isUscito){
-        const oraE=new Date(pres.entrata).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
-        const oraU=new Date(pres.uscita).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
-        presHtml=`<span style="color:var(--tx2);font-size:11px">✓ ${oraE}→${oraU}</span>`;
-      }
-      const statoHtml=m.approvato
-        ?'<span style="color:var(--gn);font-size:11px">✅ Attivo</span>'
-        :'<span style="color:var(--am);font-size:11px">⏳ In attesa</span>';
-
-      h+=`<tr style="background:${rb}" onmouseenter="this.style.background='var(--acb)'" onmouseleave="this.style.background='${rb}'">
-        <td style="${td}">
-          <div style="display:flex;align-items:center;gap:10px">
-            <div class="av ${avC[i%4]}" style="width:32px;height:32px;font-size:11px;flex-shrink:0;${av.style}">${av.content}</div>
-            <div>
-              <div style="font-weight:600">${esc(m.nome)} ${esc(m.cognome)}</div>
-              <div style="font-size:11px;color:var(--tx2)">${esc(m.ruolo)}</div>
-            </div>
-          </div>
-        </td>
-        <td style="${td};color:var(--tx2);font-size:12px">${esc(m.email||'—')}</td>
-        <td style="${td};color:var(--tx2);font-size:12px">${m.telefono||'—'}</td>
-        <td style="${td};text-align:center">${presHtml}</td>
-        <td style="${td};text-align:center">${statoHtml}</td>
-        ${canManage?`<td style="${td};text-align:center">
-          <div style="display:flex;gap:4px;justify-content:center">
-            <button onclick="apriChatConUtente('${m.id}')" title="Invia messaggio" style="background:var(--acb);border:1px solid var(--ac);color:var(--ac2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✉️</button>
-            ${!m.approvato?`<button onclick="approvaUtente('${m.id}')" title="Approva" style="background:rgba(34,197,94,.1);border:1px solid var(--gn);color:var(--gn);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✅</button>`:''}
-            <button onclick="resetPin('${m.id}','${escJs(m.nome)} ${escJs(m.cognome)}')" title="Reset PIN" style="background:var(--bg3);border:1px solid var(--b);color:var(--tx2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">🔑</button>
-          </div>
-        </td>`:''}
+      const nome=esc(m.nome)+' '+esc(m.cognome);
+      let presHtml='<span class="t-muted">Assente</span>';
+      if(pres&&!pres.uscita)presHtml=`<span class="bdg bg">Dalle ${ora(pres.entrata)}</span>${pres.luogo?` <span class="t-muted">${esc(luogoTesto(pres.luogo))}</span>`:''}`;
+      else if(pres)presHtml=`<span class="t-muted">${ora(pres.entrata)}–${ora(pres.uscita)}</span>`;
+      const tel=m.tel||m.telefono||'';
+      h+=`<tr>
+        <td><div class="t-person">
+          <span class="av ${avC[i%4]} dav" style="${av.style}" aria-hidden="true">${av.content}</span>
+          <span><span class="t-strong">${nome}</span><span class="t-sub">${esc(m.ruolo)}</span></span>
+        </div></td>
+        <td>${m.email?`<a class="t-link" href="mailto:${esc(m.email)}">${esc(m.email)}</a>`:'<span class="t-muted">—</span>'}</td>
+        <td>${tel?`<a class="t-link" href="tel:${esc(tel.replace(/[^\d+]/g,''))}">${esc(tel)}</a>`:'<span class="t-muted">—</span>'}</td>
+        <td>${presHtml}</td>
+        <td>${m.approvato?'<span class="bdg bn">Attivo</span>':'<span class="bdg ba">In attesa</span>'}</td>
+        ${canManage?`<td class="t-right"><div class="t-actions">
+          <button type="button" class="btn btn-sm" onclick="apriChatConUtente('${m.id}')" aria-label="Scrivi a ${nome}">Messaggio</button>
+          ${!m.approvato?`<button type="button" class="btn btn-sm btn-p" onclick="approvaUtente('${m.id}')" aria-label="Approva ${nome}">Approva</button>`:''}
+          <button type="button" class="btn btn-sm" onclick="resetPin('${m.id}','${escJs(m.nome)} ${escJs(m.cognome)}')" aria-label="Reimposta la password di ${nome}">Reset password</button>
+        </div></td>`:''}
       </tr>`;
     });
     h+='</tbody></table></div>';
   });
-
-  if(!cacheTeam.length)h='<div class="empty">Nessun membro del team</div>';
   el.innerHTML=h;
 }
 
@@ -14473,7 +14486,7 @@ async function renderMieOre(){
   let totLav=0, totStraord=0, giorniLav=0;
   const giorni=end.getDate();
   const pad=n=>String(n).padStart(2,'0');
-  const fmtH=ms=>{const h=Math.floor(ms/3600000);const m=Math.round((ms%3600000)/60000);return h+'h'+(m>0?m+'m':'');};
+  const fmtH=ms=>{const t=Math.round(ms/60000);const h=Math.floor(t/60),m=t%60;return h+'h'+(m>0?m+'m':'');};
 
   let rows='';
   for(let g=1;g<=giorni;g++){
@@ -14514,74 +14527,60 @@ async function renderMieOre(){
     totStraord+=straordMs;
 
     const netteStr=nette>0?fmtH(nette):'—';
-    const straordStr=straordMs>60000?'+'+fmtH(straordMs):'';
-    const rowBg=isFestivo?'background:rgba(239,68,68,.08)':isWeekend?'background:rgba(255,255,255,.02)':pList.length>0?'':'background:rgba(239,68,68,.03)';
-    const okIcon=confGiorno?'<span style="color:var(--gn);font-size:14px">✅</span>':'';
-
     const presenzaId=pList.length>0?pList[0].id:'';
     const dataISO=`${anno}-${pad(mese+1)}-${pad(g)}`;
-    rows+=`<tr style="${rowBg};cursor:pointer" onclick="apriTimbRiga('${dataISO}','${presenzaId}')" title="${isFestivo?esc(festivita.nome):'Clicca per aggiungere/modificare'}">
-      <td style="padding:7px 8px;font-size:12px;color:${isFestivo?'var(--rd)':isWeekend?'var(--tx3)':'var(--tx)'}">
-        <div style="font-weight:${isFestivo?700:500}">${pad(g)} ${gg}${isFestivo?' 🎌':''}</div>
-        ${isFestivo?`<div style="font-size:9px;color:var(--rd);font-weight:600;margin-top:1px">${esc(festivita.nome)}</div>`:''}
-      </td>
-      <td style="padding:7px 4px;font-size:11px;color:var(--tx2)">${luogo==='—'?'':esc(luogo.replace(/[🏢🔧✈️🃏🤒]/u,'').trim())}</td>
-      <td style="padding:7px 4px;font-size:11px;text-align:center;color:${entrataStr==='—'?'var(--tx3)':'var(--gn)'}">${entrataStr}</td>
-      <td style="padding:7px 4px;font-size:11px;text-align:center;color:${uscitaStr==='—'?'var(--tx3)':'var(--rd)'}">${uscitaStr}</td>
-      <td style="padding:7px 8px;font-size:12px;font-weight:600;text-align:right;color:${nette>0?'var(--gn)':'var(--tx3)'}">${netteStr}</td>
-      <td style="padding:7px 4px;font-size:12px;text-align:right;color:var(--am)">${straordMs>60000?'+'+fmtH(straordMs):''}</td>
-      <td style="padding:7px 8px;text-align:center">${okIcon}</td>
+    const cls=['orow',isFestivo?'festivo':isWeekend?'weekend':'',pList.length?'':'vuoto'].filter(Boolean).join(' ');
+    const etichetta=`${pad(g)} ${gg}${isFestivo?' · '+festivita.nome:''}: ${pList.length?'timbratura '+entrataStr+'–'+uscitaStr:'nessuna timbratura'}. Apri per modificare`;
+    rows+=`<tr class="${cls}" tabindex="0" role="button" aria-label="${esc(etichetta)}" onclick="apriTimbRiga('${dataISO}','${presenzaId}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+      <td class="o-day"><div class="o-dd">${pad(g)} ${gg}</div>${isFestivo?`<div class="o-fest">${esc(festivita.nome)}</div>`:''}</td>
+      <td class="o-luogo">${luogo==='—'?'':esc(luogoTesto(luogo))}</td>
+      <td class="o-num">${entrataStr}</td>
+      <td class="o-num">${uscitaStr}</td>
+      <td class="o-num o-strong">${netteStr}</td>
+      <td class="o-num o-warn">${straordMs>60000?'+'+fmtH(straordMs):''}</td>
+      <td class="o-ok">${confGiorno?'<span class="o-check" aria-label="Confermato">✓</span>':''}</td>
     </tr>`;
   }
 
-  // Aggiorna stats
+  // Statistiche del mese (lo standard esclude weekend e festivi, come il calcolo per giorno)
   const moLav=$('moOreLav');if(moLav)moLav.textContent=fmtH(totLav);
   const moStd=$('moOreStd');
-  const giorniLavorativi=Array.from({length:giorni},(_,i)=>new Date(anno,mese,i+1).getDay()).filter(d=>d>0&&d<6).length;
+  const festiviMese=new Set(getFestivitaItaliane(anno).map(f=>f.data));
+  const giorniLavorativi=Array.from({length:giorni},(_,i)=>new Date(anno,mese,i+1))
+    .filter(d=>d.getDay()>0&&d.getDay()<6&&!festiviMese.has(`${anno}-${pad(mese+1)}-${pad(d.getDate())}`)).length;
   if(moStd)moStd.textContent=(giorniLavorativi*ORE_STD_GIORNO)+'h';
   const moStr=$('moOreStraord');if(moStr)moStr.textContent=totStraord>0?fmtH(totStraord):'0h';
 
-  // Bottone conferma
+  // Pulsante conferma del mese
   const wrap=$('moConfermaWrap');
   const btn=$('moConfermaBtn');
   if(wrap&&btn){
     wrap.style.display='block';
-    if(meseConfermato){
-      btn.style.background='var(--gnb)';btn.style.color='var(--gn)';btn.style.borderColor='var(--gn)';
-      btn.textContent='✅ Ore confermate il '+new Date(conferme.confermataIl||'').toLocaleDateString('it-IT');
-      btn.disabled=true;
-    } else {
-      btn.style.background='';btn.style.color='';btn.style.borderColor='';
-      btn.textContent='✅ Conferma ore del mese';
-      btn.disabled=false;
-    }
+    btn.classList.toggle('btn-done',!!meseConfermato);
+    btn.classList.toggle('btn-p',!meseConfermato);
+    btn.textContent=meseConfermato?'Ore confermate il '+new Date(conferme.confermataIl||'').toLocaleDateString('it-IT'):'Conferma ore del mese';
+    btn.disabled=!!meseConfermato;
   }
 
   // Tabella
   if(el){
     el.innerHTML=`
-    <div style="overflow-x:auto;border:1px solid var(--b);border-radius:var(--r);margin-bottom:14px">
-      <table style="width:100%;border-collapse:collapse;min-width:300px">
-        <thead>
-          <tr style="background:var(--bg2)">
-            <th style="padding:8px;font-size:11px;text-align:left;color:var(--tx2);font-weight:600">Giorno</th>
-            <th style="padding:8px 4px;font-size:11px;color:var(--tx2);font-weight:600">Luogo</th>
-            <th style="padding:8px 4px;font-size:11px;text-align:center;color:var(--tx2);font-weight:600">IN</th>
-            <th style="padding:8px 4px;font-size:11px;text-align:center;color:var(--tx2);font-weight:600">OUT</th>
-            <th style="padding:8px;font-size:11px;text-align:right;color:var(--tx2);font-weight:600">Ore nette</th>
-            <th style="padding:8px 4px;font-size:11px;text-align:right;color:var(--am);font-weight:600">Straord.</th>
-            <th style="padding:8px;font-size:11px;text-align:center;color:var(--tx2);font-weight:600">OK</th>
-          </tr>
-        </thead>
+    <div class="otable-wrap">
+      <table class="otable">
+        <caption class="visually-hidden">Ore del mese, un giorno per riga</caption>
+        <thead><tr>
+          <th scope="col">Giorno</th><th scope="col">Luogo</th>
+          <th scope="col" class="o-num">Entrata</th><th scope="col" class="o-num">Uscita</th>
+          <th scope="col" class="o-num">Nette</th><th scope="col" class="o-num">Straord.</th>
+          <th scope="col" class="o-ok"><span class="visually-hidden">Confermato</span>✓</th>
+        </tr></thead>
         <tbody>${rows}</tbody>
-        <tfoot>
-          <tr style="background:var(--bg2);border-top:2px solid var(--b)">
-            <td colspan="4" style="padding:8px;font-size:12px;font-weight:600">Totale mese</td>
-            <td style="padding:8px;font-size:13px;font-weight:700;text-align:right;color:var(--gn)">${fmtH(totLav)}</td>
-            <td style="padding:8px;font-size:12px;font-weight:700;text-align:right;color:var(--am)">${totStraord>0?'+'+fmtH(totStraord):''}</td>
-            <td></td>
-          </tr>
-        </tfoot>
+        <tfoot><tr>
+          <th scope="row" colspan="4">Totale mese</th>
+          <td class="o-num o-strong">${fmtH(totLav)}</td>
+          <td class="o-num o-warn">${totStraord>0?'+'+fmtH(totStraord):''}</td>
+          <td></td>
+        </tr></tfoot>
       </table>
     </div>`;
   }
@@ -15538,7 +15537,7 @@ function schedMidnightReset(){
     }
     localStorage.removeItem('av_punch');
     punchedIn=false;punchStart=null;punchDocId=null;
-    const btn=$('pbtn');if(btn){btn.className='pbtn pin';btn.textContent='⏱ Timbra entrata';}
+    const btn=$('pbtn');if(btn){btn.className='pbtn pin';btn.textContent='Timbra entrata';}
     const stat=$('pstat');if(stat)stat.textContent='Non timbrato';
     const oe=$('nOre');if(oe)oe.textContent='0h';
     const lw=$('luogoWrap');if(lw){lw.style.opacity='1';lw.style.pointerEvents='auto';}
