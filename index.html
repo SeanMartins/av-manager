@@ -28,7 +28,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01a';
+const APP_VERSION='v2026.11.01a2';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -293,6 +293,9 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
   </div>
   <div style="font-size:9px;color:var(--tx3);text-align:center;margin-top:20px" data-app-version></div>
 </div>
+
+<!-- Messaggi brevi (toast): rimosso per errore il 12/05/2026, ripristinato -->
+<div id="toast" role="status" aria-live="polite"></div>
 
 <!-- APP -->
 <div id="app">
@@ -1519,13 +1522,14 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <div style="font-size:16px;font-weight:700;margin-bottom:2px" id="timbRigaData">—</div>
     <div style="font-size:12px;color:var(--tx2);margin-bottom:14px" id="timbRigaStato">—</div>
     <div class="ig"><label class="il">Luogo</label>
-      <select id="timbRigaLuogo">
-        <option>🏢 In sede</option>
-        <option>🔧 Assistenza</option>
-        <option>✈️ Trasferta</option>
-        <option>📍 Altro (specifica)</option>
-        <option>🤒 Malattia</option>
+      <select id="timbRigaLuogo" onchange="luogoSelectSync('timbRigaLuogo','timbRigaLuogoExtra',true)">
+        <option value="🏢 In sede">🏢 In sede</option>
+        <option value="🔧 Assistenza">🔧 Assistenza</option>
+        <option value="✈️ Trasferta">✈️ Trasferta</option>
+        <option value="📍 Altro">📍 Altro (specifica)</option>
+        <option value="🤒 Malattia">🤒 Malattia</option>
       </select>
+      <input type="text" id="timbRigaLuogoExtra" aria-label="Dettaglio del luogo" style="margin-top:6px;display:none">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="ig"><label class="il">🟢 Entrata</label><input type="time" id="timbRigaIn"></div>
@@ -3199,11 +3203,7 @@ function pickChip(el,group){
   }
   if(group==='luogo'){
     selLuogo=el.textContent.trim();
-    const isExtra=selLuogo.includes('Assistenza')||selLuogo.includes('Trasferta');
-    const isAltro=selLuogo.includes('Altro');
-    $('luogoExtra').style.display=(isExtra||isAltro)?'block':'none';
-    if(!isAltro) $('luogoCustom').value='';
-    if(isAltro) setTimeout(()=>$('luogoCustom').focus(),100);
+    luogoMostraDettaglio(selLuogo,$('luogoExtra'),$('luogoCustom'),true);
   }
 }
 
@@ -3212,9 +3212,60 @@ function mostraLuogoCustom(){
   setTimeout(()=>$('luogoCustom')?.focus(),100);
 }
 
-function aggiornaLuogoCustom(){
-  const v=($('luogoCustom')?.value||'').trim();
-  if(v) selLuogo='📍 '+v;
+// Non modifica più selLuogo: prima, scrivendo il dettaglio, il tipo scelto
+// (es. "Assistenza") veniva sostituito da "📍 <testo>" e andava perso.
+function aggiornaLuogoCustom(){}
+
+// ══ LUOGO DELLA TIMBRATURA: tipo + dettaglio ══
+// Formato salvato: "🔧 Assistenza — Hotel Villa Rosa", "📍 Altro — Firenze", "🏢 In sede".
+// Usato da: timbratura in Presenze, "Le mie ore" (mTimbRiga), aggiungi/modifica (mAddTimb).
+const LUOGO_TIPI=['🏢 In sede','🔧 Assistenza','✈️ Trasferta','📍 Altro','🤒 Malattia'];
+const LUOGO_ALTRO='📍 Altro';
+const luogoChiave=s=>String(s||'').replace(/^[^\p{L}]+/u,'').replace(/\s*\(specifica\)\s*$/i,'').trim().toLowerCase();
+function luogoRichiedeDettaglio(tipo){return /assistenza|trasferta|altro/i.test(tipo||'');}
+function luogoDettaglioObbligatorio(tipo){return /altro/i.test(tipo||'');}
+function luogoPlaceholder(tipo){
+  return /assistenza/i.test(tipo)?'Specifica dove (es: Hotel Villa Rosa, Firenze)':
+    /trasferta/i.test(tipo)?'Specifica la destinazione (es: Milano, Roma)':'Specifica il luogo (obbligatorio)';
+}
+// Tipo (anche testo di un chip o di un'opzione) + dettaglio → stringa da salvare
+function luogoComponi(tipo,dettaglio){
+  const t=LUOGO_TIPI.find(x=>luogoChiave(x)===luogoChiave(tipo))||String(tipo||'').trim()||LUOGO_TIPI[0];
+  const d=String(dettaglio||'').trim();
+  return d&&luogoRichiedeDettaglio(t)?t+' — '+d:t;
+}
+// Stringa salvata → {tipo, dettaglio}. Legge anche i formati vecchi:
+// "📍 Hotel X" (chip Altro), "📍 Luogo personalizzato", "📍 Altro (specifica)".
+function luogoScomponi(luogo){
+  const s=String(luogo||'').trim();
+  if(!s)return{tipo:LUOGO_TIPI[0],dettaglio:''};
+  const sep=s.indexOf(' — ');
+  const base=sep>=0?s.slice(0,sep):s, det=sep>=0?s.slice(sep+3).trim():'';
+  const tipo=LUOGO_TIPI.find(x=>luogoChiave(x)===luogoChiave(base));
+  if(tipo)return{tipo,dettaglio:det};
+  if(luogoChiave(s)==='luogo personalizzato')return{tipo:LUOGO_ALTRO,dettaglio:''};
+  return{tipo:LUOGO_ALTRO,dettaglio:s.replace(/^[^\p{L}\p{N}]+/u,'').trim()};
+}
+// Mostra/nasconde il campo dettaglio in base al tipo scelto
+function luogoMostraDettaglio(tipo,wrap,input,focus){
+  if(!wrap||!input)return;
+  const serve=luogoRichiedeDettaglio(tipo);
+  wrap.style.display=serve?'block':'none';
+  if(serve){input.placeholder=luogoPlaceholder(tipo);if(focus)setTimeout(()=>input.focus(),100);}
+  else input.value='';
+}
+// Helpers per le coppie <select> + campo dettaglio (mTimbRiga, mAddTimb)
+function luogoSelectSync(selId,extraId,focus){luogoMostraDettaglio($(selId)?.value,$(extraId),$(extraId),focus);}
+function luogoSelectSet(selId,extraId,luogo){
+  const sel=$(selId),ex=$(extraId);if(!sel||!ex)return;
+  const {tipo,dettaglio}=luogoScomponi(luogo);
+  sel.value=tipo;ex.value=dettaglio;luogoSelectSync(selId,extraId,false);
+}
+// Restituisce il luogo da salvare, oppure null (con avviso) se manca il dettaglio obbligatorio
+function luogoSelectGet(selId,extraId){
+  const tipo=$(selId)?.value||LUOGO_TIPI[0],det=($(extraId)?.value||'').trim();
+  if(luogoDettaglioObbligatorio(tipo)&&!det){toast('Specifica il luogo per "Altro"','r');$(extraId)?.focus();return null;}
+  return luogoComponi(tipo,det);
 }
 function togglePriv(){privOk=!privOk;$('privBox').classList.toggle('on',privOk);}
 function setBadge(id, count){
@@ -3661,15 +3712,15 @@ async function punch(){
   const btn=$('pbtn'),stat=$('pstat'),pauseBtn=$('pauseBtn');
   const now=new Date(),nowArr=arrotondaA15Min(now),t=pad(nowArr.getHours())+':'+pad(nowArr.getMinutes());
   if(!punchedIn){
-    // ENTRATA
+    // ENTRATA — il luogo si valida prima di cambiare stato
+    const extra=val('luogoCustom');
+    if(luogoDettaglioObbligatorio(selLuogo)&&!extra){toast('Specifica il luogo per "Altro"','r');$('luogoCustom')?.focus();return;}
+    const luogo=luogoComponi(selLuogo,extra);
     punchedIn=true;punchStart=Date.now();inPausa=false;pause=[];
     btn.className='pbtn pout';btn.textContent='⏹ Timbra uscita';
-    const extra=val('luogoCustom');
-    const luogo=selLuogo.includes('Altro')?(extra?'📍 '+extra:'📍 Luogo personalizzato'):
-                (extra&&(selLuogo.includes('Assistenza')||selLuogo.includes('Trasferta'))?selLuogo+' — '+extra:selLuogo);
     const isSpeciale=luogo.includes('Malattia');
     pauseBtn.style.display=isSpeciale?'none':'block';
-    stat.innerHTML='Entrata timbrata alle '+t+' <span class="lbdg">'+luogo+'</span>';
+    stat.innerHTML='Entrata timbrata alle '+t+' <span class="lbdg">'+esc(luogo)+'</span>';
     try{
       const ref=await DB.collection('presenze').add({uid:USER.id,nome:USER.nome+' '+USER.cognome,entrata:nowArr.toISOString(),uscita:null,luogo,pause:[]});
       punchDocId=ref.id;
@@ -14235,7 +14286,7 @@ async function renderMieOre(){
         <div style="font-weight:${isFestivo?700:500}">${pad(g)} ${gg}${isFestivo?' 🎌':''}</div>
         ${isFestivo?`<div style="font-size:9px;color:var(--rd);font-weight:600;margin-top:1px">${esc(festivita.nome)}</div>`:''}
       </td>
-      <td style="padding:7px 4px;font-size:11px;color:var(--tx2)">${luogo==='—'?'':luogo.replace(/[🏢🔧✈️🃏🤒]/u,'').trim()}</td>
+      <td style="padding:7px 4px;font-size:11px;color:var(--tx2)">${luogo==='—'?'':esc(luogo.replace(/[🏢🔧✈️🃏🤒]/u,'').trim())}</td>
       <td style="padding:7px 4px;font-size:11px;text-align:center;color:${entrataStr==='—'?'var(--tx3)':'var(--gn)'}">${entrataStr}</td>
       <td style="padding:7px 4px;font-size:11px;text-align:center;color:${uscitaStr==='—'?'var(--tx3)':'var(--rd)'}">${uscitaStr}</td>
       <td style="padding:7px 8px;font-size:12px;font-weight:600;text-align:right;color:${nette>0?'var(--gn)':'var(--tx3)'}">${netteStr}</td>
@@ -14389,7 +14440,7 @@ async function apriTimbRiga(dataISO, presenzaId){
       if(doc.exists){
         const p=doc.data();
         $('timbRigaStato').textContent='✏️ Modifica timbratura esistente';
-        $('timbRigaLuogo').value=p.luogo||'🏢 In sede';
+        luogoSelectSet('timbRigaLuogo','timbRigaLuogoExtra',p.luogo);
         $('timbRigaIn').value=fmtT(p.entrata);
         $('timbRigaOut').value=fmtT(p.uscita);
         $('timbRigaNota').value=p.notaModifica||'';
@@ -14400,7 +14451,7 @@ async function apriTimbRiga(dataISO, presenzaId){
   } else {
     // Nuova timbratura
     $('timbRigaStato').textContent='➕ Aggiungi timbratura per questo giorno';
-    $('timbRigaLuogo').value='🏢 In sede';
+    luogoSelectSet('timbRigaLuogo','timbRigaLuogoExtra','');
     $('timbRigaIn').value='09:00';
     $('timbRigaOut').value='18:00';
     $('timbRigaNota').value='';
@@ -14433,6 +14484,8 @@ async function saveTimbRiga(){
   if(!timbRigaDataISO)return;
   const entrataTime=$('timbRigaIn').value;
   if(!entrataTime){toast('Inserisci l\'orario di entrata','r');return;}
+  const luogo=luogoSelectGet('timbRigaLuogo','timbRigaLuogoExtra');
+  if(luogo===null)return;
 
   const mkISO=(date,time)=>time?new Date(date+'T'+time+':00').toISOString():null;
   const entrata=mkISO(timbRigaDataISO,entrataTime);
@@ -14445,7 +14498,7 @@ async function saveTimbRiga(){
 
   const doc={
     uid:USER.id,nome:USER.nome+' '+USER.cognome,
-    entrata,uscita,luogo:$('timbRigaLuogo').value,
+    entrata,uscita,luogo,
     pause,
     notaModifica:$('timbRigaNota').value||'Aggiunta manuale',
     modificatoDa:USER.nome+' '+USER.cognome,
@@ -14678,52 +14731,12 @@ function editTimb(id){
   });
 }
 
-function atLuogoChange(sel){
-  const extra=$('atLuogoExtra');if(!extra)return;
-  const v=sel.value;
-  // Mostra campo testo per Assistenza, Trasferta e Altro
-  const needsExtra=v.includes('Assistenza')||v.includes('Trasferta')||v.includes('Altro');
-  extra.style.display=needsExtra?'block':'none';
-  if(needsExtra){
-    extra.placeholder=v.includes('Assistenza')?'Specifica dove (es: Hotel Villa Rosa, Firenze)':
-      v.includes('Trasferta')?'Specifica destinazione (es: Milano, Roma)':
-      'Specifica luogo...';
-    extra.focus();
-  } else {
-    extra.value='';
-  }
-}
-
-function atGetLuogo(){
-  const sel=$('atLuogo');
-  const extra=$('atLuogoExtra');
-  const v=sel?.value||'🏢 In sede';
-  const extraVal=(extra?.value||'').trim();
-  if(extraVal&&(v.includes('Assistenza')||v.includes('Trasferta')||v.includes('Altro'))){
-    return v+' — '+extraVal;
-  }
-  return v;
-}
-
-function atSetLuogo(luogo){
-  const sel=$('atLuogo');
-  const extra=$('atLuogoExtra');
-  if(!sel||!extra)return;
-  // Controlla se contiene un dettaglio dopo " — "
-  const sep=luogo.indexOf(' — ');
-  if(sep>=0){
-    const base=luogo.substring(0,sep);
-    const det=luogo.substring(sep+3);
-    // Trova l'opzione più vicina
-    const opt=Array.from(sel.options).find(o=>o.value.replace(/[🏢🔧✈️📍🤒] /,'').includes(base.replace(/[🏢🔧✈️📍🤒] /,'')));
-    if(opt){sel.value=opt.value;extra.value=det;extra.style.display='block';}
-    else{sel.value='📍 Altro';extra.value=luogo;extra.style.display='block';}
-  } else {
-    const opt=Array.from(sel.options).find(o=>o.value===luogo||luogo.startsWith(o.value));
-    sel.value=opt?opt.value:'🏢 In sede';
-    extra.value='';extra.style.display='none';
-  }
-}
+function atLuogoChange(sel){luogoSelectSync('atLuogo','atLuogoExtra',true);}
+// null se manca il dettaglio obbligatorio di "Altro" (l'avviso lo mostra luogoSelectGet)
+function atGetLuogo(){return luogoSelectGet('atLuogo','atLuogoExtra');}
+// Legge anche i formati vecchi (es. "📍 Hotel X" dalla timbratura in Presenze),
+// che prima venivano riportati a "In sede" e sovrascritti al salvataggio.
+function atSetLuogo(luogo){luogoSelectSet('atLuogo','atLuogoExtra',luogo);}
 
 function apriNuovaTimb(){
   gestTimbEditId=null;
@@ -14773,6 +14786,8 @@ async function saveTimb(){
   const dataVal=val('atData');
   const entrataTime=val('atEntrata');
   if(!uid||!dataVal||!entrataTime){toast('Compila dipendente, data ed entrata','r');return;}
+  const luogo=atGetLuogo();
+  if(luogo===null)return;
   const m=cacheTeam.find(x=>x.id===uid);
   // Costruisci ISO dates
   const mkISO=(date,time)=>time?new Date(date+'T'+time+':00').toISOString():null;
@@ -14789,7 +14804,7 @@ async function saveTimb(){
   }).filter(p=>p.inizio);
   const doc={
     uid,nome:m?m.nome+' '+m.cognome:'—',
-    entrata,uscita,luogo:atGetLuogo(),
+    entrata,uscita,luogo,
     pause,
     notaModifica:val('atNota')||'Modifica manuale',
     modificatoDa:USER.nome+' '+USER.cognome,
