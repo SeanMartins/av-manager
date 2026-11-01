@@ -4,8 +4,8 @@
   "description": "Gestione eventi audio-video — Multimedia Meeting Group",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0f",
-  "theme_color": "#0a0a0f",
+  "background_color": "#F7F5F2",
+  "theme_color": "#F7F5F2",
   "orientation": "portrait-primary",
   "lang": "it",
   "icons": [
