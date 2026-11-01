@@ -12,9 +12,11 @@
 // Variabili d'ambiente richieste (stesse già usate da ff-sync.js):
 //   FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY
 //   (oppure FIREBASE_SERVICE_ACCOUNT come alternativa)
-//   BACKUP_SECRET             → una password a piacere, protegge il trigger manuale/cron
-//   FIREBASE_STORAGE_BUCKET   → opzionale; se non impostata usa "<project_id>.appspot.com"
-//     (il bucket predefinito creato automaticamente da Firebase per il progetto)
+//   CRON_SECRET               → autorizza il cron settimanale (Vercel lo invia da solo)
+//   BACKUP_SECRET             → una password a piacere, protegge il pulsante manuale
+//   FIREBASE_STORAGE_BUCKET   → opzionale; se non impostata usa "<project_id>.firebasestorage.app",
+//     il bucket predefinito dei progetti Firebase recenti (lo stesso usato dall'app).
+//     Il vecchio formato "<project_id>.appspot.com" per questo progetto non esiste.
 
 import admin from 'firebase-admin';
 import { isAuthorizedJob } from './_cron.js';
@@ -37,7 +39,7 @@ function getCreds() {
 function getApp() {
   if (!admin.apps.length) {
     const cred = getCreds();
-    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || `${cred.projectId}.appspot.com`;
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || `${cred.projectId}.firebasestorage.app`;
     admin.initializeApp({ credential: admin.credential.cert(cred), storageBucket: bucketName });
   }
   return admin.app();
