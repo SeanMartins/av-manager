@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01f';
+const APP_VERSION='v2026.11.01g';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -566,6 +566,39 @@ body.desktop-mode #toast{bottom:24px;left:calc(50% + 120px)}
 .th-sort{border:none;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;white-space:nowrap}
 .th-sort:hover{color:var(--color-text)}
 .dtable th.t-num .th-sort{margin-left:auto}
+
+/* ── FINESTRE (componenti comuni) ── */
+.modal-title{font-size:var(--text-lg);font-weight:var(--weight-semibold);letter-spacing:var(--tracking-tight);margin:0 0 14px}
+.modal-actions{display:flex;gap:8px;margin-top:6px}
+.modal-back{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.modal-back-txt{flex:1;min-width:0}
+.modal-back-txt .stl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg-sm{margin-bottom:0}
+.prep-ic{font-size:12px;line-height:1}
+/* Inquadratura QR */
+.scan{position:relative;border-radius:var(--radius-lg);overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:1;max-height:56vh;margin-inline:auto}
+.scan video{width:100%;height:100%;object-fit:cover;display:block}
+.scan-frame{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.scan-frame>div{width:60%;height:60%;border:2px solid #fff;border-radius:12px;box-shadow:0 0 0 9999px rgb(0 0 0 / .45)}
+.scan-hint{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:13px;color:#fff;text-shadow:0 1px 2px rgb(0 0 0 / .6)}
+/* Contatore quantità */
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--color-border-strong);border-radius:var(--radius-md);overflow:hidden;flex-shrink:0}
+.stepper-btn{width:34px;height:34px;border:none;background:var(--color-surface-2);color:var(--color-text);font-size:18px;line-height:1;cursor:pointer}
+.stepper-btn:hover{background:var(--color-surface-hover)}
+.stepper-val{min-width:30px;text-align:center;font-size:var(--text-sm);font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums}
+/* Prepara lavoro */
+.pl-existing{max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.pl-job{display:flex;align-items:flex-start;gap:10px;width:100%;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);text-align:left;cursor:pointer;color:inherit;transition:border-color var(--duration-fast) var(--ease-out)}
+.pl-job:hover{border-color:var(--color-accent)}
+.pl-add{display:flex;gap:8px;align-items:flex-start}
+.pl-add-field{flex:1;position:relative;min-width:0}
+.pl-items{margin-bottom:14px}
+.pl-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--color-border);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.pl-item:last-child{border-bottom:none}
+.pl-note{font-size:var(--text-xs);color:var(--color-accent-text);font-weight:var(--weight-medium)}
+.pl-del:hover{color:var(--color-danger);background:var(--color-danger-subtle)}
+.msug-link{display:flex;justify-content:space-between;gap:8px;width:100%;border:none;text-align:left;cursor:pointer;font-family:inherit}
 
 /* ── FORUM ── */
 .fcard{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color var(--duration-fast) var(--ease-out)}
@@ -2198,76 +2231,74 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
 <!-- PREPARA LAVORO -->
 <div class="mol" id="mPreparaLavoro" onclick="if(event.target===this){stopCam();closeMod('mPreparaLavoro')}">
-  <div class="msh">
+  <div class="msh" role="dialog" aria-modal="true" aria-labelledby="plTitolo">
     <div class="mhd"></div>
     <div id="plStep1">
-      <!-- Tab nuovo / modifica -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px;background:var(--bg2);border-radius:var(--rs);padding:4px">
-        <button id="plTabNuovo" onclick="plSwitchTab('nuovo')" style="padding:9px;border-radius:6px;border:none;background:var(--ac);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">📋 Nuovo</button>
-        <button id="plTabModifica" onclick="plSwitchTab('modifica')" style="padding:9px;border-radius:6px;border:none;background:transparent;color:var(--tx2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer">✏️ Modifica</button>
+      <h2 class="modal-title" id="plTitolo">Prepara lavoro</h2>
+      <div class="seg" role="tablist" aria-label="Nuovo lavoro o modifica">
+        <button type="button" id="plTabNuovo" class="seg-btn on" role="tab" aria-selected="true" aria-controls="plFormNuovo" onclick="plSwitchTab('nuovo')">Nuovo</button>
+        <button type="button" id="plTabModifica" class="seg-btn" role="tab" aria-selected="false" aria-controls="plFormModifica" onclick="plSwitchTab('modifica')">Modifica esistente</button>
       </div>
 
       <!-- Form nuovo lavoro -->
-      <div id="plFormNuovo">
-        <div class="ig"><label class="il">Nome evento / lavoro</label><input type="text" id="plNome" placeholder="Convegno Milano 15/06"></div>
-        <div class="ig"><label class="il">Location</label><select id="plLoc"><option value="">-- Seleziona --</option></select></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="ig"><label class="il">📅 Data inizio / uscita</label><input type="date" id="plData"></div>
-          <div class="ig"><label class="il">🔙 Data fine / rientro</label><input type="date" id="plDataFine"></div>
+      <div id="plFormNuovo" role="tabpanel" aria-labelledby="plTabNuovo">
+        <div class="ig"><label class="il" for="plNome">Nome evento / lavoro</label><input type="text" id="plNome" placeholder="Convegno Milano 15/06"></div>
+        <div class="ig"><label class="il" for="plLoc">Location</label><select id="plLoc"><option value="">Seleziona…</option></select></div>
+        <div class="grid2">
+          <div class="ig"><label class="il" for="plData">Data uscita</label><input type="date" id="plData"></div>
+          <div class="ig"><label class="il" for="plDataFine">Data rientro</label><input type="date" id="plDataFine"></div>
         </div>
-        <div class="ig"><label class="il">Note</label><textarea id="plNote" placeholder="Note per il tecnico..." style="min-height:60px" oninput="aggiornaBadgeLavoro()"></textarea></div>
-        <!-- Badge stato lavoro -->
-        <div style="display:flex;gap:8px;margin-bottom:4px">
-          <button id="btnFinito" onclick="setBadgeLavoro(false)" class="btn btn-f" style="flex:1;padding:10px;font-size:13px;border-color:var(--gn);color:var(--gn)">
-            🟢 Finito
-          </button>
-          <button id="btnDaFinire" onclick="setBadgeLavoro(true)" class="btn btn-f" style="flex:1;padding:10px;font-size:13px">
-            🟠 Da finire
-          </button>
+        <div class="ig"><label class="il" for="plNote">Note</label><textarea id="plNote" placeholder="Note per il tecnico…" style="min-height:64px" oninput="aggiornaBadgeLavoro()" aria-describedby="plNoteHint"></textarea>
+          <div class="hint" id="plNoteHint">Con una nota il lavoro risulta "Da finire".</div></div>
+        <div class="ig">
+          <div class="il" id="plPrepLbl">Preparazione</div>
+          <div class="seg seg-sm" role="radiogroup" aria-labelledby="plPrepLbl">
+            <button type="button" id="btnFinito" class="seg-btn on" role="radio" aria-checked="true" onclick="setBadgeLavoro(false)"><span class="prep-ic" aria-hidden="true">●</span> Preparato</button>
+            <button type="button" id="btnDaFinire" class="seg-btn" role="radio" aria-checked="false" onclick="setBadgeLavoro(true)"><span class="prep-ic" aria-hidden="true">◐</span> Da finire</button>
+          </div>
         </div>
         <input type="hidden" id="plDaFinire" value="false">
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-f" onclick="stopCam();closeMod('mPreparaLavoro')">Annulla</button>
-          <button class="btn btn-p btn-f" onclick="plGoScan()">📷 Avvia scansione →</button>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-f" onclick="stopCam();closeMod('mPreparaLavoro')">Annulla</button>
+          <button type="button" class="btn btn-p btn-f" onclick="plGoScan()">Avvia scansione</button>
         </div>
       </div>
 
       <!-- Lista lavori esistenti da modificare -->
-      <div id="plFormModifica" style="display:none">
-        <div style="font-size:13px;color:var(--tx2);margin-bottom:10px">Seleziona il lavoro da modificare</div>
-        <input type="text" id="plModSearch" placeholder="🔍 Cerca lavoro..." oninput="plFilterExisting()" style="margin-bottom:10px">
-        <div id="plExistingList" style="max-height:340px;overflow-y:auto"></div>
-        <button class="btn btn-f" style="margin-top:10px" onclick="stopCam();closeMod('mPreparaLavoro')">Annulla</button>
+      <div id="plFormModifica" role="tabpanel" aria-labelledby="plTabModifica" style="display:none">
+        <label class="il" for="plModSearch">Scegli il lavoro da modificare</label>
+        <input type="search" id="plModSearch" placeholder="Cerca per nome o location" oninput="plFilterExisting()" style="margin-bottom:10px">
+        <div id="plExistingList" class="pl-existing"></div>
+        <button type="button" class="btn btn-f" style="margin-top:10px" onclick="stopCam();closeMod('mPreparaLavoro')">Annulla</button>
       </div>
     </div>
 
     <div id="plStep2" style="display:none">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <button class="btn" style="padding:6px 12px;font-size:12px" onclick="plBack()">← Torna</button>
-        <div style="flex:1;min-width:0">
-          <div class="stl" id="plNomeLbl" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
-          <div style="font-size:11px;color:var(--tx2)" id="plModLbl"></div>
+      <div class="modal-back">
+        <button type="button" class="btn btn-sm" onclick="plBack()">← Indietro</button>
+        <div class="modal-back-txt">
+          <div class="stl" id="plNomeLbl">—</div>
+          <div class="hint" id="plModLbl" style="margin:0"></div>
         </div>
       </div>
-      <div style="position:relative;border-radius:var(--r);overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:1">
-        <video id="plVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
-          <div style="width:60%;height:60%;border:2px solid rgba(108,99,255,.8);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>
-        </div>
-        <div style="position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:12px;color:rgba(255,255,255,.7)">Inquadra il QR code dell'articolo</div>
+      <div class="scan">
+        <video id="plVideo" autoplay playsinline muted aria-label="Inquadratura della fotocamera"></video>
+        <div class="scan-frame" aria-hidden="true"><div></div></div>
+        <div class="scan-hint">Inquadra il QR code dell'articolo</div>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:4px">
-        <div style="flex:1;position:relative">
-          <input type="text" id="plManualId" placeholder="Cerca articolo per nome o ID..." style="margin:0" oninput="plSuggerisci()" onkeydown="if(event.key==='Enter')plAddManual()">
-          <div id="plSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg1);border:1px solid var(--b2);border-radius:0 0 var(--rs) var(--rs);z-index:50;max-height:200px;overflow-y:auto"></div>
+      <div class="pl-add">
+        <div class="pl-add-field">
+          <label class="visually-hidden" for="plManualId">Cerca articolo per nome o seriale</label>
+          <input type="search" id="plManualId" placeholder="Cerca per nome o seriale" autocomplete="off" oninput="plSuggerisci()" onkeydown="if(event.key==='Enter')plAddManual()" aria-describedby="plManualHint">
+          <div id="plSuggest" class="msuggest" style="display:none"></div>
         </div>
-        <button class="btn btn-p" style="padding:9px 14px;flex-shrink:0" onclick="plAddManual()">+ Add</button>
+        <button type="button" class="btn btn-p" onclick="plAddManual()">Aggiungi</button>
       </div>
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">Digita nome o ID seriale per cercare nel magazzino</div>
-      <div class="sec"><div class="stl">Lista preparata</div><span class="bdg bp" id="plCount">0 articoli</span></div>
-      <input type="text" id="plItemsSearch" placeholder="🔍 Cerca nella lista preparata..." oninput="renderPlItems()" style="margin-bottom:8px">
-      <div id="plItems" style="margin-bottom:14px"><div class="empty" style="padding:12px">Nessun articolo ancora</div></div>
-      <button class="btn btn-p btn-f" style="padding:14px;font-size:15px" onclick="apriFirma('prep')">✍️ Firma e genera PDF</button>
+      <div class="hint" id="plManualHint" style="margin:6px 0 14px">Scansiona il QR oppure cerca nel magazzino.</div>
+      <div class="sec"><h3 class="stl">Lista preparata</h3><span class="bdg bp" id="plCount" aria-live="polite">0 articoli</span></div>
+      <input type="search" id="plItemsSearch" placeholder="Cerca nella lista" aria-label="Cerca nella lista preparata" oninput="renderPlItems()" style="margin-bottom:8px">
+      <div id="plItems" class="pl-items"><div class="empty" style="padding:12px">Nessun articolo ancora</div></div>
+      <button type="button" class="btn btn-p btn-f btn-lg" onclick="apriFirma('prep')">Firma e genera PDF</button>
     </div>
   </div>
 </div>
@@ -8027,10 +8058,9 @@ function apriPreparaLavoro(){
 
 function plSwitchTab(tab){
   const isNuovo=tab==='nuovo';
-  document.getElementById('plFormNuovo').style.display=isNuovo?'block':'none';
-  document.getElementById('plFormModifica').style.display=isNuovo?'none':'block';
-  document.getElementById('plTabNuovo').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:'+(isNuovo?'600':'500')+';background:'+(isNuovo?'var(--ac)':'transparent')+';color:'+(isNuovo?'#fff':'var(--tx2)');
-  document.getElementById('plTabModifica').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:'+(!isNuovo?'600':'500')+';background:'+(!isNuovo?'var(--ac)':'transparent')+';color:'+(!isNuovo?'#fff':'var(--tx2)');
+  $('plFormNuovo').style.display=isNuovo?'block':'none';
+  $('plFormModifica').style.display=isNuovo?'none':'block';
+  [['plTabNuovo',isNuovo],['plTabModifica',!isNuovo]].forEach(([id,on])=>{const b=$(id);if(b){b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false');}});
   if(!isNuovo) plRenderExisting(cacheDich);
 }
 
@@ -8040,25 +8070,22 @@ function plFilterExisting(){
 }
 
 function plRenderExisting(list){
-  const el=document.getElementById('plExistingList');if(!el)return;
+  const el=$('plExistingList');if(!el)return;
   // Solo preparazioni (non rientri completati)
   const prep=list.filter(d=>!d.rientroData);
   if(!prep.length){el.innerHTML='<div class="empty">Nessun lavoro preparato trovato</div>';return;}
-  let h='';
-  prep.forEach(d=>{
+  el.innerHTML=prep.map(d=>{
     const data=d.data?fmtData(d.data,{}):new Date(d.createdAt).toLocaleDateString('it-IT');
     const nPezzi=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
-    h+='<div onclick="plCaricaEsistente(\''+d.id+'\')" style="padding:12px;border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor=\'var(--ac)\'" onmouseout="this.style.borderColor=\'var(--b)\'">'+
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
-        '<div style="flex:1;min-width:0">'+
-          '<div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(d.nome)+'</div>'+
-          '<div style="font-size:11px;color:var(--tx2);margin-top:2px">📅 '+data+' · 📍 '+esc(d.location||'—')+'</div>'+
-          '<div style="font-size:11px;color:var(--tx2)">👤 '+esc(d.tecnico)+' · 📦 '+nPezzi+' pezzi</div>'+
-        '</div>'+
-        '<span class="bdg bp">✏️ Modifica</span>'+
-      '</div></div>';
-  });
-  el.innerHTML=h;
+    return '<button type="button" class="pl-job" onclick="plCaricaEsistente(\''+d.id+'\')">'+
+      '<span class="ditem-main">'+
+        '<span class="ditem-title">'+esc(d.nome)+'</span>'+
+        '<span class="ditem-sub">'+data+' · '+esc(d.location||'—')+'</span>'+
+        '<span class="ditem-sub">'+esc(d.tecnico||'—')+' · '+nPezzi+' pezzi</span>'+
+      '</span>'+
+      '<span class="bdg bp">Modifica ›</span>'+
+    '</button>';
+  }).join('');
 }
 
 function plCaricaEsistente(id){
@@ -8197,9 +8224,7 @@ function plSuggerisci(){
   // Se ci sono più risultati di quelli mostrati, offro sempre "Vedi tutti i risultati"
   // — funziona indipendentemente dallo schema del nome (n.1, Zx 1-90, ecc.)
   if(tutteLeCorrispondenze.length>DISPLAY_MAX){
-    headerHtml+='<div onclick="event.stopPropagation();apriVediTuttiLista(\'RISULTATI:'+encUri(q)+'\',['+tutteLeCorrispondenze.map(m=>'\''+m.id+'\'').join(',')+'])" style="padding:9px 12px;cursor:pointer;background:var(--acb);border-bottom:1px solid var(--ac);font-size:12px;font-weight:600;color:var(--ac2);display:flex;justify-content:space-between;align-items:center">'+
-      '<span>👁 Vedi tutti i risultati</span><span>'+tutteLeCorrispondenze.length+' articoli ›</span>'+
-    '</div>';
+    headerHtml+='<button type="button" class="msug-agg msug-link" onclick="event.stopPropagation();apriVediTuttiLista(\'RISULTATI:'+encUri(q)+'\',['+tutteLeCorrispondenze.map(m=>'\''+m.id+'\'').join(',')+'])"><span>Vedi tutti i risultati</span><span>'+tutteLeCorrispondenze.length+' articoli ›</span></button>';
   }
 
   // Per ogni gruppo (stesso nome base, es. "n.1/n.2") tra i risultati mostrati,
@@ -8213,21 +8238,19 @@ function plSuggerisci(){
     const delGruppo=attivi.filter(x=>estraiNomeBase(x.nome)===base);
     if(delGruppo.length>=2){
       gruppiMostrati.add(base);
-      headerHtml+='<div onclick="event.stopPropagation();apriVediTuttiLista(\'FAMIGLIA:'+encUri(base)+'\',['+delGruppo.map(x=>'\''+x.id+'\'').join(',')+'])" style="padding:9px 12px;cursor:pointer;background:var(--acb);border-bottom:1px solid var(--ac);font-size:12px;font-weight:600;color:var(--ac2);display:flex;justify-content:space-between;align-items:center">'+
-        '<span>👁 Vedi tutti — '+base+'</span><span>'+delGruppo.length+' articoli ›</span>'+
-      '</div>';
+      headerHtml+='<button type="button" class="msug-agg msug-link" onclick="event.stopPropagation();apriVediTuttiLista(\'FAMIGLIA:'+encUri(base)+'\',['+delGruppo.map(x=>'\''+x.id+'\'').join(',')+'])"><span>Vedi tutti: '+esc(base)+'</span><span>'+delGruppo.length+' articoli ›</span></button>';
     }
   });
 
   box.innerHTML=headerHtml+matches.map(m=>{
-    const sc={ok:'var(--gn)',out:'var(--am)',maint:'var(--rd)'}[m.stato]||'var(--gn)';
-    return '<div onclick="plSeleziona(\''+m.id+'\')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:10px" onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'\'">'+
-      '<div style="width:8px;height:8px;border-radius:50%;background:'+sc+';flex-shrink:0"></div>'+
-      '<div style="flex:1;min-width:0">'+
-        '<div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(m.nome)+'</div>'+
-        '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'')+(m.ser?' · '+m.ser:'')+' · ×'+(m.qty||1)+'</div>'+
-      '</div>'+
-    '</div>';
+    const sc={ok:'var(--gn)',out:'var(--am)',maint:'var(--am)'}[m.stato]||'var(--gn)';
+    return '<button type="button" class="msug-item" onclick="plSeleziona(\''+m.id+'\')">'+
+      '<span class="ddot" style="background:'+sc+'" aria-hidden="true"></span>'+
+      '<span class="ditem-main">'+
+        '<span class="ditem-title">'+esc(m.nome)+'</span>'+
+        '<span class="ditem-sub">'+esc(m.marca||'')+(m.ser?' · '+esc(m.ser):'')+' · ×'+(m.qty||1)+'</span>'+
+      '</span>'+
+    '</button>';
   }).join('');
   box.style.display='block';
 }
@@ -8508,29 +8531,31 @@ function plQty(i,d){
   renderPlItems();
 }
 function renderPlItems(){
-  const el=document.getElementById('plItems');if(!el)return;
-  document.getElementById('plCount').textContent=plArticoli.length+' articoli';
-  if(!plArticoli.length){el.innerHTML='<div class="empty" style="padding:12px">Nessun articolo — scannerizza QR</div>';return;}
-  const q=(document.getElementById('plItemsSearch')?.value||'').toLowerCase().trim();
+  const el=$('plItems');if(!el)return;
+  $('plCount').textContent=plArticoli.length+(plArticoli.length===1?' articolo':' articoli');
+  if(!plArticoli.length){el.innerHTML='<div class="empty" style="padding:12px">Nessun articolo: scansiona un QR o cerca nel magazzino</div>';return;}
+  const q=($('plItemsSearch')?.value||'').toLowerCase().trim();
   const daMostrare=q?plArticoli.map((a,i)=>({a,i})).filter(({a})=>
     (a.nome||'').toLowerCase().includes(q)||(a.ser||'').toLowerCase().includes(q)||(a.id||'').toLowerCase().includes(q)
   ):plArticoli.map((a,i)=>({a,i}));
-  if(q&&!daMostrare.length){el.innerHTML='<div class="empty" style="padding:12px">Nessun articolo trovato per "'+q+'"</div>';return;}
-  let h='';
-  daMostrare.forEach(({a,i})=>{
-    h+='<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none">'+
-      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(a.nome)+'</div>'+
-      '<div style="font-size:11px;color:var(--tx2)">'+(a.ser||a.id)+'</div>'+
-      (a.note?'<div style="font-size:11px;color:var(--ac2);font-weight:600">🔀 '+esc(a.note)+'</div>':'')+
+  if(q&&!daMostrare.length){el.innerHTML='<div class="empty" style="padding:12px">Nessun articolo trovato per "'+esc(q)+'"</div>';return;}
+  el.innerHTML=daMostrare.map(({a,i})=>{
+    const n=esc(a.nome);
+    return '<div class="pl-item">'+
+      '<div class="ditem-main"><span class="ditem-title">'+n+'</span>'+
+      '<span class="ditem-sub">'+esc(a.ser||a.id)+'</span>'+
+      (a.note?'<span class="pl-note">'+esc(a.note)+'</span>':'')+
       '</div>'+
-      '<div style="display:flex;align-items:center;gap:5px;flex-shrink:0">'+
-      '<button onclick="plQty('+i+',-1)" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);color:var(--tx);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>'+
-      '<span style="font-size:14px;min-width:22px;text-align:center">'+(a.qtyPrep||1)+'</span>'+
-      '<button onclick="plQty('+i+',1)" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--b2);background:var(--bg3);color:var(--tx);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>'+
-      '<button onclick="plRemove('+i+')" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--rdb);background:var(--rdb);color:var(--rd);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>'+
-      '</div></div>';
-  });
-  el.innerHTML=h;
+      '<div class="stepper" role="group" aria-label="Quantità di '+n+'">'+
+        '<button type="button" class="stepper-btn" onclick="plQty('+i+',-1)" aria-label="Diminuisci">−</button>'+
+        '<span class="stepper-val" aria-live="polite">'+(a.qtyPrep||1)+'</span>'+
+        '<button type="button" class="stepper-btn" onclick="plQty('+i+',1)" aria-label="Aumenta">+</button>'+
+      '</div>'+
+      '<button type="button" class="icon-btn icon-btn-sm pl-del" onclick="plRemove('+i+')" aria-label="Togli '+n+' dalla lista">'+
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'+
+      '</button>'+
+    '</div>';
+  }).join('');
 }
 
 async function plGeneraPDF(){
@@ -10284,18 +10309,13 @@ function dichCardHtml(d){
   '</div>';
 }
 
+// Stato della preparazione: ● Preparato / ◐ Da finire (legenda decisa per il calendario)
 function setBadgeLavoro(daFinire){
   const btnF=$('btnFinito');const btnD=$('btnDaFinire');const inp=$('plDaFinire');
   if(!btnF||!btnD)return;
-  if(daFinire){
-    btnD.style.cssText='flex:1;padding:10px;font-size:13px;border:1px solid var(--am);background:rgba(245,158,11,.15);color:var(--am);border-radius:var(--r);font-family:var(--font);cursor:pointer;font-weight:600';
-    btnF.style.cssText='flex:1;padding:10px;font-size:13px;border:1px solid var(--b);background:none;color:var(--tx2);border-radius:var(--r);font-family:var(--font);cursor:pointer';
-    if(inp)inp.value='true';
-  } else {
-    btnF.style.cssText='flex:1;padding:10px;font-size:13px;border:1px solid var(--gn);background:rgba(34,197,94,.15);color:var(--gn);border-radius:var(--r);font-family:var(--font);cursor:pointer;font-weight:600';
-    btnD.style.cssText='flex:1;padding:10px;font-size:13px;border:1px solid var(--b);background:none;color:var(--tx2);border-radius:var(--r);font-family:var(--font);cursor:pointer';
-    if(inp)inp.value='false';
-  }
+  btnF.classList.toggle('on',!daFinire);btnF.setAttribute('aria-checked',daFinire?'false':'true');
+  btnD.classList.toggle('on',!!daFinire);btnD.setAttribute('aria-checked',daFinire?'true':'false');
+  if(inp)inp.value=daFinire?'true':'false';
 }
 
 function aggiornaBadgeLavoro(){
