@@ -423,6 +423,9 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
           <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:14px;border-color:var(--am);color:var(--am)" onclick="openSmarca()">
             <span style="font-size:22px">✅</span><span style="font-size:13px">Smarca rientro</span>
           </button>
+          <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:14px;border-color:#16a34a;color:#16a34a;grid-column:1/-1" onclick="apriFotoDich()">
+            <span style="font-size:22px">📷</span><span style="font-size:13px">Scheda da foto (dichiarazione)</span>
+          </button>
           <button class="btn btn-f" style="flex-direction:column;gap:4px;padding:14px;border-color:#6c63ff;color:#6c63ff;grid-column:1/-1" onclick="apriPlanning()">
             <span style="font-size:22px">🗓</span><span style="font-size:13px">Planning materiali</span>
           </button>
@@ -1917,6 +1920,58 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       </div>
       <div id="smItemsList" style="margin-bottom:14px"></div>
       <button class="btn btn-p btn-f" style="padding:14px;font-size:15px;background:var(--am);border-color:var(--am)" onclick="apriFirma('rientro')">✍️ Firma e genera report</button>
+    </div>
+    <!-- Rientro per schede create da foto (nessun articolo da scansionare) -->
+    <div id="smStepFoto" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <button class="btn" style="padding:6px 12px;font-size:12px" onclick="smBack()">← Torna</button>
+        <div><div class="stl" id="smFotoNomeLbl">—</div><div style="font-size:11px;color:var(--tx2)" id="smFotoInfoLbl">—</div></div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;color:var(--tx2);margin-bottom:6px">📷 Foto dichiarazione (uscita)</div>
+        <img id="smFotoUscitaImg" style="max-width:100%;border-radius:var(--rs);border:1px solid var(--b);display:none">
+      </div>
+      <div class="ig">
+        <label class="il">Foto rientro (opzionale)</label>
+        <div id="smFotoRientroPreviewWrap" style="display:none;margin-bottom:8px">
+          <img id="smFotoRientroPreviewImg" style="max-width:100%;border-radius:var(--rs);border:1px solid var(--b)">
+        </div>
+        <label class="btn btn-f" style="cursor:pointer;width:100%;text-align:center;display:block">
+          📷 <span id="smFotoRientroBtnTxt">Scatta / carica foto rientro</span>
+          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="smFotoRientroSelezionata(this)">
+        </label>
+      </div>
+      <button class="btn btn-p btn-f" style="padding:14px;font-size:15px;margin-top:10px;background:var(--am);border-color:var(--am)" onclick="apriFirma('rientroFoto')">✍️ Firma e conferma rientro</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCHEDA DA FOTO (dichiarazione scritta a mano, importata come foto) -->
+<div class="mol" id="mFotoDich" onclick="if(event.target===this)closeMod('mFotoDich')">
+  <div class="msh">
+    <div class="mhd"></div>
+    <div class="stl" style="margin-bottom:4px">📷 Nuova scheda da foto</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:14px">Fotografa il foglio della dichiarazione compilato a mano: verrà aggiunta tra i lavori in corso in Archivio, con la stessa funzione di smarcatura al rientro.</div>
+    <div class="ig"><label class="il">Nome evento / lavoro</label><input type="text" id="fdNome" placeholder="Convegno Milano 15/06"></div>
+    <div class="ig"><label class="il">Location</label><select id="fdLoc"><option value="">-- Seleziona --</option></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="ig"><label class="il">📅 Data uscita</label><input type="date" id="fdData"></div>
+      <div class="ig"><label class="il">🔙 Data rientro prevista</label><input type="date" id="fdDataFine"></div>
+    </div>
+    <div class="ig"><label class="il">Note</label><textarea id="fdNote" placeholder="Note (opzionale)..." style="min-height:50px"></textarea></div>
+    <div class="ig">
+      <label class="il">Foto dichiarazione</label>
+      <div id="fdPreviewWrap" style="display:none;margin-bottom:8px">
+        <img id="fdPreviewImg" style="max-width:100%;border-radius:var(--rs);border:1px solid var(--b)">
+      </div>
+      <label class="btn btn-f" style="cursor:pointer;width:100%;text-align:center;display:block">
+        📷 <span id="fdPhotoBtnTxt">Scatta / carica foto</span>
+        <input type="file" id="fdPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="fdFotoSelezionata(this)">
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-f" onclick="closeMod('mFotoDich')">Annulla</button>
+      <button class="btn btn-p btn-f" id="fdSalvaBtn" onclick="fdSalva()">💾 Salva lavoro</button>
     </div>
   </div>
 </div>
@@ -4817,6 +4872,111 @@ async function compressImg(file, maxSize, quality){
     };
     r.readAsDataURL(file);
   });
+}
+
+// ── SCHEDA DA FOTO (dichiarazione scritta a mano, scansionata e importata) ──
+let fdFotoFile=null;
+
+function apriFotoDich(){
+  fdFotoFile=null;
+  ['fdNome','fdNote','fdData','fdDataFine'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  const pd=$('fdData');if(pd)pd.value=toLocalISO(new Date());
+  const pw=$('fdPreviewWrap');if(pw)pw.style.display='none';
+  const fi=$('fdPhotoInput');if(fi)fi.value='';
+  const bt=$('fdPhotoBtnTxt');if(bt)bt.textContent='Scatta / carica foto';
+  const sel=$('fdLoc');
+  if(sel){
+    sel.innerHTML='<option value="">-- Seleziona --</option>';
+    cacheLoc.forEach(l=>{
+      const o=document.createElement('option');
+      o.value=l.nome;o.textContent=l.nome;
+      sel.appendChild(o);
+    });
+  }
+  openMod('mFotoDich');
+}
+
+function fdFotoSelezionata(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  fdFotoFile=f;
+  const r=new FileReader();
+  r.onload=e=>{$('fdPreviewImg').src=e.target.result;$('fdPreviewWrap').style.display='block';};
+  r.readAsDataURL(f);
+  $('fdPhotoBtnTxt').textContent='Cambia foto';
+}
+
+function fdGeneraHtmlPrep(nome,loc,dataUsc,dataRientro,fotoUrl){
+  return `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">
+  <title>Dichiarazione (foto) — ${nome}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#000}
+    .page{max-width:210mm;margin:0 auto;padding:10mm 12mm}
+    .titolo{font-size:13px;font-weight:bold;text-align:center;border:2px solid #000;padding:6px;margin-bottom:10px;text-transform:uppercase}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+    .campo{border:1px solid #999;padding:4px 8px}
+    .campo label{font-size:8px;color:#555;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:bold;letter-spacing:.4px}
+    .campo span{font-size:11px;font-weight:600}
+    .foto-wrap{text-align:center;margin-top:8px}
+    .foto-wrap img{max-width:100%;border:1px solid #ccc}
+    @media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}button{display:none}.page{padding:6mm 10mm}}
+  </style></head>
+  <body><div class="page">
+    <div style="font-size:20px;font-weight:900;color:#2c3e7a;letter-spacing:2px;margin-bottom:10px">MMG</div>
+    <div class="titolo">Dichiarazione di Esonero Bolla — foglio fotografato</div>
+    <div class="grid2">
+      <div class="campo"><label>Cliente / Evento</label><span>${nome}</span></div>
+      <div class="campo"><label>Luogo</label><span>${loc||'—'}</span></div>
+      <div class="campo"><label>Data Uscita</label><span>${dataUsc}</span></div>
+      <div class="campo"><label>Data Rientro Prevista</label><span>${dataRientro}</span></div>
+    </div>
+    <div class="foto-wrap"><img src="${fotoUrl}"></div>
+  </div></body></html>`;
+}
+
+async function fdSalva(){
+  const nome=val('fdNome');
+  if(!nome){toast('Inserisci il nome del lavoro','r');return;}
+  if(!fdFotoFile){toast('Scatta o carica la foto della dichiarazione','r');return;}
+  const btn=$('fdSalvaBtn');
+  if(btn){btn.textContent='Salvataggio...';btn.disabled=true;}
+  try{
+    const compressed=await compressImg(fdFotoFile,1600,.85);
+    const ref=DB.collection('lavori').doc();
+    const lavId=ref.id;
+    const STOR=firebase.storage();
+    const nomeFile='dichiarazione_'+Date.now()+'.jpg';
+    const path=`lavori_scan/${lavId}/${nomeFile}`;
+    const sref=STOR.ref(path);
+    await sref.put(compressed);
+    const url=await sref.getDownloadURL();
+    const tecnico=USER?USER.nome+' '+USER.cognome:'—';
+    const loc=val('fdLoc')||'';
+    const dataRaw=val('fdData')||toLocalISO(new Date());
+    const dataFineRaw=val('fdDataFine')||'';
+    const dataUscLbl=dataRaw?new Date(dataRaw).toLocaleDateString('it-IT'):'—';
+    const dataRientLbl=dataFineRaw?new Date(dataFineRaw).toLocaleDateString('it-IT'):' ';
+    const lavoroData={
+      nome,location:loc,data:dataRaw,dataFine:dataFineRaw,
+      tecnico,note:val('fdNote')||'',
+      articoli:[],noteMancanti:[],
+      fonteFoto:true,
+      fotoDichiarazione:{url,path,nome:nomeFile,size:compressed.size,at:new Date().toISOString()},
+      htmlPrep:fdGeneraHtmlPrep(nome,loc,dataUscLbl,dataRientLbl,url),
+      daFinire:false,
+      modificatoDa:tecnico,
+      modificatoIl:new Date().toISOString(),
+      createdAt:new Date().toISOString(),
+      updatedAt:new Date().toISOString()
+    };
+    await ref.set(lavoroData);
+    closeMod('mFotoDich');
+    toast('✅ Scheda da foto aggiunta ai lavori in corso — vedi in Archivio');
+  }catch(e){
+    toast('Errore: '+e.message,'r');
+  }finally{
+    if(btn){btn.textContent='💾 Salva lavoro';btn.disabled=false;}
+  }
 }
 
 // ── MAGAZZINO ──
@@ -8137,12 +8297,13 @@ async function plGeneraPDF(){
 }
 
 // ── SMARCA RIENTRO ──
-let smLavori=[],smSel=null,smArticoli=[],smStream=null,smInterval=null;
+let smLavori=[],smSel=null,smArticoli=[],smStream=null,smInterval=null,smFotoRientroFile=null;
 
 async function openSmarca(){
-  smLavori=[];smSel=null;smArticoli=[];
+  smLavori=[];smSel=null;smArticoli=[];smFotoRientroFile=null;
   document.getElementById('smStep1').style.display='block';
   document.getElementById('smStep2').style.display='none';
+  const sf=document.getElementById('smStepFoto');if(sf)sf.style.display='none';
   document.getElementById('smSearch').value='';
   document.getElementById('mSmarca').classList.add('on');
   document.body.style.overflow='hidden';
@@ -8173,16 +8334,43 @@ function smFilter(){
 }
 function smSeleziона(id){
   smSel=smLavori.find(l=>l.id===id);if(!smSel)return;
+  document.getElementById('smStep1').style.display='none';
+  if(smSel.fonteFoto){
+    smFotoRientroFile=null;
+    document.getElementById('smStep2').style.display='none';
+    document.getElementById('smStepFoto').style.display='block';
+    document.getElementById('smFotoNomeLbl').textContent=smSel.nome;
+    const dataF=smSel.data?new Date(smSel.data).toLocaleDateString('it-IT'):'—';
+    document.getElementById('smFotoInfoLbl').textContent='📅 '+dataF+' · 📍 '+(smSel.location||'—');
+    const img=document.getElementById('smFotoUscitaImg');
+    if(smSel.fotoDichiarazione&&smSel.fotoDichiarazione.url){img.src=smSel.fotoDichiarazione.url;img.style.display='block';}
+    else img.style.display='none';
+    document.getElementById('smFotoRientroPreviewWrap').style.display='none';
+    const bt=document.getElementById('smFotoRientroBtnTxt');if(bt)bt.textContent='Scatta / carica foto rientro';
+    return;
+  }
   smArticoli=(smSel.articoli||[]).map(a=>({...a,rientrato:false}));
   document.getElementById('smNomeLbl').textContent=smSel.nome;
   const data=smSel.data?new Date(smSel.data).toLocaleDateString('it-IT'):'—';
   document.getElementById('smInfoLbl').textContent='📅 '+data+' · 📍 '+(smSel.location||'—');
-  document.getElementById('smStep1').style.display='none';
   document.getElementById('smStep2').style.display='block';
   smUpdateProgress();smRenderItems();
   startSmCam();
 }
-function smBack(){smStopCam();document.getElementById('smStep1').style.display='block';document.getElementById('smStep2').style.display='none';}
+function smBack(){
+  smStopCam();
+  document.getElementById('smStep1').style.display='block';
+  document.getElementById('smStep2').style.display='none';
+  const sf=document.getElementById('smStepFoto');if(sf)sf.style.display='none';
+}
+function smFotoRientroSelezionata(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  smFotoRientroFile=f;
+  const r=new FileReader();
+  r.onload=e=>{document.getElementById('smFotoRientroPreviewImg').src=e.target.result;document.getElementById('smFotoRientroPreviewWrap').style.display='block';};
+  r.readAsDataURL(f);
+  document.getElementById('smFotoRientroBtnTxt').textContent='Cambia foto';
+}
 
 async function startSmCam(){
   try{
@@ -8258,6 +8446,40 @@ async function smGeneraPDF(){
   try{await DB.collection('lavori').doc(l.id).update({rientrato:allOk,rientroData:new Date().toISOString(),rientroTecnico:tecnico,htmlRient:html});}catch(e){console.warn(e);}
   openPDF(html, l.nome||'rientro');
   closeMod('mSmarca');toast('✓ Report generato!');
+}
+
+async function smGeneraRientroFoto(){
+  if(!smSel)return;
+  const l=smSel;
+  const tecnico=USER?USER.nome+' '+USER.cognome:'—',now=new Date().toLocaleString('it-IT');
+  const data=l.data?new Date(l.data).toLocaleDateString('it-IT'):new Date(l.createdAt).toLocaleDateString('it-IT');
+  const firmaImg=getFirmaImgSm();
+  let fotoRientro=null;
+  try{
+    if(smFotoRientroFile){
+      const compressed=await compressImg(smFotoRientroFile,1600,.85);
+      const STOR=firebase.storage();
+      const nomeFile='rientro_'+Date.now()+'.jpg';
+      const path=`lavori_scan/${l.id}/${nomeFile}`;
+      const ref=STOR.ref(path);
+      await ref.put(compressed);
+      const url=await ref.getDownloadURL();
+      fotoRientro={url,path,nome:nomeFile,size:compressed.size,at:new Date().toISOString()};
+    }
+    const html='<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Report rientro — '+l.nome+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Helvetica,Arial,sans-serif;color:#1a1a2e}.page{max-width:800px;margin:0 auto;padding:32px 40px}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #27ae60}.logo{font-size:22px;font-weight:700;color:#27ae60}.logo span{font-size:12px;font-weight:400;color:#888;display:block}.status{background:#d4edda;border-radius:10px;padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;gap:12px;font-size:16px;font-weight:700;color:#155724}.info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;background:#f8f8fc;border-radius:10px;padding:16px}.info label{font-size:10px;font-weight:600;text-transform:uppercase;color:#888;display:block;margin-bottom:3px}.info span{font-size:14px;font-weight:500}.foto-wrap{margin-bottom:20px}.foto-wrap img{max-width:100%;border:1px solid #e0e0e0;border-radius:8px;margin-top:6px}.firma{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:32px;padding-top:20px;border-top:1px solid #eee}.fbox{border-top:1px solid #ccc;padding-top:8px;font-size:11px;color:#888}.footer{margin-top:24px;padding-top:14px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:10px;color:#aaa}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="page">'+
+      '<div class="header"><div><div class="logo">MMG<span>Report verifica rientro materiali (da foto)</span></div></div><div style="text-align:right;font-size:11px;color:#888">'+now+'</div></div>'+
+      '<div class="status"><span>✅</span>Rientro confermato</div>'+
+      '<div class="info"><div><label>Evento</label><span>'+l.nome+'</span></div><div><label>Data uscita</label><span>'+data+'</span></div><div><label>Location</label><span>'+(l.location||'—')+'</span></div><div><label>Verifica eseguita da</label><span>'+tecnico+'</span></div></div>'+
+      (l.fotoDichiarazione&&l.fotoDichiarazione.url?'<div class="foto-wrap"><div style="font-size:12px;font-weight:600;color:#555">📷 Foto dichiarazione (uscita)</div><img src="'+l.fotoDichiarazione.url+'"></div>':'')+
+      (fotoRientro?'<div class="foto-wrap"><div style="font-size:12px;font-weight:600;color:#555">📷 Foto rientro</div><img src="'+fotoRientro.url+'"></div>':'')+
+      '<div class="firma"><div class="fbox">Firma responsabile verifica<br>'+(firmaImg?'<img src="'+firmaImg+'" style="max-width:160px;max-height:55px;margin:6px 0;display:block"><br>':'<br><br>')+tecnico+'</div><div class="fbox">Firma responsabile magazzino<br><br><br>___________________</div></div>'+
+      '<div class="footer"><span>MMG · Report rientro</span><span>'+l.nome+' · '+now+'</span></div></div></body></html>';
+    const update={rientrato:true,rientroData:new Date().toISOString(),rientroTecnico:tecnico,htmlRient:html};
+    if(fotoRientro)update.fotoRientro=fotoRientro;
+    await DB.collection('lavori').doc(l.id).update(update);
+    openPDF(html, l.nome||'rientro');
+    closeMod('mSmarca');toast('✅ Rientro confermato!');
+  }catch(e){toast('Errore: '+e.message,'r');}
 }
 
 // ── EXPORT PRESENZE ──
@@ -9477,7 +9699,7 @@ function renderDichDesktop(list){
     let pallino,statoTxt,statoColor;
     if(isRient){pallino='🟢';statoTxt='Rientrato';statoColor='var(--gn)';}
     else if(d.daFinire||d.note){pallino='🟠';statoTxt='Da finire';statoColor='var(--am)';}
-    else if(d.articoli&&d.articoli.length>0){pallino='🟢';statoTxt='Pronto';statoColor='var(--gn)';}
+    else if((d.articoli&&d.articoli.length>0)||d.fonteFoto){pallino='🟢';statoTxt='Pronto';statoColor='var(--gn)';}
     else{pallino='🔴';statoTxt='Da prep.';statoColor='var(--rd)';}
     const dataUsc=d.data?fmtData(d.data,{day:'2-digit',month:'short',year:'numeric'}):'—';
     const dataRient=d.rientroData?fmtData(d.rientroData,{day:'2-digit',month:'short',year:'numeric'}):'—';
@@ -9496,12 +9718,12 @@ function renderDichDesktop(list){
       <td style="${td};color:var(--tx2);font-size:12px;white-space:nowrap">📍 ${d.location||'—'}</td>
       <td style="${td};text-align:center;font-size:12px;white-space:nowrap">${dataUsc}</td>
       <td style="${td};text-align:center;font-size:12px;white-space:nowrap;color:${isRient?'var(--gn)':'var(--tx3)'}">${dataRient}</td>
-      <td style="${td};text-align:center;font-size:12px">${nPezzi>0?`<b>${nPezzi}</b> pz · ${nArt} art.`:'<span style="color:var(--tx3)">—</span>'}</td>
+      <td style="${td};text-align:center;font-size:12px">${d.fonteFoto?'<span style="color:var(--tx2)">📷 Da foto</span>':(nPezzi>0?`<b>${nPezzi}</b> pz · ${nArt} art.`:'<span style="color:var(--tx3)">—</span>')}</td>
       <td style="${td};max-width:180px">${notaHtml}</td>
       <td style="${td}">
         <div style="display:flex;gap:4px;justify-content:center">
-          <button onclick="dichOpenDoc('${d.id}')" title="Apri PDF" style="background:var(--acb);border:1px solid var(--ac);color:var(--ac2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">📄 PDF</button>
-          ${!isRient&&puoModificare?`<button onclick="dichModifica('${d.id}')" title="Modifica" style="background:var(--bg3);border:1px solid var(--b);color:var(--tx2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✏️</button>`:''}
+          <button onclick="dichOpenDoc('${d.id}')" title="${d.fonteFoto?'Apri foto':'Apri PDF'}" style="background:var(--acb);border:1px solid var(--ac);color:var(--ac2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">${d.fonteFoto?'📷':'📄'} ${d.fonteFoto?'Foto':'PDF'}</button>
+          ${!isRient&&!d.fonteFoto&&puoModificare?`<button onclick="dichModifica('${d.id}')" title="Modifica" style="background:var(--bg3);border:1px solid var(--b);color:var(--tx2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✏️</button>`:''}
           ${canManage?`<button onclick="dichElimina('${d.id}','${encodeURIComponent(d.nome||'')}')" title="Elimina" style="background:none;border:1px solid var(--rd);color:var(--rd);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">🗑️</button>`:''}
         </div>
       </td>
@@ -9553,12 +9775,12 @@ function dichCardHtml(d){
     statoBd='var(--am)';
     pallino='🟠';
     statoTxt='⚠️ Da finire';
-  } else if(d.articoli&&d.articoli.length>0){
-    // Verde — preparato completo
+  } else if((d.articoli&&d.articoli.length>0)||d.fonteFoto){
+    // Verde — preparato completo (o scheda da foto)
     statoBg='rgba(34,197,94,.1)';
     statoBd='var(--gn)';
     pallino='🟢';
-    statoTxt='✅ Pronto';
+    statoTxt=d.fonteFoto?'✅ Pronto (foto)':'✅ Pronto';
   } else {
     // Rosso — da preparare
     statoBg='rgba(239,68,68,.08)';
@@ -9593,7 +9815,7 @@ function dichCardHtml(d){
         '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">📍 Location</div>'+
           '<div style="font-size:12px;font-weight:500">'+(d.location||'—')+'</div></div>'+
         '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">📦 Materiale</div>'+
-          '<div style="font-size:12px;font-weight:500">'+nPezzi+' pezzi · '+(d.articoli||[]).length+' art.</div></div>'+
+          '<div style="font-size:12px;font-weight:500">'+(d.fonteFoto?'📷 Da foto dichiarazione':nPezzi+' pezzi · '+(d.articoli||[]).length+' art.')+'</div></div>'+
         '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">📅 Data uscita</div>'+
           '<div style="font-size:12px;font-weight:500">'+dataUscita+'</div></div>'+
         '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">🔙 Data rientro</div>'+
@@ -9604,16 +9826,16 @@ function dichCardHtml(d){
       (d.modificatoDa?'<div style="font-size:10px;color:var(--tx3);margin-top:6px">✏️ Ultima modifica: '+d.modificatoDa+' · '+new Date(d.modificatoIl).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})+'</div>':'')+
       // Note visibili subito dopo la data
       noteHtml+
-      // Note mancanti (solo per preparazioni non ancora rientrate)
-      ((!isRient)?(
+      // Note mancanti (solo per preparazioni non ancora rientrate, non per schede da foto)
+      ((!isRient&&!d.fonteFoto)?(
         '<button onclick="apriNoteMancanti(\''+d.id+'\',\''+encodeURIComponent(d.nome)+'\')" class="btn btn-f" style="font-size:13px;padding:10px;margin-top:8px;width:100%;border-color:'+(d.noteMancanti&&d.noteMancanti.some(n=>!n.completata)?'var(--am)':'var(--b)')+';color:'+(d.noteMancanti&&d.noteMancanti.some(n=>!n.completata)?'var(--am)':'var(--tx2)')+'">'+
           '📝 Note mancanti'+(d.noteMancanti&&d.noteMancanti.some(n=>!n.completata)?' ('+d.noteMancanti.filter(n=>!n.completata).length+' aperte)':'')+
         '</button>'
       ):'')+
       '<button onclick="dichOpenDoc(\''+d.id+'\')" class="btn btn-p btn-f" style="font-size:13px;padding:10px;margin-top:8px">'+
-        '📄 Apri PDF '+(isRient?'rientro':'preparazione')+
+        (d.fonteFoto?'📷 Apri foto dichiarazione'+(isRient?' / rientro':''):'📄 Apri PDF '+(isRient?'rientro':'preparazione'))+
       '</button>'+
-      (!isRient&&puoModificare?
+      (!isRient&&!d.fonteFoto&&puoModificare?
         '<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px">'+
           '<button onclick="dichModifica(\''+d.id+'\')" class="btn btn-f" style="font-size:12px;padding:9px">'+
             '✏️ Modifica'+
@@ -14610,6 +14832,7 @@ function getFirmaImgSm(){return getFirmaImg();}
 function confermaPDF(){
   const modal=$('mFirma');if(modal)modal.classList.remove('on');
   if(firmaTipo==='prep') plGeneraPDF();
+  else if(firmaTipo==='rientroFoto') smGeneraRientroFoto();
   else smGeneraPDF();
 }
 
