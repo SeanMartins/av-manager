@@ -18,6 +18,7 @@
 // dati mancano, invece di bloccarsi.
 
 import admin from 'firebase-admin';
+import { isAuthorizedJob } from './_cron.js';
 
 function getDb() {
   if (!admin.apps.length) {
@@ -200,14 +201,9 @@ async function calcolaGiornata(db, numero) {
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Protezione trigger manuale: la cron di Vercel invia un header interno che salta questo controllo
-  const isCron = req.headers['x-vercel-cron'] === '1' || req.headers['user-agent']?.includes('vercel-cron');
-  if (!isCron) {
-    const authHeader = req.headers.authorization || '';
-    const secret = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    if (!process.env.FF_SYNC_SECRET || secret !== process.env.FF_SYNC_SECRET) {
-      return res.status(401).json({ error: 'Non autorizzato: header Authorization: Bearer <secret> mancante o errato' });
-    }
+  // Cron di Vercel (Bearer CRON_SECRET) o trigger manuale (Bearer FF_SYNC_SECRET); vedi _cron.js
+  if (!isAuthorizedJob(req, 'FF_SYNC_SECRET')) {
+    return res.status(401).json({ error: 'Non autorizzato: header Authorization: Bearer <secret> mancante o errato' });
   }
 
   try {

@@ -12,6 +12,7 @@
 // d'inizio non altera mai il punteggio della giornata già in corso.
 
 import admin from 'firebase-admin';
+import { isAuthorizedJob } from './_cron.js';
 
 function getDb() {
   if (!admin.apps.length) {
@@ -47,13 +48,9 @@ async function fdFetch(path) {
 }
 
 export default async function handler(req, res) {
-  const isCron = req.headers['x-vercel-cron'] === '1' || req.headers['user-agent']?.includes('vercel-cron');
-  if (!isCron) {
-    const authHeader = req.headers.authorization || '';
-    const key = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    if (!process.env.FF_SYNC_SECRET || key !== process.env.FF_SYNC_SECRET) {
-      return res.status(401).json({ error: 'Non autorizzato: header Authorization: Bearer <secret> mancante o errato' });
-    }
+  // Cron di Vercel (Bearer CRON_SECRET) o trigger manuale (Bearer FF_SYNC_SECRET); vedi _cron.js
+  if (!isAuthorizedJob(req, 'FF_SYNC_SECRET')) {
+    return res.status(401).json({ error: 'Non autorizzato: header Authorization: Bearer <secret> mancante o errato' });
   }
 
   try {

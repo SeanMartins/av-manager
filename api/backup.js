@@ -17,6 +17,7 @@
 //     (il bucket predefinito creato automaticamente da Firebase per il progetto)
 
 import admin from 'firebase-admin';
+import { isAuthorizedJob } from './_cron.js';
 
 function getCreds() {
   if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
@@ -54,13 +55,9 @@ const COLLECTIONS = [
 ];
 
 export default async function handler(req, res) {
-  const isCron = req.headers['x-vercel-cron'] === '1' || req.headers['user-agent']?.includes('vercel-cron');
-  if (!isCron) {
-    const authHeader = req.headers.authorization || '';
-    const key = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    if (!process.env.BACKUP_SECRET || key !== process.env.BACKUP_SECRET) {
-      return res.status(401).json({ error: 'Chiave mancante o errata (header Authorization: Bearer <secret>)' });
-    }
+  // Cron di Vercel (Bearer CRON_SECRET) o trigger manuale (Bearer BACKUP_SECRET); vedi _cron.js
+  if (!isAuthorizedJob(req, 'BACKUP_SECRET')) {
+    return res.status(401).json({ error: 'Chiave mancante o errata (header Authorization: Bearer <secret>)' });
   }
 
   try {
