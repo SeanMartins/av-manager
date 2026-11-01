@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01c';
+const APP_VERSION='v2026.11.01d';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -406,6 +406,38 @@ body.desktop-mode #toast{bottom:24px;left:calc(50% + 120px)}
 /* Zona di caricamento file */
 .upz{display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px dashed var(--color-border-strong);border-radius:var(--radius-md);padding:16px;text-align:center;cursor:pointer;background:var(--color-surface-sunken);margin-bottom:8px;transition:border-color var(--duration-fast) var(--ease-out)}
 .upz:hover{border-color:var(--color-accent)}
+
+/* ── INTESTAZIONE DI PAGINA (desktop: non c'è la topbar) ── */
+.btn-sm{padding:6px 12px;font-size:13px}
+.page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}
+.page-title{font-size:var(--text-2xl);font-weight:var(--weight-semibold);letter-spacing:var(--tracking-tight);line-height:var(--leading-tight);margin:0}
+.page-sub{font-size:var(--text-sm);color:var(--color-text-secondary);margin-top:4px}
+
+/* ── DASHBOARD ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
+@media(min-width:900px){.kpi-grid{grid-template-columns:repeat(4,1fr)}}
+.kpi{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);text-align:left;cursor:pointer;color:inherit;transition:border-color var(--duration-fast) var(--ease-out),background-color var(--duration-fast) var(--ease-out)}
+.kpi:hover{border-color:var(--color-border-strong);background:var(--color-surface-hover)}
+.kpi-val{font-size:var(--text-3xl);font-weight:var(--weight-semibold);letter-spacing:var(--tracking-tight);line-height:1;font-variant-numeric:tabular-nums;color:var(--color-text)}
+.kpi-val[data-tono="warning"]{color:var(--color-warning)}
+.kpi-val[data-tono="danger"]{color:var(--color-danger)}
+.kpi-lbl{font-size:13px;color:var(--color-text-secondary)}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start}
+.dcard{margin-bottom:0}
+.dcard-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.dcard-title{font-size:var(--text-md);font-weight:var(--weight-semibold);letter-spacing:var(--tracking-tight);margin:0}
+/* Elenco compatto (usato nei pannelli) */
+.dlist{display:flex;flex-direction:column;max-height:264px;overflow-y:auto}
+.ditem{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--color-border);min-height:44px}
+.ditem:last-child{border-bottom:none}
+.ditem-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.ditem-title{font-size:var(--text-sm);font-weight:var(--weight-medium);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ditem-sub{font-size:var(--text-xs);color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ditem-meta{font-size:var(--text-xs);color:var(--color-text-secondary);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ddot{width:10px;height:10px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 1px var(--color-border-strong)}
+.dav{width:30px;height:30px;font-size:11px}
+.dempty{font-size:13px;color:var(--color-text-tertiary);text-align:center;padding:24px 12px}
+@media(max-width:599px){.page-head{flex-direction:column}.dash-grid{grid-template-columns:1fr}}
 
 /* ── FORUM ── */
 .fcard{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color var(--duration-fast) var(--ease-out)}
@@ -935,88 +967,51 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- DASHBOARD KPI (solo desktop) -->
     <div class="page" id="p-dashboard">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <div class="page-head">
         <div>
-          <div style="font-size:22px;font-weight:700">📊 Dashboard</div>
-          <div style="font-size:13px;color:var(--tx2)" id="dashDataOra">—</div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-sub" id="dashDataOra">—</p>
         </div>
-        <button class="btn btn-f" style="padding:8px 14px;font-size:12px" onclick="renderDashboard()">↻ Aggiorna</button>
+        <button type="button" class="btn" onclick="renderDashboard()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Aggiorna
+        </button>
       </div>
-      <!-- KPI riga 1 -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
-        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('team')" title="Vai al team">
-          <div style="font-size:32px;font-weight:800;color:var(--ac2)" id="kpiTeam">—</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:4px">👥 Team attivo</div>
-        </div>
-        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('presenze')" title="Vai alle presenze">
-          <div style="font-size:32px;font-weight:800;color:#22c55e" id="kpiPresenti">—</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:4px">🟢 Presenti oggi</div>
-        </div>
-        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('dichiarazione')" title="Vai ai lavori">
-          <div style="font-size:32px;font-weight:800;color:#ef4444" id="kpiLavori">—</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:4px">📋 Lavori in corso</div>
-        </div>
-        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('magazzino')" title="Vai al magazzino">
-          <div style="font-size:32px;font-weight:800;color:var(--am)" id="kpiMagazzino">—</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:4px">📦 Articoli in uso</div>
-        </div>
+
+      <!-- Indicatori: ogni scheda porta alla sezione relativa -->
+      <div class="kpi-grid" aria-label="Indicatori">
+        <button type="button" class="kpi" onclick="goPage('team')"><span class="kpi-val" id="kpiTeam">—</span><span class="kpi-lbl">Team attivo</span></button>
+        <button type="button" class="kpi" onclick="goPage('presenze')"><span class="kpi-val" id="kpiPresenti">—</span><span class="kpi-lbl">Presenti ora</span></button>
+        <button type="button" class="kpi" onclick="goPage('dichiarazione')"><span class="kpi-val" id="kpiLavori">—</span><span class="kpi-lbl">Lavori in corso</span></button>
+        <button type="button" class="kpi" onclick="goPage('magazzino')"><span class="kpi-val" id="kpiMagazzino">—</span><span class="kpi-lbl">Articoli in uso</span></button>
+        <button type="button" class="kpi" onclick="goPage('calendario')"><span class="kpi-val" id="kpiLavoriMese">—</span><span class="kpi-lbl">Lavori questo mese</span></button>
+        <button type="button" class="kpi" onclick="goPage('magazzino')"><span class="kpi-val" id="kpiMagDisp">—</span><span class="kpi-lbl">Articoli disponibili</span></button>
+        <button type="button" class="kpi" onclick="goPage('forum')"><span class="kpi-val" id="kpiForumPost">—</span><span class="kpi-lbl">Post nel forum</span></button>
+        <button type="button" class="kpi" onclick="apriTurniDaConfermare()"><span class="kpi-val" id="kpiTurniConf">—</span><span class="kpi-lbl">Turni da confermare</span></button>
       </div>
-      <!-- KPI riga 2 -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px">
-        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('calendario')" title="Vai al calendario">
-          <div style="font-size:32px;font-weight:800;color:#7c3aed" id="kpiLavoriMese">—</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:4px">📅 Lavori questo mese</div>
-        </div>
-        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('magazzino')" title="Vai al magazzino">
-          <div style="font-size:32px;font-weight:800;color:#22c55e" id="kpiMagDisp">—</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:4px">✅ Articoli disponibili</div>
-        </div>
-        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="goPage('forum')" title="Vai al forum">
-          <div style="font-size:32px;font-weight:800;color:var(--tx2)" id="kpiForumPost">—</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:4px">💬 Post forum</div>
-        </div>
-        <div class="card" style="padding:18px;text-align:center;cursor:pointer" onclick="apriTurniDaConfermare()" title="Vedi turni da confermare">
-          <div style="font-size:32px;font-weight:800;color:#f59e0b" id="kpiTurniConf">—</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:4px">⏳ Turni da confermare</div>
-        </div>
-      </div>
-      <!-- Griglia sezioni -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-        <div class="card">
-          <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
-            <span>🟢 Team oggi</span>
-            <button class="btn btn-f" style="padding:4px 10px;font-size:11px" onclick="goPage('presenze')">Vai →</button>
-          </div>
-          <div id="dashPresenze" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
-        </div>
-        <div class="card">
-          <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
-            <span>📋 Lavori in corso</span>
-            <button class="btn btn-f" style="padding:4px 10px;font-size:11px" onclick="goPage('dichiarazione')">Vai →</button>
-          </div>
-          <div id="dashLavori" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
-        </div>
-        <div class="card">
-          <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
-            <span>📅 Prossimi lavori</span>
-            <button class="btn btn-f" style="padding:4px 10px;font-size:11px" onclick="goPage('calendario')">Vai →</button>
-          </div>
-          <div id="dashCalendario" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
-        </div>
-        <div class="card">
-          <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
-            <span>📦 Magazzino critico</span>
-            <button class="btn btn-f" style="padding:4px 10px;font-size:11px" onclick="goPage('magazzino')">Vai →</button>
-          </div>
-          <div id="dashMag" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
-        </div>
-        <div class="card" id="dashScadenzarioCard" style="display:none">
-          <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
-            <span>📅 Prossime scadenze</span>
-            <button class="btn btn-f" style="padding:4px 10px;font-size:11px" onclick="goPage('scadenzario')">Vai →</button>
-          </div>
-          <div id="dashScadenzario" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
-        </div>
+
+      <!-- Pannelli -->
+      <div class="dash-grid">
+        <section class="card dcard" aria-labelledby="dhPres">
+          <div class="dcard-head"><h2 class="dcard-title" id="dhPres">Presenti ora</h2><button type="button" class="btn btn-sm" onclick="goPage('presenze')">Presenze</button></div>
+          <div id="dashPresenze" class="dlist"></div>
+        </section>
+        <section class="card dcard" aria-labelledby="dhLav">
+          <div class="dcard-head"><h2 class="dcard-title" id="dhLav">Lavori in corso</h2><button type="button" class="btn btn-sm" onclick="goPage('dichiarazione')">Archivio</button></div>
+          <div id="dashLavori" class="dlist"></div>
+        </section>
+        <section class="card dcard" aria-labelledby="dhCal">
+          <div class="dcard-head"><h2 class="dcard-title" id="dhCal">Prossimi lavori</h2><button type="button" class="btn btn-sm" onclick="goPage('calendario')">Calendario</button></div>
+          <div id="dashCalendario" class="dlist"></div>
+        </section>
+        <section class="card dcard" aria-labelledby="dhMag">
+          <div class="dcard-head"><h2 class="dcard-title" id="dhMag">Magazzino critico</h2><button type="button" class="btn btn-sm" onclick="goPage('magazzino')">Magazzino</button></div>
+          <div id="dashMag" class="dlist"></div>
+        </section>
+        <section class="card dcard" id="dashScadenzarioCard" aria-labelledby="dhSc" style="display:none">
+          <div class="dcard-head"><h2 class="dcard-title" id="dhSc">Prossime scadenze</h2><button type="button" class="btn btn-sm" onclick="goPage('scadenzario')">Scadenzario</button></div>
+          <div id="dashScadenzario" class="dlist"></div>
+        </section>
       </div>
     </div>
 
@@ -12489,110 +12484,107 @@ function renderDashboard(){
   const ora=new Date().toLocaleString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
   const el=$('dashDataOra');if(el)el.textContent=ora.charAt(0).toUpperCase()+ora.slice(1);
   const avC=['a1','a2','a3','a4'];
+  const setKpi=(id,v,tono)=>{const k=$(id);if(!k)return;k.textContent=v;k.dataset.tono=tono||'';};
+  const vuoto=t=>`<div class="dempty">${t}</div>`;
+  // Pallino di stato: il colore viene dalla legenda dei lavori (getStatoLavoro), con bordo
+  // perché alcuni colori (es. nero = rientrato) altrimenti sparirebbero nel tema scuro.
+  const dot=c=>`<span class="ddot" style="background:${c}" aria-hidden="true"></span>`;
 
   // KPI 1 — Team attivo
   const teamAttivi=cacheTeam.filter(m=>m.approvato&&m.ruolo!=='Collaboratore esterno');
-  const k1=$('kpiTeam');if(k1)k1.textContent=teamAttivi.length;
+  setKpi('kpiTeam',teamAttivi.length);
 
-  // KPI 2 — Presenti oggi
+  // KPI 2 — Presenti ora (entrati oggi e non ancora usciti)
   const presentiOggi=cachePresenze.filter(p=>p.entrata&&toLocalISO(new Date(p.entrata))===oggi&&!p.uscita);
-  const k2=$('kpiPresenti');if(k2)k2.textContent=presentiOggi.length;
+  setKpi('kpiPresenti',presentiOggi.length);
 
   // KPI 3 — Lavori in corso
   const lavoriInCorso=cacheDich.filter(d=>!d.rientroData);
-  const k3=$('kpiLavori');if(k3)k3.textContent=lavoriInCorso.length;
+  setKpi('kpiLavori',lavoriInCorso.length);
 
-  // KPI 4 — Articoli in uso
-  const inUsoIds=new Set();
-  cacheDich.filter(d=>!d.rientroData).forEach(d=>(d.articoli||[]).forEach(a=>{if(a.id)inUsoIds.add(a.id);}));
-  const k4=$('kpiMagazzino');if(k4)k4.textContent=inUsoIds.size;
+  // KPI 4 — Articoli in uso (e quantità in uso per articolo, riusata sotto)
+  const inUsoIds=new Set();const qtaInUso={};
+  lavoriInCorso.forEach(d=>(d.articoli||[]).forEach(a=>{if(!a.id)return;inUsoIds.add(a.id);qtaInUso[a.id]=(qtaInUso[a.id]||0)+(a.qty||1);}));
+  setKpi('kpiMagazzino',inUsoIds.size);
 
   // KPI 5 — Lavori questo mese
   const mese=oggi.slice(0,7);
-  const lavMese=[...cacheDich,...cacheLavoriCal].filter(l=>(l.data||l.createdAt||'').slice(0,7)===mese);
-  const k5=$('kpiLavoriMese');if(k5)k5.textContent=lavMese.length;
+  setKpi('kpiLavoriMese',[...cacheDich,...cacheLavoriCal].filter(l=>(l.data||l.createdAt||'').slice(0,7)===mese).length);
 
   // KPI 6 — Articoli disponibili
-  const k6=$('kpiMagDisp');if(k6)k6.textContent=cacheMag.filter(m=>!inUsoIds.has(m.id)).length;
+  setKpi('kpiMagDisp',cacheMag.filter(m=>!inUsoIds.has(m.id)).length);
 
-  // KPI 7 — Forum post
-  const k7=$('kpiForumPost');if(k7)k7.textContent=cacheForum.length;
+  // KPI 7 — Post nel forum
+  setKpi('kpiForumPost',cacheForum.length);
 
-  // KPI 8 — Turni da confermare
-  const k8=$('kpiTurniConf');if(k8)k8.textContent=cacheAgenda.filter(t=>!t.confermato&&t.data>=oggi).length;
+  // KPI 8 — Turni da confermare (in evidenza se ce ne sono)
+  const nTurni=cacheAgenda.filter(t=>!t.confermato&&t.data>=oggi).length;
+  setKpi('kpiTurniConf',nTurni,nTurni>0?'warning':'');
 
-  // Sezione presenze
+  // Presenti ora
   const elP=$('dashPresenze');
   if(elP){
-    if(!presentiOggi.length){elP.innerHTML='<div class="empty" style="font-size:12px">Nessuno presente oggi</div>';}
-    else{elP.innerHTML=presentiOggi.map((p,i)=>{
+    elP.innerHTML=!presentiOggi.length?vuoto('Nessuno in servizio in questo momento'):presentiOggi.map((p,i)=>{
       const m=cacheTeam.find(x=>x.id===p.uid);
       const nome=m?m.nome+' '+m.cognome:p.nome||'—';
-      return`<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg2);border-radius:var(--rs)">
-        <div class="av ${avC[i%4]}" style="width:28px;height:28px;font-size:11px;flex-shrink:0">${nome.slice(0,2).toUpperCase()}</div>
-        <div style="flex:1;font-size:12px;font-weight:500">${nome}</div>
-        <span style="font-size:10px;color:var(--gn);background:rgba(34,197,94,.1);border-radius:6px;padding:2px 6px">${esc(p.luogo||'In sede')}</span>
+      const ini=m?iniziali(m):iniziali({nome:(p.nome||'').split(' ')[0],cognome:(p.nome||'').split(' ').slice(1).join(' ')});
+      return`<div class="ditem">
+        <span class="av ${avC[i%4]} dav" aria-hidden="true">${esc(ini)}</span>
+        <span class="ditem-main"><span class="ditem-title">${esc(nome)}</span></span>
+        <span class="bdg bg">${esc(p.luogo||'In sede')}</span>
       </div>`;
-    }).join('');}
+    }).join('');
   }
 
-  // Sezione lavori in corso
+  // Lavori in corso
   const elL=$('dashLavori');
   if(elL){
-    if(!lavoriInCorso.length){elL.innerHTML='<div class="empty" style="font-size:12px">Nessun lavoro in corso</div>';}
-    else{elL.innerHTML=lavoriInCorso.slice(0,6).map(l=>{
+    elL.innerHTML=!lavoriInCorso.length?vuoto('Nessun lavoro in corso'):lavoriInCorso.slice(0,6).map(l=>{
       const s=getStatoLavoro({...l,_fonte:'dich'});
-      return`<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg2);border-radius:var(--rs)">
-        <div style="width:8px;height:8px;border-radius:50%;background:${s.color};flex-shrink:0"></div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.nome||'—')}</div>
-          <div style="font-size:10px;color:var(--tx2)">${esc(l.tecnico||'—')} · ${esc(l.location||'—')}</div>
-        </div>
-        <span style="font-size:10px;color:${s.color}">${fmtData(l.data,{day:'2-digit',month:'short'})}</span>
+      return`<div class="ditem">
+        ${dot(s.color)}
+        <span class="ditem-main">
+          <span class="ditem-title">${esc(l.nome||'—')}</span>
+          <span class="ditem-sub">${esc(l.tecnico||'—')} · ${esc(l.location||'—')}</span>
+        </span>
+        <span class="ditem-meta">${fmtData(l.data,{day:'2-digit',month:'short'})}</span>
       </div>`;
-    }).join('');}
+    }).join('');
   }
 
-  // Sezione prossimi lavori
+  // Prossimi lavori
   const elC=$('dashCalendario');
   if(elC){
     const prossimi=cacheLavoriCal.filter(l=>l.data>=oggi).sort((a,b)=>a.data.localeCompare(b.data)).slice(0,6);
-    if(!prossimi.length){elC.innerHTML='<div class="empty" style="font-size:12px">Nessun lavoro pianificato</div>';}
-    else{elC.innerHTML=prossimi.map(l=>{
+    elC.innerHTML=!prossimi.length?vuoto('Nessun lavoro pianificato'):prossimi.map(l=>{
       const s=getStatoLavoro({...l,_fonte:'cal'});
-      return`<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg2);border-radius:var(--rs)">
-        <div style="width:8px;height:8px;border-radius:50%;background:${s.color};flex-shrink:0"></div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.nome||'—')}</div>
-          <div style="font-size:10px;color:var(--tx2)">${l.tecnicoNome||'Nessun tecnico'}</div>
-        </div>
-        <span style="font-size:10px;color:${s.color}">${fmtData(l.data,{day:'2-digit',month:'short'})}</span>
+      return`<div class="ditem">
+        ${dot(s.color)}
+        <span class="ditem-main">
+          <span class="ditem-title">${esc(l.nome||'—')}</span>
+          <span class="ditem-sub">${esc(l.tecnicoNome||'Nessun tecnico')}</span>
+        </span>
+        <span class="ditem-meta">${fmtData(l.data,{day:'2-digit',month:'short'})}</span>
       </div>`;
-    }).join('');}
+    }).join('');
   }
 
-  // Sezione magazzino critico
+  // Magazzino critico: esauriti (rosso) o disponibilità ≤ 30% (avviso)
   const elM=$('dashMag');
   if(elM){
-    const critici=cacheMag.filter(m=>{
-      const uso=cacheDich.filter(d=>!d.rientroData).reduce((s,d)=>s+(d.articoli||[]).filter(a=>a.id===m.id).reduce((q,a)=>q+(a.qty||1),0),0);
-      const disp=(m.qty||1)-uso;
-      return disp<=0||(disp/(m.qty||1))<=0.3;
-    }).slice(0,6);
-    if(!critici.length){elM.innerHTML='<div style="font-size:12px;color:var(--gn);text-align:center;padding:20px">✅ Tutti i materiali disponibili</div>';}
-    else{elM.innerHTML=critici.map(m=>{
-      const uso=cacheDich.filter(d=>!d.rientroData).reduce((s,d)=>s+(d.articoli||[]).filter(a=>a.id===m.id).reduce((q,a)=>q+(a.qty||1),0),0);
-      const disp=(m.qty||1)-uso;
-      const color=disp<=0?'var(--rd)':'var(--am)';
-      return`<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg2);border-radius:var(--rs)">
-        <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
-        <div style="flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.nome)}</div>
-        <span style="font-size:11px;color:${color};font-weight:700">${disp}/${m.qty||1}</span>
+    const critici=cacheMag.map(m=>({m,disp:(m.qty||1)-(qtaInUso[m.id]||0)}))
+      .filter(({m,disp})=>disp<=0||disp/(m.qty||1)<=0.3)
+      .sort((a,b)=>a.disp-b.disp).slice(0,6);
+    elM.innerHTML=!critici.length?vuoto('Tutti i materiali sono disponibili'):critici.map(({m,disp})=>{
+      const esaurito=disp<=0;
+      return`<div class="ditem">
+        <span class="ditem-main"><span class="ditem-title">${esc(m.nome)}</span></span>
+        <span class="bdg ${esaurito?'br':'ba'}">${esaurito?'Esaurito':'Disponibili'} ${Math.max(disp,0)}/${m.qty||1}</span>
       </div>`;
-    }).join('');}
+    }).join('');
   }
 
-  // Sezione scadenzario (solo Admin/Responsabile/Project Manager)
+  // Prossime scadenze (solo Admin/Responsabile/Project Manager)
   const cardSc=$('dashScadenzarioCard');
   if(cardSc&&pvCanAccess()){
     cardSc.style.display='block';
@@ -12602,16 +12594,15 @@ function renderDashboard(){
         .filter(s=>scGiorniA(s.dataScadenza)<=30)
         .sort((a,b)=>a.dataScadenza.localeCompare(b.dataScadenza))
         .slice(0,6);
-      if(!combinata.length){elSc.innerHTML='<div style="font-size:12px;color:var(--gn);text-align:center;padding:20px">✅ Nessuna scadenza nei prossimi 30 giorni</div>';}
-      else{elSc.innerHTML=combinata.map(s=>{
+      elSc.innerHTML=!combinata.length?vuoto('Nessuna scadenza nei prossimi 30 giorni'):combinata.map(s=>{
         const g=scGiorniA(s.dataScadenza);
-        const color=g<0?'var(--rd)':g<=7?'var(--am)':'var(--gn)';
-        return`<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg2);border-radius:var(--rs)">
-          <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
-          <div style="flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.titolo)}</div>
-          <span style="font-size:11px;color:${color};font-weight:700;white-space:nowrap">${g<0?Math.abs(g)+'gg fa':g+'gg'}</span>
+        const cls=g<0?'br':g<=7?'ba':'bp';
+        const txt=g<0?'Scaduta da '+Math.abs(g)+' gg':g===0?'Oggi':'Tra '+g+' gg';
+        return`<div class="ditem">
+          <span class="ditem-main"><span class="ditem-title">${esc(s.titolo)}</span></span>
+          <span class="bdg ${cls}">${txt}</span>
         </div>`;
-      }).join('');}
+      }).join('');
     }
   } else if(cardSc){
     cardSc.style.display='none';
