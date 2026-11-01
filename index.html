@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01b';
+const APP_VERSION='v2026.11.01c';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -208,24 +208,61 @@ button,input,select,textarea{font-family:inherit}
    STRUTTURA (topbar, contenuto, nav mobile, layout desktop)
    ══════════════════════════════════════════════════════════════ */
 #app{display:none;flex-direction:column;height:100vh;height:100dvh}
-#topbar{padding:calc(var(--st) + 10px) 14px 10px;display:flex;align-items:center;background:var(--color-surface);border-bottom:1px solid var(--color-border);flex-shrink:0;gap:8px;overflow:hidden}
+/* Topbar: logo | titolo centrato | azioni (griglia simmetrica: il titolo resta al centro) */
+#topbar{padding:calc(var(--st) + 8px) 14px 8px;display:grid;grid-template-columns:1fr minmax(0,max-content) 1fr;align-items:center;background:var(--color-surface);border-bottom:1px solid var(--color-border);flex-shrink:0;gap:8px;min-height:56px}
+.tb-logo{height:24px;width:auto;justify-self:start}
+.tb-title{font-size:var(--text-md);font-weight:var(--weight-semibold);letter-spacing:var(--tracking-tight);color:var(--color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;margin:0}
+.tb-actions{display:flex;align-items:center;gap:8px;justify-self:end}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;border:1px solid transparent;border-radius:var(--radius-md);background:none;color:var(--color-text-secondary);cursor:pointer;transition:background-color var(--duration-fast) var(--ease-out),color var(--duration-fast) var(--ease-out)}
+.icon-btn:hover{background:var(--color-surface-hover);color:var(--color-text)}
+button.avbtn{padding:0;font-family:inherit;line-height:1;background-size:cover;background-position:center}
 @media(min-width:600px){
-  #topbar{padding:12px 20px}
-  #topbar img{height:30px}
-  #ptitle{font-size:14px!important;font-weight:500}
+  #topbar{padding:10px 20px}
+  .tb-logo{height:28px}
 }
+/* Menu "Gestione" a scomparsa (mobile) */
+.drawer-overlay{position:fixed;inset:0;background:var(--color-overlay);z-index:300}
+.drawer{position:fixed;top:0;right:0;width:min(300px,86vw);height:100%;height:100dvh;background:var(--color-surface);border-left:1px solid var(--color-border);box-shadow:var(--shadow-md);z-index:301;display:flex;flex-direction:column;overflow:hidden;transform:translateX(105%);visibility:hidden;transition:transform var(--duration-base) var(--ease-out),visibility 0s linear var(--duration-base)}
+.drawer.open{transform:none;visibility:visible;transition:transform var(--duration-base) var(--ease-out),visibility 0s}
+.drawer-head{padding:calc(var(--st) + 14px) 12px 12px 20px;border-bottom:1px solid var(--color-border)}
+.drawer-head-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.drawer-title{font-size:var(--text-lg);font-weight:var(--weight-semibold);letter-spacing:var(--tracking-tight);margin:0}
+.drawer-user{font-size:var(--text-xs);color:var(--color-text-secondary);margin-top:2px}
+.drawer-body{flex:1;overflow-y:auto;padding:8px 12px calc(var(--sb) + 16px)}
+.nav-label{font-size:11px;font-weight:var(--weight-semibold);color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:var(--tracking-caps);padding:14px 10px 6px}
+.nav-label-sep{margin-top:8px;border-top:1px solid var(--color-border);padding-top:16px}
+/* Sidebar desktop */
+.dsb{flex-direction:column;width:240px;min-width:240px;height:100dvh;background:var(--color-surface);border-right:1px solid var(--color-border);flex-shrink:0;overflow-y:auto}
+.dsb-brand{padding:20px 18px 14px}
+.dsb-logo{height:26px;width:auto;display:block}
+.dsb-sub{font-size:var(--text-xs);color:var(--color-text-tertiary);margin-top:6px}
+.dsb-user{display:flex;align-items:center;gap:10px;margin:0 10px;padding:8px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-sunken);text-align:left;cursor:pointer;color:inherit;transition:border-color var(--duration-fast) var(--ease-out)}
+.dsb-user:hover{border-color:var(--color-border-strong)}
+.dsb-av{width:32px;height:32px;font-size:12px;flex-shrink:0;cursor:inherit}
+.dsb-user-txt{display:flex;flex-direction:column;min-width:0}
+.dsb-name{font-size:13px;font-weight:var(--weight-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dsb-role{font-size:var(--text-xs);color:var(--color-text-tertiary)}
+.dsb-nav{flex:1;padding:4px 10px 10px;overflow-y:auto}
+.dsb-foot{padding:12px 16px;border-top:1px solid var(--color-border);font-size:11px;color:var(--color-text-tertiary);text-align:center;line-height:var(--leading-snug)}
+.dnav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;margin-bottom:2px;background:none;border:none;border-radius:var(--radius-md);color:var(--color-text);font-size:var(--text-sm);font-weight:var(--weight-regular);text-align:left;cursor:pointer;transition:background-color var(--duration-fast) var(--ease-out)}
+.dnav-btn:hover{background:var(--color-surface-hover)}
+.dnav-ic{display:flex;flex-shrink:0;color:var(--color-text-tertiary)}
+.dnav-btn.on{background:var(--color-accent-subtle);color:var(--color-accent-text);font-weight:var(--weight-semibold)}
+.dnav-btn.on .dnav-ic,.dnav-btn.special .dnav-ic{color:var(--color-accent-text)}
+.dnav-btn.special{color:var(--color-accent-text)}
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .page{display:none;padding:16px 16px calc(80px + var(--sb))}
 .page::after{content:'© Martins Osemwengie · MMG Logistics · ' var(--app-version,'');display:block;text-align:center;font-size:var(--text-xs);color:var(--color-text-tertiary);padding:16px 0 8px;margin-top:24px;border-top:1px solid var(--color-border)}
 .page.on{display:block}
 #nav{display:flex;background:var(--color-surface);border-top:1px solid var(--color-border);padding-bottom:var(--sb);flex-shrink:0}
-.ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 6px;cursor:pointer;gap:3px;min-width:0;min-height:52px;position:relative}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 6px;cursor:pointer;gap:3px;min-width:0;min-height:52px;position:relative;background:none;border:none;font-family:inherit;color:inherit}
+.ni:focus-visible{outline-offset:-2px}
 .ni .ic{display:flex;align-items:center;justify-content:center;color:var(--color-text-tertiary)}
 .ni .lb{font-size:10px;color:var(--color-text-tertiary);font-weight:var(--weight-medium);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center}
 .ni.on .ic,.ni.on .lb{color:var(--color-accent-text)}
 .ni.on .ic svg{stroke:var(--color-accent-text)}
 .ni.on::before{content:'';position:absolute;top:0;left:25%;right:25%;height:2px;border-radius:0 0 2px 2px;background:var(--color-accent)}
-.notif-badge{position:absolute;top:4px;right:6px;min-width:16px;height:16px;background:var(--color-accent);border-radius:var(--radius-full);border:2px solid var(--color-surface);font-size:10px;font-weight:700;color:var(--color-on-accent);display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
+.notif-badge{position:absolute;top:4px;left:calc(50% + 4px);min-width:16px;height:16px;background:var(--color-accent);border-radius:var(--radius-full);border:2px solid var(--color-surface);font-size:10px;font-weight:700;color:var(--color-on-accent);display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
 /* ── DESKTOP LAYOUT ── */
 body.desktop-mode #app{flex-direction:row;height:100dvh;width:100vw}
 body.desktop-mode #nav{display:none!important}
@@ -335,6 +372,29 @@ body.desktop-mode .mhd{display:none}
 .mhd{width:36px;height:4px;background:var(--color-border-strong);border-radius:2px;margin:0 auto 16px}
 /* Login / registrazione */
 #reg{height:100vh;height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(var(--st) + 16px) 20px calc(24px + var(--sb));background:var(--color-bg);overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box}
+[hidden]{display:none!important}
+.hint{font-size:var(--text-xs);color:var(--color-text-tertiary);margin-top:6px;line-height:var(--leading-snug)}
+.btn-lg{padding:13px 20px;font-size:var(--text-md);font-weight:var(--weight-semibold)}
+.check{display:flex;align-items:flex-start;gap:10px;margin:4px 0 16px;font-size:13px;color:var(--color-text-secondary);line-height:var(--leading-snug);cursor:pointer}
+.check input{margin-top:1px;flex-shrink:0}
+/* Controllo segmentato (schede a due o tre voci) */
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;background:var(--color-surface-sunken);border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:20px}
+.seg-btn{padding:9px 12px;border:none;border-radius:6px;background:transparent;color:var(--color-text-secondary);font-size:var(--text-sm);font-weight:var(--weight-medium);cursor:pointer;transition:background-color var(--duration-fast) var(--ease-out),color var(--duration-fast) var(--ease-out)}
+.seg-btn:hover{color:var(--color-text)}
+.seg-btn.on{background:var(--color-surface);color:var(--color-text);font-weight:var(--weight-semibold);box-shadow:var(--shadow-sm);border:1px solid var(--color-border)}
+/* Accesso / registrazione */
+.auth{width:100%;max-width:400px;margin:auto 0;display:flex;flex-direction:column;align-items:center}
+.auth-brand{display:flex;flex-direction:column;align-items:center;gap:6px;margin:8px 0 24px}
+.auth-logo{width:180px;height:auto}
+.auth-sub{font-size:var(--text-xs);color:var(--color-text-tertiary);letter-spacing:var(--tracking-caps);text-transform:uppercase}
+.auth-card{width:100%;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px;box-shadow:var(--shadow-sm)}
+.auth-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.auth-hint{font-size:var(--text-xs);color:var(--color-text-tertiary);text-align:center;margin-top:12px;line-height:var(--leading-snug)}
+.auth-title{font-size:var(--text-xl);font-weight:var(--weight-semibold);letter-spacing:var(--tracking-tight);margin-bottom:10px}
+.auth-text{font-size:var(--text-sm);color:var(--color-text-secondary);line-height:var(--leading-normal);margin-bottom:12px}
+.auth-text:last-of-type{margin-bottom:20px}
+.auth-ver{font-size:var(--text-xs);color:var(--color-text-tertiary);text-align:center;margin-top:20px;font-variant-numeric:tabular-nums}
+@media(min-width:600px){.auth-card{padding:28px}}
 /* Toast: messaggi brevi di conferma/errore (vedi toast()) */
 #toast{position:fixed;bottom:calc(84px + var(--sb));left:50%;transform:translate(-50%,8px);padding:11px 16px;border-radius:var(--radius-lg);font-size:var(--text-sm);font-weight:var(--weight-medium);z-index:999;white-space:pre-line;text-align:center;max-width:min(92vw,420px);width:max-content;opacity:0;transition:opacity var(--duration-base) var(--ease-out),transform var(--duration-base) var(--ease-out);pointer-events:none;box-shadow:var(--shadow-md);background:var(--color-text);color:var(--color-bg)}
 #toast.show{opacity:1;transform:translate(-50%,0)}
@@ -423,59 +483,63 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
 <!-- REGISTER -->
 <div id="reg">
-  <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:24px;width:100%;max-width:380px">
-    <img src="logo.png" alt="MMG Logo" style="width:200px;height:auto;margin-bottom:8px">
-    <div style="font-size:11px;color:var(--tx3);text-align:center;margin-bottom:20px">MMG Logistics</div>
-  </div>
-  <div style="width:100%;max-width:380px">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:18px;background:var(--bg2);border-radius:var(--rs);padding:4px">
-      <button id="tabReg" onclick="showTab('reg')" style="padding:9px;border-radius:6px;border:none;background:var(--ac);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Registrati</button>
-      <button id="tabLogin" onclick="showTab('login')" style="padding:9px;border-radius:6px;border:none;background:transparent;color:var(--tx2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer">Accedi</button>
+  <div class="auth">
+    <div class="auth-brand">
+      <img src="logo.png" alt="MMG — Multimedia Meeting Group" class="auth-logo">
+      <div class="auth-sub">MMG Logistics</div>
     </div>
-    <div id="formReg">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-        <div><label class="il">Nome</label><input type="text" id="rNome" placeholder="Mario"></div>
-        <div><label class="il">Cognome</label><input type="text" id="rCognome" placeholder="Rossi"></div>
+    <div class="auth-card">
+      <div class="seg" role="tablist" aria-label="Accesso o registrazione">
+        <button type="button" class="seg-btn on" id="tabLogin" role="tab" aria-selected="true" aria-controls="formLogin" onclick="showTab('login')">Accedi</button>
+        <button type="button" class="seg-btn" id="tabReg" role="tab" aria-selected="false" aria-controls="formReg" onclick="showTab('reg')">Registrati</button>
       </div>
-      <div class="ig"><label class="il">Email</label><input type="email" id="rEmail" placeholder="mario@azienda.it"></div>
-      <div class="ig"><label class="il">Telefono</label><input type="tel" id="rTel" placeholder="+39 333 000 0000"></div>
-      <div class="ig">
-        <label class="il">Ruolo</label>
-        <div class="chips" id="roleChips">
-          <span class="chip on" onclick="pickChip(this,'role')">Tecnico AV</span>
-          <span class="chip" onclick="pickChip(this,'role')">Project Manager</span>
-          <span class="chip" onclick="pickChip(this,'role')">Magazziniere</span>
-          <span class="chip" onclick="pickChip(this,'role')">Responsabile</span>
-          <span class="chip" onclick="pickChip(this,'role')">Collaboratore esterno</span>
+
+      <form id="formLogin" role="tabpanel" aria-labelledby="tabLogin" onsubmit="event.preventDefault();doLogin()" novalidate>
+        <div class="ig"><label class="il" for="loginEmail">Email</label><input type="email" id="loginEmail" placeholder="mario@azienda.it" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false"></div>
+        <div class="ig">
+          <label class="il" for="loginPin">Password</label>
+          <input type="password" id="loginPin" placeholder="La tua password" autocomplete="current-password">
         </div>
-      </div>
-      <!-- Password per tutti incluso Responsabile -->
-      <div class="ig">
-        <label class="il">🔑 Password</label>
-        <input type="password" id="rPin" placeholder="Almeno 6 caratteri" minlength="6" autocomplete="new-password">
-        <div style="font-size:11px;color:var(--tx3);margin-top:4px">La tua password personale per accedere all'app (min. 6 caratteri)</div>
-      </div>
-      <div class="ig">
-        <label class="il">Conferma password</label>
-        <input type="password" id="rPinConf" placeholder="Ripeti la password" minlength="6" autocomplete="new-password">
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
-        <div id="privBox" class="cbox" onclick="togglePriv()"></div>
-        <span style="font-size:11px;color:var(--tx2);line-height:1.5;cursor:pointer" onclick="togglePriv()">Acconsento al trattamento dei dati personali (GDPR).</span>
-      </div>
-      <button class="btn btn-p btn-f" id="regBtn" onclick="doReg()" style="padding:13px;font-size:15px;font-weight:600">Inizia →</button>
+        <button type="submit" class="btn btn-p btn-f btn-lg" id="loginBtn">Accedi</button>
+        <p class="auth-hint">Usa l'email con cui ti sei registrato.</p>
+      </form>
+
+      <form id="formReg" role="tabpanel" aria-labelledby="tabReg" onsubmit="event.preventDefault();doReg()" novalidate hidden>
+        <div class="auth-grid2">
+          <div class="ig"><label class="il" for="rNome">Nome</label><input type="text" id="rNome" placeholder="Mario" autocomplete="given-name"></div>
+          <div class="ig"><label class="il" for="rCognome">Cognome</label><input type="text" id="rCognome" placeholder="Rossi" autocomplete="family-name"></div>
+        </div>
+        <div class="ig"><label class="il" for="rEmail">Email</label><input type="email" id="rEmail" placeholder="mario@azienda.it" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false"></div>
+        <div class="ig"><label class="il" for="rTel">Telefono</label><input type="tel" id="rTel" placeholder="+39 333 000 0000" autocomplete="tel"></div>
+        <div class="ig">
+          <div class="il" id="roleLbl">Ruolo</div>
+          <div class="chips" id="roleChips" role="radiogroup" aria-labelledby="roleLbl">
+            <button type="button" class="chip on" role="radio" aria-checked="true" onclick="pickChip(this,'role')">Tecnico AV</button>
+            <button type="button" class="chip" role="radio" aria-checked="false" onclick="pickChip(this,'role')">Project Manager</button>
+            <button type="button" class="chip" role="radio" aria-checked="false" onclick="pickChip(this,'role')">Magazziniere</button>
+            <button type="button" class="chip" role="radio" aria-checked="false" onclick="pickChip(this,'role')">Responsabile</button>
+            <button type="button" class="chip" role="radio" aria-checked="false" onclick="pickChip(this,'role')">Collaboratore esterno</button>
+          </div>
+        </div>
+        <div class="ig">
+          <label class="il" for="rPin">Password</label>
+          <input type="password" id="rPin" placeholder="Almeno 6 caratteri" minlength="6" autocomplete="new-password" aria-describedby="rPinHint">
+          <div class="hint" id="rPinHint">La tua password personale per accedere all'app (minimo 6 caratteri).</div>
+        </div>
+        <div class="ig">
+          <label class="il" for="rPinConf">Conferma password</label>
+          <input type="password" id="rPinConf" placeholder="Ripeti la password" minlength="6" autocomplete="new-password">
+        </div>
+        <label class="check">
+          <input type="checkbox" id="privChk" onchange="togglePriv()">
+          <span>Acconsento al trattamento dei dati personali (GDPR).</span>
+        </label>
+        <button type="submit" class="btn btn-p btn-f btn-lg" id="regBtn">Invia richiesta</button>
+        <p class="auth-hint">Un Responsabile approverà il tuo account prima del primo accesso.</p>
+      </form>
     </div>
-    <div id="formLogin" style="display:none">
-      <div class="ig"><label class="il">La tua email</label><input type="email" id="loginEmail" placeholder="mario@azienda.it" autocomplete="username"></div>
-      <div class="ig">
-        <label class="il">🔑 Password</label>
-        <input type="password" id="loginPin" placeholder="La tua password" autocomplete="current-password">
-      </div>
-      <button class="btn btn-p btn-f" id="loginBtn" onclick="doLogin()" style="padding:13px;font-size:15px;font-weight:600">Accedi →</button>
-      <div style="font-size:12px;color:var(--tx2);text-align:center;margin-top:10px">Inserisci l'email con cui ti sei registrato</div>
-    </div>
+    <div class="auth-ver" data-app-version></div>
   </div>
-  <div style="font-size:9px;color:var(--tx3);text-align:center;margin-top:20px" data-app-version></div>
 </div>
 
 <!-- Messaggi brevi (toast): rimosso per errore il 12/05/2026, ripristinato -->
@@ -484,35 +548,33 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 <!-- APP -->
 <div id="app">
   <!-- DESKTOP SIDEBAR (dentro app per flex layout) -->
-  <div id="desktopSidebarInner" style="display:none;flex-direction:column;width:240px;min-width:240px;height:100dvh;background:var(--bg1);border-right:1px solid var(--b);flex-shrink:0;overflow-y:auto">
-    <div style="padding:20px 16px 14px;border-bottom:1px solid var(--b)">
-      <img src="logo.png" alt="MMG" style="height:24px;width:auto;margin-bottom:6px">
-      <div style="font-size:10px;color:var(--tx3)">Pannello di controllo</div>
+  <aside id="desktopSidebarInner" class="dsb" aria-label="Menu principale" style="display:none">
+    <div class="dsb-brand">
+      <img src="logo.png" alt="MMG — Multimedia Meeting Group" class="dsb-logo">
+      <div class="dsb-sub">Pannello di controllo</div>
     </div>
-    <div style="padding:10px 16px;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:8px">
-      <div id="deskAvatar" class="avbtn" style="width:32px;height:32px;font-size:12px;cursor:default;flex-shrink:0">?</div>
-      <div style="flex:1;min-width:0">
-        <div id="deskNome" style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
-        <div id="deskRuolo" style="font-size:10px;color:var(--tx3)">—</div>
-      </div>
-    </div>
-    <div style="flex:1;padding:8px;overflow-y:auto">
+    <button type="button" class="dsb-user" onclick="openMod('mProfile')" aria-label="Apri il profilo">
+      <span id="deskAvatar" class="avbtn dsb-av" aria-hidden="true">?</span>
+      <span class="dsb-user-txt">
+        <span id="deskNome" class="dsb-name">—</span>
+        <span id="deskRuolo" class="dsb-role">—</span>
+      </span>
+    </button>
+    <nav class="dsb-nav" aria-label="Sezioni">
       <div id="deskNav"></div>
-    </div>
-    <div style="padding:10px 16px;border-top:1px solid var(--b);font-size:9px;color:var(--tx3);text-align:center">
-      © Martins Osemwengie · MMG Logistics · <span data-app-version></span>
-    </div>
-  </div>
-  <div id="topbar">
-    <img src="logo.png" alt="MMG" style="height:26px;width:auto;flex-shrink:0">
-    <div style="font-size:13px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;flex:1;padding:0 8px" id="ptitle">Presenze</div>
-    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-      <button id="sidebarToggle" onclick="apriSidebar()" style="display:none;background:none;border:1px solid var(--b);border-radius:var(--rs);padding:6px;cursor:pointer;color:var(--tx2);align-items:center;justify-content:center">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </nav>
+    <div class="dsb-foot">© Martins Osemwengie · MMG Logistics · <span data-app-version></span></div>
+  </aside>
+  <header id="topbar">
+    <img src="logo.png" alt="MMG" class="tb-logo">
+    <h1 id="ptitle" class="tb-title">Presenze</h1>
+    <div class="tb-actions">
+      <button type="button" id="sidebarToggle" class="icon-btn" onclick="apriSidebar()" aria-label="Apri il menu gestione" aria-controls="sidebar" aria-expanded="false" style="display:none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="avbtn" id="avbtn" onclick="openMod('mProfile')">?</div>
+      <button type="button" class="avbtn" id="avbtn" onclick="openMod('mProfile')" aria-label="Apri il profilo">?</button>
     </div>
-  </div>
+  </header>
   <div id="content">
 
     <!-- PRESENZE -->
@@ -1409,47 +1471,47 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
   </div>
 
-  <div id="nav">
-    <div class="ni on" id="n-presenze" onclick="goPage('presenze')">
-      <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-      <div class="lb">Presenze</div>
-    </div>
-    <div class="ni" id="n-location" onclick="goPage('location')">
-      <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>
-      <div class="lb">Location</div>
-    </div>
-    <div class="ni" id="n-magazzino" onclick="goPage('magazzino')">
-      <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h5l2 3h9a2 2 0 0 1 2 2v2"/><path d="M19 21v-6"/><path d="M16 18h6"/></svg></div>
-      <div class="lb">Magazz.</div>
-    </div>
-    <div class="ni" id="n-cespiti" onclick="goPage('cespiti')" style="display:none">
-      <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></div>
-      <div class="lb">Cespiti</div>
-    </div>
-    <div class="ni" id="n-agenda" onclick="goPage('agenda')" style="position:relative">
-      <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-      <div class="lb">Agenda</div>
-      <div class="notif-badge" id="agendaDot" style="display:none"></div>
-    </div>
-    <div class="ni" id="n-forum" onclick="goPage('forum');clearNotif()" style="position:relative">
-      <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-      <div class="lb">Forum</div>
-      <div class="notif-badge" id="notifDot" style="display:none"></div>
-    </div>
-    <div class="ni" id="n-chat" onclick="goPage('chat');apriUltimaConv()" style="position:relative">
-      <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9h8"/><path d="M8 13h6"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6l-4 4V7a3 3 0 0 1 3-3h13z"/></svg></div>
-      <div class="lb">Chat</div>
-      <div class="notif-badge" id="chatDot" style="display:none"></div>
-    </div>
-    <div class="ni" id="n-dichiarazione" onclick="goPage('dichiarazione')">
-      <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
-      <div class="lb">Archivio</div>
-    </div>
-    <div class="ni" id="n-fantacalcio" onclick="goPage('fantacalcio')" style="display:none">
-      <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/></svg></div>
-      <div class="lb">Svago</div>
-    </div>
-  </div>
+  <nav id="nav" aria-label="Sezioni principali">
+    <button type="button" class="ni on" id="n-presenze" onclick="goPage('presenze')">
+      <span class="ic" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+      <span class="lb">Presenze</span>
+    </button>
+    <button type="button" class="ni" id="n-location" onclick="goPage('location')">
+      <span class="ic" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
+      <span class="lb">Location</span>
+    </button>
+    <button type="button" class="ni" id="n-magazzino" onclick="goPage('magazzino')" aria-label="Magazzino">
+      <span class="ic" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h5l2 3h9a2 2 0 0 1 2 2v2"/><path d="M19 21v-6"/><path d="M16 18h6"/></svg></span>
+      <span class="lb" aria-hidden="true">Magazz.</span>
+    </button>
+    <button type="button" class="ni" id="n-cespiti" onclick="goPage('cespiti')" style="display:none">
+      <span class="ic" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></span>
+      <span class="lb">Cespiti</span>
+    </button>
+    <button type="button" class="ni" id="n-agenda" onclick="goPage('agenda')">
+      <span class="ic" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+      <span class="lb">Agenda</span>
+      <span class="notif-badge" id="agendaDot" style="display:none"></span>
+    </button>
+    <button type="button" class="ni" id="n-forum" onclick="goPage('forum');clearNotif()">
+      <span class="ic" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+      <span class="lb">Forum</span>
+      <span class="notif-badge" id="notifDot" style="display:none"></span>
+    </button>
+    <button type="button" class="ni" id="n-chat" onclick="goPage('chat');apriUltimaConv()">
+      <span class="ic" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9h8"/><path d="M8 13h6"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6l-4 4V7a3 3 0 0 1 3-3h13z"/></svg></span>
+      <span class="lb">Chat</span>
+      <span class="notif-badge" id="chatDot" style="display:none"></span>
+    </button>
+    <button type="button" class="ni" id="n-dichiarazione" onclick="goPage('dichiarazione')">
+      <span class="ic" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+      <span class="lb">Archivio</span>
+    </button>
+    <button type="button" class="ni" id="n-fantacalcio" onclick="goPage('fantacalcio')" style="display:none">
+      <span class="ic" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/></svg></span>
+      <span class="lb">Svago</span>
+    </button>
+  </nav>
 </div>
 
 <!-- GESTIONE UTENTI -->
@@ -1476,24 +1538,24 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
 <!-- DESKTOP SIDEBAR (Blocco 1) -->
 <!-- SIDEBAROVERLAY -->
-<div id="sidebarOverlay" onclick="chiudiSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;-webkit-tap-highlight-color:transparent"></div>
-<div id="sidebar" style="position:fixed;top:0;right:-290px;width:280px;height:100%;height:100dvh;background:var(--bg1);border-left:1px solid var(--b);z-index:301;transition:right .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden">
-  <div style="padding:calc(env(safe-area-inset-top,16px) + 16px) 20px 14px;border-bottom:1px solid var(--b)">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div style="font-size:15px;font-weight:700">🔐 Gestione</div>
-      <button onclick="chiudiSidebar()" style="background:none;border:none;color:var(--tx2);font-size:22px;cursor:pointer;padding:4px;line-height:1;-webkit-tap-highlight-color:transparent">✕</button>
+<div id="sidebarOverlay" class="drawer-overlay" onclick="chiudiSidebar()" hidden></div>
+<aside id="sidebar" class="drawer" role="dialog" aria-modal="true" aria-labelledby="sidebarTitle" aria-hidden="true" inert>
+  <div class="drawer-head">
+    <div class="drawer-head-row">
+      <h2 class="drawer-title" id="sidebarTitle">Gestione</h2>
+      <button type="button" class="icon-btn" onclick="chiudiSidebar()" aria-label="Chiudi il menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
-    <div style="font-size:12px;color:var(--tx2);margin-top:3px" id="sidebarUser">—</div>
+    <div class="drawer-user" id="sidebarUser">—</div>
   </div>
-  <div style="flex:1;overflow-y:auto;padding:8px 12px;padding-bottom:calc(env(safe-area-inset-bottom,16px) + 16px)">
+  <div class="drawer-body">
     <!-- Gestione Utenti -->
-    <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:8px 8px 4px">Utenti</div>
+    <div class="nav-label">Utenti</div>
     <button class="sidebar-btn" onclick="chiudiSidebar();apriGestioneUtenti()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Gestione utenti
     </button>
     <!-- Presenze -->
-    <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Presenze</div>
+    <div class="nav-label">Presenze</div>
     <button class="sidebar-btn" onclick="chiudiSidebar();openMod('mGestTimb')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Modifica timbrature
@@ -1507,7 +1569,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       Esporta ore confermate
     </button>
     <!-- Magazzino -->
-    <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Magazzino</div>
+    <div class="nav-label">Magazzino</div>
     <button class="sidebar-btn" onclick="chiudiSidebar();renderMatNuovi();openMod('mMatNuovi')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Materiali nuovi
@@ -1522,7 +1584,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </button>
     <!-- Cespiti — visibile solo Admin/Responsabile -->
     <div id="sbCespitiSection" style="display:none">
-      <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Cespiti</div>
+      <div class="nav-label">Cespiti</div>
       <button class="sidebar-btn" onclick="chiudiSidebar();goPage('cespiti');cesTab('nuovi')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
         Nuovi acquisti
@@ -1537,22 +1599,22 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       </button>
     </div>
     <!-- Agenda -->
-    <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Agenda</div>
+    <div class="nav-label">Agenda</div>
     <button class="sidebar-btn" onclick="chiudiSidebar();goPage('agenda')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Gestione turni
     </button>
     <!-- Svago / Fantacalcio -->
     <div id="sbFantacalcioSection">
-      <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Svago</div>
+      <div class="nav-label">Svago</div>
       <button class="sidebar-btn" onclick="chiudiSidebar();goPage('fantacalcio')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/></svg>
-        ⚽ Fantacalcio MMG<span id="sbFantacalcioStato" style="color:var(--rd);font-weight:700"></span>
+        Fantacalcio MMG<span id="sbFantacalcioStato" style="color:var(--rd);font-weight:700"></span>
       </button>
     </div>
     <!-- AI Analisi -->
     <div id="sbPreventiviSection">
-    <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px">Intelligenza Artificiale</div>
+    <div class="nav-label">Intelligenza Artificiale</div>
     <button class="sidebar-btn" onclick="chiudiSidebar();goPage('preventivi')" style="color:var(--ac2)">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
       Preventivi
@@ -1571,7 +1633,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     </button>
     </div>
   </div>
-</div>
+</aside>
 
 <!-- NUOVO LAVORO CALENDARIO -->
 <div class="mol" id="mNuovoLavoroCal" onclick="if(event.target===this)closeMod('mNuovoLavoroCal')">
@@ -3358,16 +3420,19 @@ function closeMod(id){
   if(el)el.classList.remove('on');
   document.body.style.overflow='';
 }
+const PAGE_TITLES={presenze:'Presenze',location:'Location',magazzino:'Magazzino',cespiti:'Cespiti',forum:'Forum',team:'Team',dichiarazione:'Archivio documenti',agenda:'Agenda',chat:'Messaggi',tools:'Tools tecnici AV',calendario:'Calendario lavori','ai-preventivi':'Analisi preventivi AI',preventivi:'Preventivi',personale:'Personale','personale-dett':'Dettaglio dipendente',dashboard:'Dashboard',fantacalcio:'Fantacalcio MMG',scadenzario:'Scadenzario'};
 function goPage(n){
   if((n==='preventivi'||n==='ai-preventivi'||n==='personale'||n==='personale-dett'||n==='scadenzario')&&!pvCanAccess()){
     toast('Accesso riservato a Responsabili e Project Manager','r');
     return;
   }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.ni').forEach(b=>b.classList.remove('on'));
-  $('p-'+n)&&$('p-'+n).classList.add('on');$('n-'+n)&&$('n-'+n).classList.add('on');
-  const t={presenze:'Presenze',location:'Location',magazzino:'Magazzino',cespiti:'Cespiti',forum:'Forum discussioni',team:'Team',dichiarazione:'📁 Archivio documenti',agenda:'📅 Agenda',chat:'✉️ Messaggi',tools:'🔧 Tools Tecnici AV',calendario:'📅 Calendario Lavori','ai-preventivi':'🤖 AI Analisi Preventivi',preventivi:'📋 Preventivi',personale:'👥 Personale','personale-dett':'👤 Dettaglio dipendente',dashboard:'📊 Dashboard',fantacalcio:'⚽ Fantacalcio MMG'};
-  $('ptitle').textContent=t[n]||n;
+  document.querySelectorAll('.ni').forEach(b=>{b.classList.remove('on');b.removeAttribute('aria-current');});
+  $('p-'+n)&&$('p-'+n).classList.add('on');
+  const ni=$('n-'+n);if(ni){ni.classList.add('on');ni.setAttribute('aria-current','page');}
+  const c=$('content');if(c)c.scrollTop=0;
+  $('ptitle').textContent=PAGE_TITLES[n]||n;
+  document.title=(PAGE_TITLES[n]?PAGE_TITLES[n]+' · ':'')+'MMG Logistics';
   if(n==='agenda'){clearAgendaDot();renderAgenda();}
   if(n==='calendario'){renderCalendario();}
   if(n==='chat'){clearChatDot();chiudiChat();renderChatTeam();}
@@ -3383,15 +3448,15 @@ function goPage(n){
 // ── UI ──
 function showTab(t){
   const r=t==='reg';
-  $('formReg').style.display=r?'block':'none';
-  $('formLogin').style.display=r?'none':'block';
-  if(!r){}
-  $('tabReg').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:'+(r?'600':'500')+';background:'+(r?'var(--ac)':'transparent')+';color:'+(r?'#fff':'var(--tx2)');
-  $('tabLogin').style.cssText='padding:9px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;cursor:pointer;font-weight:'+(!r?'600':'500')+';background:'+(!r?'var(--ac)':'transparent')+';color:'+(!r?'#fff':'var(--tx2)');
+  $('formReg').hidden=!r;
+  $('formLogin').hidden=r;
+  [['tabReg',r],['tabLogin',!r]].forEach(([id,on])=>{
+    const b=$(id);b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false');
+  });
 }
 function pickChip(el,group){
-  el.closest('.chips').querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
-  el.classList.add('on');
+  el.closest('.chips').querySelectorAll('.chip').forEach(c=>{c.classList.remove('on');if(c.hasAttribute('aria-checked'))c.setAttribute('aria-checked','false');});
+  el.classList.add('on');if(el.hasAttribute('aria-checked'))el.setAttribute('aria-checked','true');
   if(group==='role'){
     selRole=el.textContent.trim();
   }
@@ -3461,7 +3526,7 @@ function luogoSelectGet(selId,extraId){
   if(luogoDettaglioObbligatorio(tipo)&&!det){toast('Specifica il luogo per "Altro"','r');$(extraId)?.focus();return null;}
   return luogoComponi(tipo,det);
 }
-function togglePriv(){privOk=!privOk;$('privBox').classList.toggle('on',privOk);}
+function togglePriv(){privOk=!!$('privChk')?.checked;}
 function setBadge(id, count){
   const el=$(id);if(!el)return;
   if(!count||count<=0){
@@ -3469,8 +3534,10 @@ function setBadge(id, count){
     el.textContent='';
     return;
   }
-  el.style.cssText='display:flex!important;min-width:16px;height:16px;background:var(--rd);border-radius:8px;border:2px solid var(--bg1);font-size:10px;font-weight:700;color:#fff;align-items:center;justify-content:center;padding:0 3px;position:absolute;top:4px;right:6px;line-height:1';
+  // stile in .notif-badge (accento: una novità non è un errore)
+  el.style.display='flex';
   el.textContent=count>99?'99+':count>1?String(count):'';
+  el.setAttribute('aria-label',count===1?'1 novità':count+' novità');
 }
 function clearNotif(){setBadge('notifDot',0);}
 function clearChatDot(){setBadge('chatDot',0);}
@@ -3504,26 +3571,20 @@ async function doReg(){
     else if(e.code==='auth/invalid-email')toast('Email non valida','r');
     else alert('Errore: '+e.message);
   }
-  btn.textContent='Inizia →';btn.disabled=false;
+  btn.textContent='Invia richiesta';btn.disabled=false;
 }
 
 function mostraAttesaApprovazione(nome){
   const regEl=$('reg');
   if(!regEl)return;
   regEl.innerHTML=`
-    <div style="min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px">
-      <div style="text-align:center;max-width:340px">
-        <div style="font-size:48px;margin-bottom:16px">⏳</div>
-        <div style="font-size:22px;font-weight:700;margin-bottom:8px">Richiesta inviata!</div>
-        <div style="font-size:14px;color:var(--tx2);line-height:1.6;margin-bottom:20px">
-          Ciao <strong>${nome}</strong>, la tua registrazione è in attesa di approvazione.<br><br>
-          Il Responsabile riceverà una notifica e potrà approvarti a breve.<br>
-          Riprova ad accedere dopo l'approvazione.
-        </div>
-        <div style="background:var(--bg2);border-radius:var(--r);padding:14px;font-size:12px;color:var(--tx2);margin-bottom:20px">
-          📧 Riceverai conferma quando il tuo account sarà attivo
-        </div>
-        <button class="btn btn-p btn-f" onclick="location.reload()">← Torna al login</button>
+    <div class="auth">
+      <div class="auth-brand"><img src="logo.png" alt="MMG — Multimedia Meeting Group" class="auth-logo"></div>
+      <div class="auth-card" role="status">
+        <h1 class="auth-title">Richiesta inviata</h1>
+        <p class="auth-text">Ciao <strong>${esc(nome)}</strong>, la tua registrazione è in attesa di approvazione.</p>
+        <p class="auth-text">Un Responsabile riceverà una notifica e potrà approvarti a breve. Potrai accedere dopo l'approvazione.</p>
+        <button type="button" class="btn btn-p btn-f btn-lg" onclick="location.reload()">Torna all'accesso</button>
       </div>
     </div>`;
 }
@@ -3600,13 +3661,13 @@ async function doLogin(){
     if(!docSnap.exists){
       await AUTH.signOut();
       toast('Account non trovato — contatta il Responsabile','r');
-      btn.textContent='Accedi →';btn.disabled=false;return;
+      btn.textContent='Accedi';btn.disabled=false;return;
     }
     const userData={id:uid,...docSnap.data()};
     if(!userData.approvato){
       await AUTH.signOut();
       mostraAttesaApprovazione(userData.nome||'utente');
-      btn.textContent='Accedi →';btn.disabled=false;return;
+      btn.textContent='Accedi';btn.disabled=false;return;
     }
     // sessionToken: meccanismo "un dispositivo alla volta", indipendente da Firebase Auth
     const sessionToken=Date.now().toString(36)+Math.random().toString(36).slice(2);
@@ -3624,7 +3685,7 @@ async function doLogin(){
     else if(e.code==='auth/too-many-requests')toast('Troppi tentativi — riprova tra qualche minuto','r');
     else alert('Errore: '+e.message);
   }
-  btn.textContent='Accedi →';btn.disabled=false;
+  btn.textContent='Accedi';btn.disabled=false;
 }
 async function cambiaPin(){
   closeMod('mProfile');
@@ -3680,7 +3741,7 @@ function renderDeskNav(){
   const canManage=USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager';
   const ffPuoVedere=USER.isAdmin===true||(USER.ruolo!=='Responsabile'&&USER.ruolo!=='Project Manager');
   if(ffPuoVedere&&(ffFeatureEnabled||USER.isAdmin===true)){
-    pages.push({id:'fantacalcio',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>',label:'⚽ Fantacalcio'+(ffFeatureEnabled?'':' (disattivato)')});
+    pages.push({id:'fantacalcio',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>',label:'Fantacalcio'+(ffFeatureEnabled?'':' (disattivato)')});
   }
   if(pvCanAccess()){
     pages.push({id:'preventivi',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>',label:'Preventivi'});
@@ -3689,58 +3750,54 @@ function renderDeskNav(){
     pages.push({id:'scadenzario',icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',label:'Scadenzario'});
   }
 
-  // Sezione principale
-  let h='<div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:6px 8px 4px">Menu</div>';
-  pages.forEach(p=>{
-    const isOn=document.getElementById('p-'+p.id)?.classList.contains('on');
-    h+=`<button onclick="goPage('${p.id}')" id="deskNav_${p.id}" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:${isOn?'var(--acb)':'none'};border:none;border-radius:var(--rs);color:${p.special?'var(--ac2)':isOn?'var(--ac2)':'var(--tx)'};font-size:13px;font-weight:${isOn?600:400};cursor:pointer;font-family:var(--font);text-align:left;transition:background .15s;margin-bottom:2px">
-      <span style="flex-shrink:0;opacity:${isOn?1:.7}">${p.icon}</span>
-      <span>${p.label}</span>
+  // Voci: pulsanti con classe .dnav-btn (stile nel CSS), .on + aria-current sulla pagina attiva
+  const btn=(id,icon,label,onclick,extra='')=>{
+    const isOn=!!id&&!!document.getElementById('p-'+id)?.classList.contains('on');
+    return `<button type="button" class="dnav-btn${isOn?' on':''}${extra}" ${id?`id="deskNav_${id}"`:''} onclick="${onclick}"${isOn?' aria-current="page"':''}>
+      <span class="dnav-ic" aria-hidden="true">${icon}</span><span class="dnav-lb">${label}</span>
     </button>`;
-  });
+  };
+  let h='<div class="nav-label">Menu</div>';
+  pages.forEach(p=>{h+=btn(p.id,p.icon,p.label,`goPage('${p.id}')`,p.special?' special':'');});
 
   // Sezione gestione (solo resp/admin)
   if(canManage){
-    h+='<div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:12px 8px 4px;margin-top:4px;border-top:1px solid var(--b)">Gestione</div>';
-    h+=`<button onclick="goPage('cespiti')" id="deskNav_cespiti" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:none;border:none;border-radius:var(--rs);color:var(--tx);font-size:13px;cursor:pointer;font-family:var(--font);text-align:left;margin-bottom:2px">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
-      Cespiti
-    </button>`;
-    h+=`<button onclick="apriGestioneUtenti()" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:none;border:none;border-radius:var(--rs);color:var(--tx);font-size:13px;cursor:pointer;font-family:var(--font);text-align:left;margin-bottom:2px">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      Utenti
-    </button>
-    <button onclick="openExport()" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:none;border:none;border-radius:var(--rs);color:var(--tx);font-size:13px;cursor:pointer;font-family:var(--font);text-align:left;margin-bottom:2px">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Esporta presenze
-    </button>`;
+    h+='<div class="nav-label nav-label-sep">Gestione</div>';
+    h+=btn('cespiti','<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>','Cespiti',"goPage('cespiti')");
+    h+=btn('','<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>','Utenti','apriGestioneUtenti()');
+    h+=btn('','<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>','Esporta presenze','openExport()');
   }
-
-  // Logout
-  h+=`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--b)">
-    <button onclick="openMod('mProfile')" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:none;border:none;border-radius:var(--rs);color:var(--tx2);font-size:13px;cursor:pointer;font-family:var(--font);text-align:left">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      Profilo
-    </button>
-  </div>`;
 
   el.innerHTML=h;
 }
 
+// Menu "Gestione" a scomparsa (mobile). inert/aria-hidden quando chiuso: non raggiungibile da tastiera.
 function apriSidebar(){
   const s=$('sidebar'),o=$('sidebarOverlay');
   if(!s||!o)return;
   $('sidebarUser').textContent=(USER?.nome||'')+' '+(USER?.cognome||'')+' · '+(USER?.ruolo||'');
   const pvSection=$('sbPreventiviSection');
   if(pvSection)pvSection.style.display=pvCanAccess()?'block':'none';
-  s.style.right='0';
-  o.style.display='block';
+  o.hidden=false;
+  s.inert=false;s.setAttribute('aria-hidden','false');s.classList.add('open');
+  const t=$('sidebarToggle');if(t)t.setAttribute('aria-expanded','true');
+  setTimeout(()=>s.querySelector('.drawer-head .icon-btn')?.focus(),50);
 }
 function chiudiSidebar(){
   const s=$('sidebar'),o=$('sidebarOverlay');
-  if(s)s.style.right='-290px';
-  if(o)o.style.display='none';
+  if(s){s.classList.remove('open');s.setAttribute('aria-hidden','true');s.inert=true;}
+  if(o)o.hidden=true;
+  const t=$('sidebarToggle');if(t&&t.getAttribute('aria-expanded')==='true'){t.setAttribute('aria-expanded','false');t.focus();}
 }
+
+// Esc chiude il menu a scomparsa o il modale aperto più in alto
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape')return;
+  if($('sidebar')?.classList.contains('open')){chiudiSidebar();return;}
+  const aperti=[...document.querySelectorAll('.mol.on')];
+  const top=aperti[aperti.length-1];
+  if(top&&top.id){e.preventDefault();closeMod(top.id);}
+});
 
 function doLogout(){
   AUTH.signOut().catch(()=>{});
