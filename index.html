@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01h';
+const APP_VERSION='v2026.11.01i';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -273,10 +273,9 @@ body.desktop-mode .page::after{display:none}
 body.desktop-mode #desktopSidebarInner{display:flex!important;width:240px;min-width:240px}
 /* Calendario desktop */
 body.desktop-mode #p-calendario{padding:20px 28px 40px}
-body.desktop-mode #calLayout{display:grid!important;grid-template-columns:1fr 340px;gap:20px;align-items:start}
-body.desktop-mode #calGiornoDetail{display:block!important;margin-top:0!important;position:sticky;top:20px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;max-height:calc(100vh - 200px);overflow-y:auto}
+body.desktop-mode #calLayout.con-dettaglio{display:grid!important;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+body.desktop-mode #calLayout.con-dettaglio #calGiornoDetail{margin-top:0!important;position:sticky;top:20px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;max-height:calc(100vh - 200px);overflow-y:auto}
 body.desktop-mode #calGriglia .cal-cell{min-height:100px!important}
-body.desktop-mode #calGriglia .cal-nome{display:block!important}
 body.desktop-mode #calGriglia .cal-dots{display:none!important}
 body.desktop-mode #calGiornoDetail .cal-empty-msg{display:block}
 /* Archivio / magazzino / team desktop */
@@ -510,6 +509,8 @@ body.desktop-mode #toast{bottom:24px;left:calc(50% + 120px)}
 
 /* ── MAGAZZINO ── */
 .mstats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:14px}
+/* Telefono: 3 + 2 indicatori, così le etichette non toccano il bordo */
+@media(max-width:599px){.mstats{grid-template-columns:repeat(6,minmax(0,1fr))}.mstats>*{grid-column:span 2}.mstats>*:nth-child(n+4){grid-column:span 3}.mstats .sl{white-space:normal;line-height:1.2}}
 .mstats .sc{padding:10px 8px;min-width:0}
 .mstats .sn{font-size:20px}
 .mstats .sl{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -642,7 +643,8 @@ body.desktop-mode #toast{bottom:24px;left:calc(50% + 120px)}
 .cal-dots{display:flex;gap:3px;flex-wrap:wrap;align-items:center;margin-top:auto}
 .cal-dot{width:7px;height:7px;border-radius:50%;box-shadow:0 0 0 1px var(--color-surface)}
 .cal-alert{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:var(--color-danger);color:var(--color-surface);font-size:9px;font-weight:700;line-height:1}
-.cal-nome{display:none;font-size:11px;font-weight:var(--weight-medium);padding:1px 5px;border-left:3px solid;border-radius:2px;background:var(--color-surface-sunken);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-nome{display:none;font-size:11px;font-weight:var(--weight-medium);line-height:1.25;padding:2px 5px;border-left:3px solid;border-radius:2px;background:var(--color-surface-sunken);overflow:hidden;overflow-wrap:anywhere}
+body.desktop-mode #calGriglia .cal-nome{display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .cal-nome.has-problem{background:var(--color-danger-subtle);color:var(--color-danger)}
 .cal-prep{margin-right:3px;color:var(--color-text-secondary)}
 .cal-more{font-size:10px;color:var(--color-text-tertiary)}
@@ -912,8 +914,8 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <!-- Indicatori -->
       <div class="mstats">
         <div class="sc"><div class="sn" id="nArt">0</div><div class="sl">Articoli</div></div>
-        <button type="button" class="sc sc-btn" onclick="mostraStatusMag()"><span class="sn" id="nDisp">0</span><span class="sl">Disponibili</span></button>
-        <button type="button" class="sc sc-btn" onclick="mostraStatusMag()"><span class="sn" id="nInUso">0</span><span class="sl">In uso</span></button>
+        <button type="button" class="sc sc-btn" onclick="mostraStatusMag()"><span class="sn" id="nDisp">0</span><span class="sl">Pezzi disponibili</span></button>
+        <button type="button" class="sc sc-btn" onclick="mostraStatusMag()"><span class="sn" id="nInUso">0</span><span class="sl">Pezzi in uso</span></button>
         <button type="button" class="sc sc-btn" onclick="mostraSottoScorta()"><span class="sn" id="nSottoScorta">0</span><span class="sl">Sotto scorta</span></button>
         <button type="button" class="sc sc-btn" onclick="mostraManutenzioni()"><span class="sn" id="nManutScadute">0</span><span class="sl">Verifiche</span></button>
       </div>
@@ -1207,9 +1209,9 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
         <button type="button" class="kpi" onclick="goPage('team')"><span class="kpi-val" id="kpiTeam">—</span><span class="kpi-lbl">Team attivo</span></button>
         <button type="button" class="kpi" onclick="goPage('presenze')"><span class="kpi-val" id="kpiPresenti">—</span><span class="kpi-lbl">Presenti ora</span></button>
         <button type="button" class="kpi" onclick="goPage('dichiarazione')"><span class="kpi-val" id="kpiLavori">—</span><span class="kpi-lbl">Lavori in corso</span></button>
-        <button type="button" class="kpi" onclick="goPage('magazzino')"><span class="kpi-val" id="kpiMagazzino">—</span><span class="kpi-lbl">Articoli in uso</span></button>
+        <button type="button" class="kpi" onclick="goPage('magazzino')"><span class="kpi-val" id="kpiMagazzino">—</span><span class="kpi-lbl">Pezzi in uso</span></button>
         <button type="button" class="kpi" onclick="goPage('calendario')"><span class="kpi-val" id="kpiLavoriMese">—</span><span class="kpi-lbl">Lavori questo mese</span></button>
-        <button type="button" class="kpi" onclick="goPage('magazzino')"><span class="kpi-val" id="kpiMagDisp">—</span><span class="kpi-lbl">Articoli disponibili</span></button>
+        <button type="button" class="kpi" onclick="goPage('magazzino')"><span class="kpi-val" id="kpiMagDisp">—</span><span class="kpi-lbl">Pezzi disponibili</span></button>
         <button type="button" class="kpi" onclick="goPage('forum')"><span class="kpi-val" id="kpiForumPost">—</span><span class="kpi-lbl">Post nel forum</span></button>
         <button type="button" class="kpi" onclick="apriTurniDaConfermare()"><span class="kpi-val" id="kpiTurniConf">—</span><span class="kpi-lbl">Turni da confermare</span></button>
       </div>
@@ -3958,6 +3960,26 @@ function initDesktopLayout(){
   setTimeout(()=>goPage('dashboard'),200);
 }
 
+// Passa da/a layout desktop quando cambia la larghezza della finestra (prima solo all'avvio).
+// Non cambia pagina: resta sulla sezione aperta.
+let _deskResizeT=null;
+window.addEventListener('resize',()=>{
+  clearTimeout(_deskResizeT);
+  _deskResizeT=setTimeout(()=>{
+    if(!USER||!appStarted)return;
+    const vuole=isDesktopUser(),attivo=document.body.classList.contains('desktop-mode');
+    if(vuole===attivo)return;
+    document.body.classList.toggle('desktop-mode',vuole);
+    if(vuole){
+      applyAvatar($('deskAvatar'),USER);
+      const nm=$('deskNome');if(nm)nm.textContent=USER.nome+' '+USER.cognome;
+      const rl=$('deskRuolo');if(rl)rl.textContent=USER.ruolo;
+      renderDeskNav();
+    }
+    const aperta=document.querySelector('.page.on')?.id?.replace(/^p-/,'');
+    if(aperta)goPage(aperta);
+  },200);
+});
 function renderDeskNav(){
   const el=$('deskNav');if(!el)return;
   const pages=[
@@ -4156,6 +4178,7 @@ function startListeners(){
     .where('entrata','<=',todayEnd.toISOString())
     .onSnapshot(snap=>{
       cachePresenze=snap.docs.map(d=>({id:d.id,...d.data()}));
+      syncPunchConServer();
       renderPresenze();
       if($('mieOreTable')&&$('p-presenze')&&$('p-presenze').classList.contains('on')){
         renderMieOre();
@@ -4308,6 +4331,31 @@ function updateTimeline(){
   const hh=Math.floor(ms/3600000);
   const mm=Math.floor((ms%3600000)/60000);
   const ne=$('oreNette');if(ne)ne.textContent=hh+'h '+mm+'m';
+}
+// Lo stato della propria timbratura era solo nel localStorage del dispositivo: timbrando da un
+// altro telefono (o dopo aver cancellato i dati del browser) la scheda diceva "Non timbrato"
+// mentre "Team oggi" mostrava la persona presente, e si poteva timbrare un'entrata doppia.
+// Ora la scheda adotta la timbratura aperta di oggi su Firestore, e si chiude se è stata
+// chiusa altrove.
+function syncPunchConServer(){
+  if(!USER)return;
+  if(punchedIn&&!punchDocId)return; // entrata appena timbrata, in salvataggio
+  const aperta=cachePresenze.filter(p=>p.uid===USER.id&&p.entrata&&!p.uscita).sort((a,b)=>b.entrata.localeCompare(a.entrata))[0];
+  if(aperta&&(!punchedIn||punchDocId!==aperta.id)){
+    localStorage.setItem('av_punch',JSON.stringify({docId:aperta.id,entrata:aperta.entrata,luogo:aperta.luogo||'',pause:aperta.pause||[],inPausa:false,pauseStart:null}));
+    restorePunch();
+  } else if(!aperta&&punchedIn&&punchDocId){
+    const chiusa=cachePresenze.find(p=>p.id===punchDocId&&p.uscita);
+    if(!chiusa)return;
+    punchedIn=false;inPausa=false;pauseStart=null;punchDocId=null;punchStart=null;
+    localStorage.removeItem('av_punch');
+    const btn=$('pbtn');if(btn){btn.className='pbtn pin';btn.textContent='Timbra entrata';}
+    const pb=$('pauseBtn');if(pb){pb.style.display='none';setPausaBtn(false);}
+    const u=new Date(chiusa.uscita);
+    const st=$('pstat');if(st)st.textContent='Uscita timbrata alle '+pad(u.getHours())+':'+pad(u.getMinutes());
+    const lw=$('luogoWrap');if(lw){lw.style.opacity='1';lw.style.pointerEvents='auto';lw.inert=false;}
+    const tt=$('turnoTimeline');if(tt)tt.style.display='none';
+  }
 }
 function restorePunch(){
   const a=localStorage.getItem('av_punch');if(!a)return;
@@ -5595,6 +5643,16 @@ function magInUsoIndex(){
     lavori:m=>{const v=new Map();trova(m).forEach(r=>{const d=r.lav;if(!v.has(d.id))v.set(d.id,{id:d.id,nome:d.nome,data:d.data,dataFine:d.dataFine,location:d.location,tecnico:d.tecnico});});return [...v.values()];}
   };
 }
+// Riepilogo del magazzino in PEZZI (non articoli): per ogni articolo i pezzi in uso sono al massimo
+// la sua quantità, così disponibili + in uso + in manutenzione = pezzi totali. Unica fonte per
+// gli indicatori del Magazzino e della Dashboard (prima contavano in modi diversi).
+function magRiepilogo(){
+  const iu=magInUsoIndex();
+  const vis=cacheMag.filter(m=>!m.eliminatoAt);
+  let pezzi=0,disp=0,uso=0,manut=0;
+  vis.forEach(m=>{const q=m.qty||1;const u=Math.min(q,iu.qty(m));pezzi+=q;uso+=u;if(m.stato==='maint')manut+=q-u;else disp+=q-u;});
+  return{articoli:vis.length,pezzi,disp,uso,manut,iu};
+}
 function getInUsoGlobale(m){
   let tot=0;
   cacheDich.filter(d=>!d.rientroData).forEach(d=>{
@@ -5634,10 +5692,9 @@ function _renderMagInner(){
   const getInUso=m=>_iu.qty(m);
   const getLavoriInUso=m=>_iu.lavori(m);
 
-  $('nDisp').textContent=cacheMagVisibili.filter(m=>{
-    return Math.max(0,(m.qty||1)-getInUso(m))>0&&m.stato==='ok';
-  }).length;
-  $('nInUso').textContent=cacheMagVisibili.filter(m=>getInUso(m)>0).length;
+  const _rie=magRiepilogo();
+  $('nDisp').textContent=_rie.disp;
+  $('nInUso').textContent=_rie.uso;
   const nSS=$('nSottoScorta');
   if(nSS){
     const sottoScortaCount=cacheMagVisibili.filter(m=>{
@@ -12739,21 +12796,27 @@ function renderDashboard(){
   const presentiOggi=cachePresenze.filter(p=>p.entrata&&toLocalISO(new Date(p.entrata))===oggi&&!p.uscita);
   setKpi('kpiPresenti',presentiOggi.length);
 
-  // KPI 3 — Lavori in corso
-  const lavoriInCorso=cacheDich.filter(d=>!d.rientroData);
+  // Lavori: pianificati + preparati, senza cestino; la voce pianificata "in preparazione" è
+  // nascosta se esiste già la preparazione con lo stesso nome (sono lo stesso lavoro).
+  const nomiPrep=new Set(cacheDich.filter(d=>!d.eliminatoAt).map(d=>(d.nome||'').toLowerCase().trim()));
+  const tuttiLav=[
+    ...cacheLavoriCal.filter(l=>!l.eliminatoAt&&!(l.stato==='in_preparazione'&&nomiPrep.has((l.nome||'').toLowerCase().trim()))).map(l=>({...l,_fonte:'cal'})),
+    ...cacheDich.filter(l=>!l.eliminatoAt).map(l=>({...l,_fonte:'dich'}))
+  ].map(l=>({l,s:getStatoLavoro(l)}));
+
+  // KPI 3 — Lavori in corso: iniziati e non ancora rientrati (stessa regola del calendario)
+  const lavoriInCorso=tuttiLav.filter(x=>x.s.key==='incorso').sort((a,b)=>(a.l.data||'').localeCompare(b.l.data||''));
   setKpi('kpiLavori',lavoriInCorso.length);
 
-  // KPI 4 — Articoli in uso (e quantità in uso per articolo, riusata sotto)
-  const inUsoIds=new Set();const qtaInUso={};
-  lavoriInCorso.forEach(d=>(d.articoli||[]).forEach(a=>{if(!a.id)return;inUsoIds.add(a.id);qtaInUso[a.id]=(qtaInUso[a.id]||0)+(a.qty||1);}));
-  setKpi('kpiMagazzino',inUsoIds.size);
+  // KPI 4 e 6 — Pezzi in uso / disponibili (stesso riepilogo del Magazzino)
+  const rie=magRiepilogo();
+  setKpi('kpiMagazzino',rie.uso);
 
   // KPI 5 — Lavori questo mese
   const mese=oggi.slice(0,7);
-  setKpi('kpiLavoriMese',[...cacheDich,...cacheLavoriCal].filter(l=>(l.data||l.createdAt||'').slice(0,7)===mese).length);
+  setKpi('kpiLavoriMese',tuttiLav.filter(x=>(x.l.data||x.l.createdAt||'').slice(0,7)===mese).length);
 
-  // KPI 6 — Articoli disponibili
-  setKpi('kpiMagDisp',cacheMag.filter(m=>!inUsoIds.has(m.id)).length);
+  setKpi('kpiMagDisp',rie.disp);
 
   // KPI 7 — Post nel forum
   setKpi('kpiForumPost',cacheForum.length);
@@ -12772,7 +12835,7 @@ function renderDashboard(){
       return`<div class="ditem">
         <span class="av ${avC[i%4]} dav" aria-hidden="true">${esc(ini)}</span>
         <span class="ditem-main"><span class="ditem-title">${esc(nome)}</span></span>
-        <span class="bdg bg">${esc(p.luogo||'In sede')}</span>
+        <span class="bdg bg">${esc(luogoTesto(p.luogo)||'In sede')}</span>
       </div>`;
     }).join('');
   }
@@ -12780,8 +12843,7 @@ function renderDashboard(){
   // Lavori in corso
   const elL=$('dashLavori');
   if(elL){
-    elL.innerHTML=!lavoriInCorso.length?vuoto('Nessun lavoro in corso'):lavoriInCorso.slice(0,6).map(l=>{
-      const s=getStatoLavoro({...l,_fonte:'dich'});
+    elL.innerHTML=!lavoriInCorso.length?vuoto('Nessun lavoro in corso'):lavoriInCorso.slice(0,6).map(({l,s})=>{
       return`<div class="ditem">
         ${dot(s.color)}
         <span class="ditem-main">
@@ -12797,14 +12859,14 @@ function renderDashboard(){
   // Prossimi lavori
   const elC=$('dashCalendario');
   if(elC){
-    const prossimi=cacheLavoriCal.filter(l=>l.data>=oggi).sort((a,b)=>a.data.localeCompare(b.data)).slice(0,6);
-    elC.innerHTML=!prossimi.length?vuoto('Nessun lavoro pianificato'):prossimi.map(l=>{
-      const s=getStatoLavoro({...l,_fonte:'cal'});
+    // Prossimi: non ancora iniziati (preventivi e confermati), pianificati o già preparati
+    const prossimi=tuttiLav.filter(x=>x.s.key==='confermato'||x.s.key==='preventivo').sort((a,b)=>(a.l.data||'').localeCompare(b.l.data||'')).slice(0,6);
+    elC.innerHTML=!prossimi.length?vuoto('Nessun lavoro in programma'):prossimi.map(({l,s})=>{
       return`<div class="ditem">
         ${dot(s.color)}
         <span class="ditem-main">
           <span class="ditem-title">${esc(l.nome||'—')}</span>
-          <span class="ditem-sub">${esc(l.tecnicoNome||'Nessun tecnico')}</span>
+          <span class="ditem-sub">${esc(l.tecnicoNome||l.tecnico||'Nessun tecnico')}${s.prep?' · '+s.prep.icon+' '+s.prep.label:''}</span>
         </span>
         ${s.problemi.length?`<span class="bdg br" title="${s.problemi.join(', ')}">${s.problemi.length===1?s.problemi[0]:s.problemi.length+' problemi'}</span>`:''}
         <span class="ditem-meta">${fmtData(l.data,{day:'2-digit',month:'short'})}</span>
@@ -12815,7 +12877,7 @@ function renderDashboard(){
   // Magazzino critico: esauriti (rosso) o disponibilità ≤ 30% (avviso)
   const elM=$('dashMag');
   if(elM){
-    const critici=cacheMag.map(m=>({m,disp:(m.qty||1)-(qtaInUso[m.id]||0)}))
+    const critici=cacheMag.filter(m=>!m.eliminatoAt).map(m=>({m,disp:(m.qty||1)-rie.iu.qty(m)}))
       .filter(({m,disp})=>disp<=0||disp/(m.qty||1)<=0.3)
       .sort((a,b)=>a.disp-b.disp).slice(0,6);
     elM.innerHTML=!critici.length?vuoto('Tutti i materiali sono disponibili'):critici.map(({m,disp})=>{
@@ -13418,15 +13480,9 @@ function renderCalendario(){
   h+='</div>';
   const el=$('calGriglia');if(el)el.innerHTML=h;
 
-  // Desktop: inizializza pannello laterale
-  if(document.body.classList.contains('desktop-mode')){
-    const det=$('calGiornoDetail');
-    if(det&&!det.querySelector('[id^="calGiornoList"]')?.innerHTML){
-      $('calGiornoList').innerHTML='<div class="dempty">Scegli un giorno per vedere i lavori</div>';
-      det.style.display='block';
-    }
-  }
+  // Il dettaglio (pannello laterale su desktop) compare solo quando si sceglie un giorno
   $('calGiornoDetail').style.display='none';
+  $('calLayout')?.classList.remove('con-dettaglio');
 }
 
 function calNuovoGiorno(g){
@@ -13439,12 +13495,8 @@ function calNuovoGiorno(g){
 function chiudiDettaglioGiorno(){
   const det=$('calGiornoDetail');
   if(!det)return;
-  if(document.body.classList.contains('desktop-mode')){
-    $('calGiornoTitolo').textContent='Dettaglio del giorno';
-    $('calGiornoList').innerHTML='<div class="dempty">Scegli un giorno per vedere i lavori</div>';
-  } else {
-    det.style.display='none';
-  }
+  det.style.display='none';
+  $('calLayout')?.classList.remove('con-dettaglio');
 }
 
 function calApriGiorno(g){
@@ -13525,6 +13577,7 @@ function calApriGiorno(g){
   const det=$('calGiornoDetail');
   if(det){
     det.style.display='block';
+    $('calLayout')?.classList.add('con-dettaglio');
     // Su mobile scrolla, su desktop è già visibile nel pannello laterale
     if(!document.body.classList.contains('desktop-mode')){
       det.scrollIntoView({behavior:'smooth',block:'nearest'});
