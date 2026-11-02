@@ -28,7 +28,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.02a';
+const APP_VERSION='v2026.11.02b';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
