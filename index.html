@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01i';
+const APP_VERSION='v2026.11.01j';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -612,7 +612,11 @@ body.desktop-mode #toast{bottom:24px;left:calc(50% + 120px)}
 .st-incorso .stb-dot{background:var(--st-incorso)}
 .st-rientrato .stb-dot{background:var(--st-rientrato)}
 .prep{display:inline-flex;align-items:center;gap:4px;font-size:var(--text-xs);color:var(--color-text-secondary);white-space:nowrap}
-.prep>span[aria-hidden],.cal-prep,.prep-ic{font-size:14px;line-height:1;font-family:system-ui,sans-serif}
+/* Icone di preparazione disegnate (○ vuoto, ◐ metà, ● pieno): i simboli tipografici cambiano dimensione col font */
+.prep-dot{display:inline-block;width:9px;height:9px;border-radius:50%;border:1.5px solid currentColor;flex-shrink:0;vertical-align:-1px}
+.prep-dot-preparato{background:currentColor}
+.prep-dot-dafinire{background:linear-gradient(90deg,currentColor 50%,transparent 50%)}
+.dtable .t-muted-cell{white-space:nowrap}
 .btn-danger-text{color:var(--color-danger)}
 .btn-danger-text:hover:not(:disabled){background:var(--color-danger-subtle)}
 
@@ -646,7 +650,7 @@ body.desktop-mode #toast{bottom:24px;left:calc(50% + 120px)}
 .cal-nome{display:none;font-size:11px;font-weight:var(--weight-medium);line-height:1.25;padding:2px 5px;border-left:3px solid;border-radius:2px;background:var(--color-surface-sunken);overflow:hidden;overflow-wrap:anywhere}
 body.desktop-mode #calGriglia .cal-nome{display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .cal-nome.has-problem{background:var(--color-danger-subtle);color:var(--color-danger)}
-.cal-prep{margin-right:3px;color:var(--color-text-secondary)}
+.cal-prep{margin-right:4px;color:var(--color-text-secondary)}
 .cal-more{font-size:10px;color:var(--color-text-tertiary)}
 /* Dettaglio del giorno */
 .cal-detail{margin-top:14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:14px}
@@ -662,6 +666,25 @@ body.desktop-mode #calGriglia .cal-nome{display:-webkit-box!important;-webkit-li
 .cal-job-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .cal-stato-edit{margin-top:6px}
 @media(max-width:420px){.cal-title{font-size:var(--text-lg)}.cal-cell{min-height:48px;padding:4px}}
+
+/* ── ARCHIVIO ── */
+.sg2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.arch-tools{display:flex;gap:8px;margin-bottom:14px}
+.arch-tools input{flex:1;min-width:0}
+.arch-sort{width:auto;flex-shrink:0}
+@media(max-width:420px){.arch-tools{flex-direction:column}.arch-sort{width:100%}}
+.arch-card{background:var(--color-surface);border:1px solid var(--color-border);border-left:4px solid var(--color-border-strong);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px}
+.arch-cestino{border-left-color:var(--color-border-strong);opacity:.92}
+.arch-warn{font-size:var(--text-xs);color:var(--color-warning);font-weight:var(--weight-semibold);margin-top:4px}
+.arch-facts{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin:8px 0 2px}
+.arch-facts dt{font-size:11px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:var(--tracking-caps)}
+.arch-facts dd{font-size:13px;font-weight:var(--weight-medium);margin:1px 0 0}
+.arch-wide{grid-column:1/-1}
+.arch-stato{display:flex;flex-wrap:wrap;gap:4px 10px}
+.arch-zip{margin-top:20px}
+.arch-zip .dcard-title{margin-bottom:12px}
+.arch-checks{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.arch-checks .check{margin:0}
 
 /* ── FORUM ── */
 .fcard{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color var(--duration-fast) var(--ease-out)}
@@ -1270,9 +1293,9 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
             <span class="stb st-rientrato"><span class="stb-dot" aria-hidden="true"></span>Rientrato</span>
           </div>
           <div class="cal-legend-row">
-            <span class="prep"><span aria-hidden="true">○</span> Da preparare</span>
-            <span class="prep"><span aria-hidden="true">◐</span> Da finire</span>
-            <span class="prep"><span aria-hidden="true">●</span> Preparato</span>
+            <span class="prep"><span class="prep-dot prep-dot-dapreparare" aria-hidden="true"></span> Da preparare</span>
+            <span class="prep"><span class="prep-dot prep-dot-dafinire" aria-hidden="true"></span> Da finire</span>
+            <span class="prep"><span class="prep-dot prep-dot-preparato" aria-hidden="true"></span> Preparato</span>
           </div>
           <div class="cal-legend-row">
             <span class="bdg br">Problema</span>
@@ -1504,49 +1527,41 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- DICHIARAZIONE -->
     <div class="page" id="p-dichiarazione">
-      <!-- Stats (sempre visibili) -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px" id="dichStats">
-        <div class="sc" style="cursor:pointer" onclick="dichFilter('prep')">
-          <div class="sn" id="nDichPrep">0</div>
-          <div class="sl">📋 Preparazioni</div>
-        </div>
-        <div class="sc" style="cursor:pointer" onclick="dichFilter('rient')">
-          <div class="sn" id="nDichRient">0</div>
-          <div class="sl">✅ Rientrati</div>
-        </div>
+      <div class="page-head desk-only"><div><h1 class="page-title">Archivio documenti</h1></div></div>
+      <!-- Indicatori -->
+      <div class="sg2" id="dichStats">
+        <button type="button" class="sc sc-btn" onclick="dichFilter('prep')"><span class="sn" id="nDichPrep">0</span><span class="sl">Preparazioni aperte</span></button>
+        <button type="button" class="sc sc-btn" onclick="dichFilter('rient')"><span class="sn" id="nDichRient">0</span><span class="sl">Rientrati</span></button>
       </div>
 
-      <!-- Filtri + Ordinamento -->
-      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap" id="dichFiltri">
-        <button class="btn" id="dfAll" onclick="dichFilter('all')" style="flex:1;font-size:12px;min-width:60px;background:var(--acb);border-color:var(--ac);color:var(--ac2)">Tutti</button>
-        <button class="btn" id="dfPrep" onclick="dichFilter('prep')" style="flex:1;font-size:12px;min-width:60px">📋 Preparazioni</button>
-        <button class="btn" id="dfRient" onclick="dichFilter('rient')" style="flex:1;font-size:12px;min-width:60px">✅ Rientri</button>
-        <button class="btn" id="dfCestino" onclick="dichFilter('cestino')" style="flex:1;font-size:12px;min-width:60px;display:none">🗑️ Cestino</button>
+      <!-- Filtri -->
+      <div class="seg" role="radiogroup" aria-label="Mostra" id="dichFiltri">
+        <button type="button" class="seg-btn on" id="dfAll" role="radio" aria-checked="true" onclick="dichFilter('all')">Tutti</button>
+        <button type="button" class="seg-btn" id="dfPrep" role="radio" aria-checked="false" onclick="dichFilter('prep')">Preparazioni</button>
+        <button type="button" class="seg-btn" id="dfRient" role="radio" aria-checked="false" onclick="dichFilter('rient')">Rientri</button>
+        <button type="button" class="seg-btn" id="dfCestino" role="radio" aria-checked="false" onclick="dichFilter('cestino')" style="display:none">Cestino</button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center" id="dichSortWrap">
-        <span style="font-size:12px;color:var(--tx2)">Ordina:</span>
-        <select id="dichSort" onchange="renderDich()" style="flex:1;font-size:12px;padding:7px 10px">
-          <option value="data_desc">📅 Data ↓ (recente)</option>
-          <option value="data_asc">📅 Data ↑ (meno recente)</option>
-          <option value="location">📍 Location A→Z</option>
-          <option value="nome">🔤 Nome A→Z</option>
+      <div class="arch-tools" id="dichSortWrap">
+        <input type="search" id="dichSearch" placeholder="Cerca per nome o location" aria-label="Cerca nell'archivio" oninput="renderDich()">
+        <label class="visually-hidden" for="dichSort">Ordina</label>
+        <select id="dichSort" onchange="renderDich()" class="arch-sort">
+          <option value="data_desc">Più recenti</option>
+          <option value="data_asc">Meno recenti</option>
+          <option value="location">Per location</option>
+          <option value="nome">Per nome (A→Z)</option>
         </select>
       </div>
 
-      <!-- Ricerca -->
-      <input type="text" id="dichSearch" placeholder="🔍 Cerca per nome o location..." oninput="renderDich()" style="margin-bottom:14px">
-
-      <!-- Vista mobile: card -->
+      <!-- Vista mobile: schede -->
       <div id="dichList"><div class="empty">Caricamento...</div></div>
-
       <!-- Vista desktop: tabella -->
       <div id="dichListDesktop" style="display:none"></div>
 
       <!-- Download ZIP -->
-      <div style="margin-top:16px;padding:14px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--r)">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px">⬇️ Scarica archivio ZIP</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <div><label class="il">Mese</label>
+      <section class="card arch-zip" aria-labelledby="zipTit">
+        <h2 class="dcard-title" id="zipTit">Scarica archivio ZIP</h2>
+        <div class="grid2">
+          <div class="ig"><label class="il" for="zipMese">Mese</label>
             <select id="zipMese">
               <option value="all">Tutto l'anno</option>
               <option value="0">Gennaio</option><option value="1">Febbraio</option>
@@ -1557,20 +1572,14 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
               <option value="10">Novembre</option><option value="11">Dicembre</option>
             </select>
           </div>
-          <div><label class="il">Anno</label><select id="zipAnno"></select></div>
+          <div class="ig"><label class="il" for="zipAnno">Anno</label><select id="zipAnno"></select></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border-radius:var(--rs);padding:10px">
-            <input type="checkbox" id="zipPrep" checked style="width:18px;height:18px;cursor:pointer">
-            <label for="zipPrep" style="font-size:13px;cursor:pointer">📋 Preparazioni</label>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border-radius:var(--rs);padding:10px">
-            <input type="checkbox" id="zipRient" checked style="width:18px;height:18px;cursor:pointer">
-            <label for="zipRient" style="font-size:13px;cursor:pointer">✅ Rientri</label>
-          </div>
+        <div class="arch-checks">
+          <label class="check"><input type="checkbox" id="zipPrep" checked><span>Preparazioni</span></label>
+          <label class="check"><input type="checkbox" id="zipRient" checked><span>Rientri</span></label>
         </div>
-        <button class="btn btn-p btn-f" id="zipBtn" onclick="downloadZip()">📦 Genera e scarica ZIP</button>
-      </div>
+        <button type="button" class="btn btn-p btn-f" id="zipBtn" onclick="downloadZip()">Genera e scarica ZIP</button>
+      </section>
     </div>
 
     <!-- AGENDA -->
@@ -2331,8 +2340,8 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
         <div class="ig">
           <div class="il" id="plPrepLbl">Preparazione</div>
           <div class="seg seg-sm" role="radiogroup" aria-labelledby="plPrepLbl">
-            <button type="button" id="btnFinito" class="seg-btn on" role="radio" aria-checked="true" onclick="setBadgeLavoro(false)"><span class="prep-ic" aria-hidden="true">●</span> Preparato</button>
-            <button type="button" id="btnDaFinire" class="seg-btn" role="radio" aria-checked="false" onclick="setBadgeLavoro(true)"><span class="prep-ic" aria-hidden="true">◐</span> Da finire</button>
+            <button type="button" id="btnFinito" class="seg-btn on" role="radio" aria-checked="true" onclick="setBadgeLavoro(false)"><span class="prep-dot prep-dot-preparato" aria-hidden="true"></span> Preparato</button>
+            <button type="button" id="btnDaFinire" class="seg-btn" role="radio" aria-checked="false" onclick="setBadgeLavoro(true)"><span class="prep-dot prep-dot-dafinire" aria-hidden="true"></span> Da finire</button>
           </div>
         </div>
         <input type="hidden" id="plDaFinire" value="false">
@@ -10113,10 +10122,108 @@ function dichFilter(f){
   ['all','prep','rient','cestino'].forEach(k=>{
     const btn=$('df'+k.charAt(0).toUpperCase()+k.slice(1));
     if(!btn)return;
-    if(k===f){btn.style.background='var(--acb)';btn.style.borderColor='var(--ac)';btn.style.color='var(--ac2)';}
-    else{btn.style.background='';btn.style.borderColor='';btn.style.color='';}
+    btn.classList.toggle('on',k===f);btn.setAttribute('aria-checked',k===f?'true':'false');
   });
   renderDich();
+}
+const _fmtDataArch=iso=>iso?new Date(iso.length===10?iso+'T12:00:00':iso).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'}):'—';
+function _giorniCestino(d){
+  const scad=new Date(d.eliminatoAt);scad.setDate(scad.getDate()+CESTINO_GIORNI);
+  return Math.max(0,Math.ceil((scad-new Date())/86400000));
+}
+function _permessiArchivio(){
+  const puoGestire=!!USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
+  const puoModificare=puoGestire||(!!USER&&(USER.ruolo==='Tecnico AV'||USER.ruolo==='Magazziniere'));
+  return{puoGestire,puoModificare};
+}
+function dichCardCestinoHtml(d){
+  const nomeEnc=encUri(d.nome||'');const nome=esc(d.nome||'—');
+  return '<article class="arch-card arch-cestino">'+
+    '<h3 class="cal-job-title">'+nome+'</h3>'+
+    '<div class="ditem-sub">Eliminato il '+_fmtDataArch(d.eliminatoAt)+(d.eliminatoDa?' da '+esc(d.eliminatoDa):'')+'</div>'+
+    '<div class="arch-warn">Cancellazione definitiva tra '+_giorniCestino(d)+' giorni</div>'+
+    '<div class="cal-job-actions">'+
+      '<button type="button" class="btn btn-p btn-sm" onclick="dichRipristina(\''+d.id+'\',\''+nomeEnc+'\')">Ripristina</button>'+
+      '<button type="button" class="btn btn-sm btn-danger-text" onclick="dichEliminaDefinitivo(\''+d.id+'\',\''+nomeEnc+'\')" aria-label="Elimina definitivamente '+nome+'">Elimina ora</button>'+
+    '</div>'+
+  '</article>';
+}
+function dichCardHtml(d){
+  const isRient=!!d.rientroData;
+  const s=getStatoLavoro({...d,_fonte:'dich'});
+  const nPezzi=(d.articoli||[]).reduce((t,a)=>t+(a.qty||1),0);
+  const {puoGestire,puoModificare}=_permessiArchivio();
+  const nome=esc(d.nome||'—');
+  const noteAperte=(d.noteMancanti||[]).filter(n=>!n.completata).length;
+  const noteHtml=d.note?
+    '<button type="button" class="cal-note" onclick="toggleNota(\''+d.id+'\')" aria-expanded="false">'+
+      '<span class="cal-note-head"><span>Nota</span><span id="nota_ico_'+d.id+'" aria-hidden="true">▼</span></span>'+
+      '<span id="nota_txt_'+d.id+'" class="cal-note-txt">'+esc(d.note)+'</span>'+
+    '</button>':'';
+  return '<article class="arch-card" style="border-left-color:'+s.color+'">'+
+    '<h3 class="cal-job-title">'+nome+'</h3>'+
+    '<div class="cal-job-badges">'+statoLavoroHtml(s)+(isRient&&d.rientrato?'<span class="bdg bg">Rientro completo</span>':'')+'</div>'+
+    '<dl class="arch-facts">'+
+      '<div><dt>Location</dt><dd>'+esc(d.location||'—')+'</dd></div>'+
+      '<div><dt>Materiale</dt><dd>'+(d.fonteFoto?'Da foto della dichiarazione':nPezzi+' pezzi · '+(d.articoli||[]).length+' articoli')+'</dd></div>'+
+      '<div><dt>Uscita</dt><dd>'+_fmtDataArch(d.data||d.createdAt)+'</dd></div>'+
+      '<div><dt>Rientro</dt><dd>'+(isRient?_fmtDataArch(d.rientroData):'<span class="t-muted">Non rientrato</span>')+'</dd></div>'+
+      '<div class="arch-wide"><dt>Tecnico</dt><dd>'+esc(d.tecnico||'—')+(isRient&&d.rientroTecnico&&d.rientroTecnico!==d.tecnico?' · rientro: '+esc(d.rientroTecnico):'')+'</dd></div>'+
+    '</dl>'+
+    (d.modificatoDa?'<div class="mmod">Ultima modifica: '+esc(d.modificatoDa)+' · '+new Date(d.modificatoIl).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})+'</div>':'')+
+    noteHtml+
+    '<div class="cal-job-actions">'+
+      '<button type="button" class="btn btn-p btn-sm" onclick="dichOpenDoc(\''+d.id+'\')">'+(d.fonteFoto?'Apri foto':'Apri PDF '+(isRient?'rientro':'preparazione'))+'</button>'+
+      ((!isRient&&!d.fonteFoto)?'<button type="button" class="btn btn-sm" onclick="apriNoteMancanti(\''+d.id+'\',\''+encUri(d.nome)+'\')">Note mancanti'+(noteAperte?' <span class="bdg ba bdg-xs">'+noteAperte+' aperte</span>':'')+'</button>':'')+
+      (!isRient&&!d.fonteFoto&&puoModificare?'<button type="button" class="btn btn-sm" onclick="dichModifica(\''+d.id+'\')">Modifica</button>':'')+
+      (puoGestire?'<button type="button" class="btn btn-sm btn-danger-text" onclick="dichElimina(\''+d.id+'\',\''+encUri(d.nome||'')+'\')" aria-label="Elimina '+nome+'">Elimina</button>':'')+
+    '</div>'+
+  '</article>';
+}
+function renderDichDesktop(list){
+  const el=$('dichListDesktop');if(!el)return;
+  if(!list||!list.length){el.innerHTML='<div class="dempty">'+(dichCurrentFilter==='cestino'?'Il cestino è vuoto':'Nessun documento trovato')+'</div>';return;}
+  const {puoGestire,puoModificare}=_permessiArchivio();
+  if(dichCurrentFilter==='cestino'){
+    let hc=`<p class="page-sub">${list.length} nel cestino</p><div class="dtable-wrap"><table class="dtable">
+      <thead><tr><th scope="col">Lavoro</th><th scope="col">Eliminato il</th><th scope="col">Da</th><th scope="col">Cancellazione</th><th scope="col" class="t-right">Azioni</th></tr></thead><tbody>`;
+    list.forEach(d=>{
+      const nomeEnc=encUri(d.nome||'');const nome=esc(d.nome||'—');
+      hc+=`<tr><td class="t-strong-cell">${nome}</td><td>${_fmtDataArch(d.eliminatoAt)}</td><td class="t-muted-cell">${esc(d.eliminatoDa||'—')}</td>
+        <td><span class="bdg ba">tra ${_giorniCestino(d)} giorni</span></td>
+        <td class="t-right"><div class="t-actions">
+          <button type="button" class="btn btn-sm" onclick="dichRipristina('${d.id}','${nomeEnc}')" aria-label="Ripristina ${nome}">Ripristina</button>
+          <button type="button" class="btn btn-sm btn-danger-text" onclick="dichEliminaDefinitivo('${d.id}','${nomeEnc}')" aria-label="Elimina definitivamente ${nome}">Elimina ora</button>
+        </div></td></tr>`;
+    });
+    el.innerHTML=hc+'</tbody></table></div>';
+    return;
+  }
+  let h=`<p class="page-sub">${list.length} lavori</p><div class="dtable-wrap"><table class="dtable">
+    <thead><tr><th scope="col">Lavoro</th><th scope="col">Stato</th><th scope="col">Tecnico</th><th scope="col">Location</th>
+      <th scope="col">Uscita</th><th scope="col">Rientro</th><th scope="col" class="t-num">Materiale</th><th scope="col" class="t-right">Azioni</th></tr></thead><tbody>`;
+  list.forEach(d=>{
+    const isRient=!!d.rientroData;
+    const s=getStatoLavoro({...d,_fonte:'dich'});
+    const nPezzi=(d.articoli||[]).reduce((t,a)=>t+(a.qty||1),0);
+    const nome=esc(d.nome||'—');
+    const docs=(d.documenti||[]).map(doc=>`<a class="cal-doc" href="${esc(doc.url)}" target="_blank" rel="noopener">${esc(doc.nome||'Documento')}</a>`).join(' ');
+    h+=`<tr>
+      <td><div class="t-strong">${nome}</div>${d.note?`<button type="button" class="mfam" onclick="mostraNota('${encUri(d.note||'')}','${encUri(d.nome||'')}')" title="${esc(d.note)}">Nota</button>`:''}${docs?`<div class="cal-docs">${docs}</div>`:''}</td>
+      <td><div class="arch-stato">${statoLavoroHtml(s)}</div></td>
+      <td class="t-muted-cell">${esc(d.tecnico||'—')}</td>
+      <td class="t-muted-cell">${esc(d.location||'—')}</td>
+      <td>${_fmtDataArch(d.data)}</td>
+      <td>${isRient?_fmtDataArch(d.rientroData):'<span class="t-muted">—</span>'}</td>
+      <td class="t-num">${d.fonteFoto?'<span class="t-muted">da foto</span>':(nPezzi?`${nPezzi} pz · ${(d.articoli||[]).length} art.`:'<span class="t-muted">—</span>')}</td>
+      <td class="t-right"><div class="t-actions">
+        <button type="button" class="btn btn-sm" onclick="dichOpenDoc('${d.id}')">${d.fonteFoto?'Foto':'PDF'}</button>
+        ${!isRient&&!d.fonteFoto&&puoModificare?`<button type="button" class="btn btn-sm" onclick="dichModifica('${d.id}')" aria-label="Modifica ${nome}">Modifica</button>`:''}
+        ${puoGestire?`<button type="button" class="btn btn-sm btn-danger-text" onclick="dichElimina('${d.id}','${encUri(d.nome||'')}')" aria-label="Elimina ${nome}">Elimina</button>`:''}
+      </div></td>
+    </tr>`;
+  });
+  el.innerHTML=h+'</tbody></table></div>';
 }
 
 const CESTINO_GIORNI=30; // giorni di permanenza nel cestino prima della cancellazione definitiva
@@ -10204,7 +10311,8 @@ function renderDich(){
   }
 
   const el=$('dichList');if(!el)return;
-  if(!list.length){el.innerHTML='<div class="empty">'+(dichCurrentFilter==='cestino'?'Cestino vuoto':'Nessun documento trovato')+'</div>';return;}
+  if(document.body.classList.contains('desktop-mode')) renderDichDesktop(list);
+  if(!list.length){el.innerHTML='<div class="empty">'+(dichCurrentFilter==='cestino'?'Il cestino è vuoto':'Nessun documento trovato')+'</div>';return;}
 
   let h='';
   if(dichCurrentFilter==='cestino'){
@@ -10214,233 +10322,17 @@ function renderDich(){
     const byLoc={};
     list.forEach(d=>{const k=d.location||'—';if(!byLoc[k])byLoc[k]=[];byLoc[k].push(d);});
     Object.entries(byLoc).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([loc,docs])=>{
-      h+='<div style="font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;display:flex;align-items:center;gap:6px">📍 '+loc+' <span style="color:var(--tx3)">('+docs.length+')</span></div>';
+      h+='<h3 class="nav-label" style="padding-left:0">'+esc(loc)+' <span class="mcount">'+docs.length+'</span></h3>';
       docs.forEach(d=>{h+=dichCardHtml(d);});
     });
   } else {
     list.forEach(d=>{h+=dichCardHtml(d);});
   }
   el.innerHTML=h;
-  // Desktop: tabella
-  if(document.body.classList.contains('desktop-mode')) renderDichDesktop(list);
 }
 
-function renderDichDesktop(list){
-  const el=$('dichListDesktop');if(!el)return;
-  if(!list||!list.length){el.innerHTML='<div class="empty">'+(dichCurrentFilter==='cestino'?'Cestino vuoto':'Nessun documento trovato')+'</div>';return;}
-  const canManage=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
-  const puoModificare=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager'||USER.ruolo==='Tecnico AV'||USER.ruolo==='Magazziniere');
 
-  if(dichCurrentFilter==='cestino'){
-    const th='padding:10px 14px;font-size:11px;font-weight:600;color:var(--tx2);text-align:left;border-bottom:2px solid var(--b);white-space:nowrap';
-    const td='padding:9px 14px;border-bottom:1px solid var(--b);font-size:13px;vertical-align:middle';
-    let hc=`<div style="font-size:12px;color:var(--tx2);margin-bottom:10px">${list.length} nel cestino</div>
-    <div style="border-radius:var(--r);border:1px solid var(--b);overflow:hidden;overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;background:var(--bg1)">
-      <thead><tr style="background:var(--bg2)">
-        <th style="${th}">Lavoro</th>
-        <th style="${th}">Eliminato il</th>
-        <th style="${th}">Da</th>
-        <th style="${th}">Scadenza</th>
-        <th style="${th};text-align:center">Azioni</th>
-      </tr></thead><tbody>`;
-    const fmtDataL=iso=>{if(!iso)return'—';return new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});};
-    list.forEach((d,i)=>{
-      const scadenza=new Date(d.eliminatoAt);scadenza.setDate(scadenza.getDate()+CESTINO_GIORNI);
-      const giorniRimasti=Math.max(0,Math.ceil((scadenza-new Date())/(1000*60*60*24)));
-      const nomeEnc=encUri(d.nome||'');
-      const rb=i%2===0?'var(--bg1)':'var(--bg2)';
-      hc+=`<tr style="background:${rb}">
-        <td style="${td};font-weight:600">🗑️ ${esc(d.nome||'—')}</td>
-        <td style="${td};color:var(--tx2);font-size:12px">${fmtDataL(d.eliminatoAt)}</td>
-        <td style="${td};color:var(--tx2);font-size:12px">${d.eliminatoDa||'—'}</td>
-        <td style="${td};color:var(--rd);font-size:12px;font-weight:600">${giorniRimasti}g rimasti</td>
-        <td style="${td}"><div style="display:flex;gap:4px;justify-content:center">
-          <button onclick="dichRipristina('${d.id}','${nomeEnc}')" title="Ripristina" style="background:var(--acb);border:1px solid var(--ac);color:var(--ac2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">↩️</button>
-          <button onclick="dichEliminaDefinitivo('${d.id}','${nomeEnc}')" title="Elimina definitivamente" style="background:none;border:1px solid var(--rd);color:var(--rd);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">🗑️</button>
-        </div></td>
-      </tr>`;
-    });
-    hc+='</tbody></table></div>';
-    el.innerHTML=hc;
-    return;
-  }
 
-  const th='padding:10px 14px;font-size:11px;font-weight:600;color:var(--tx2);text-align:left;border-bottom:2px solid var(--b);white-space:nowrap';
-  const td='padding:9px 14px;border-bottom:1px solid var(--b);font-size:13px;vertical-align:middle';
-  let h=`<div style="font-size:12px;color:var(--tx2);margin-bottom:10px">${list.length} lavori</div>
-  <div style="border-radius:var(--r);border:1px solid var(--b);overflow:hidden;overflow-x:auto">
-  <table style="width:100%;border-collapse:collapse;background:var(--bg1)">
-    <thead><tr style="background:var(--bg2)">
-      <th style="${th}">Stato</th>
-      <th style="${th}">Lavoro</th>
-      <th style="${th}">Tecnico</th>
-      <th style="${th}">Location</th>
-      <th style="${th};text-align:center">Uscita</th>
-      <th style="${th};text-align:center">Rientro</th>
-      <th style="${th};text-align:center">Materiale</th>
-      <th style="${th}">Note</th>
-      <th style="${th};text-align:center">Azioni</th>
-    </tr></thead><tbody>`;
-  list.forEach((d,i)=>{
-    const isRient=!!d.rientroData;
-    const nPezzi=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
-    const nArt=(d.articoli||[]).length;
-    const rb=i%2===0?'var(--bg1)':'var(--bg2)';
-    let pallino,statoTxt,statoColor;
-    if(isRient){pallino='🟢';statoTxt='Rientrato';statoColor='var(--gn)';}
-    else if(d.daFinire||d.note){pallino='🟠';statoTxt='Da finire';statoColor='var(--am)';}
-    else if((d.articoli&&d.articoli.length>0)||d.fonteFoto){pallino='🟢';statoTxt='Pronto';statoColor='var(--gn)';}
-    else{pallino='🔴';statoTxt='Da prep.';statoColor='var(--rd)';}
-    const dataUsc=d.data?fmtData(d.data,{day:'2-digit',month:'short',year:'numeric'}):'—';
-    const dataRient=d.rientroData?fmtData(d.rientroData,{day:'2-digit',month:'short',year:'numeric'}):'—';
-    const notaHtml=d.note
-      ?`<span title="${(d.note||'').replace(/"/g,'&quot;')}" style="font-size:11px;color:var(--am);cursor:pointer;max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle" onclick="mostraNota('${encUri(d.note||'')}','${encUri(d.nome||'')}')">📝 ${d.note.substring(0,28)}${d.note.length>28?'…':''}</span>`
-      :'<span style="color:var(--tx3)">—</span>';
-    const docs=d.documenti||[];
-    const pdfHtml=docs.map(doc=>`<a href="${esc(doc.url)}" target="_blank" style="font-size:10px;background:var(--acb);color:var(--ac2);border:1px solid var(--ac);border-radius:5px;padding:1px 5px;text-decoration:none">📄</a>`).join(' ');
-    h+=`<tr style="background:${rb}" onmouseenter="this.style.background='var(--acb)'" onmouseleave="this.style.background='${rb}'">
-      <td style="${td}"><span style="font-size:12px;color:${statoColor};white-space:nowrap">${pallino} ${statoTxt}</span></td>
-      <td style="${td};font-weight:600;max-width:220px">
-        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.nome||'—')}</div>
-        ${pdfHtml?`<div style="margin-top:2px">${pdfHtml}</div>`:''}
-      </td>
-      <td style="${td};color:var(--tx2);font-size:12px;white-space:nowrap">${esc(d.tecnico||'—')}</td>
-      <td style="${td};color:var(--tx2);font-size:12px;white-space:nowrap">📍 ${esc(d.location||'—')}</td>
-      <td style="${td};text-align:center;font-size:12px;white-space:nowrap">${dataUsc}</td>
-      <td style="${td};text-align:center;font-size:12px;white-space:nowrap;color:${isRient?'var(--gn)':'var(--tx3)'}">${dataRient}</td>
-      <td style="${td};text-align:center;font-size:12px">${d.fonteFoto?'<span style="color:var(--tx2)">📷 Da foto</span>':(nPezzi>0?`<b>${nPezzi}</b> pz · ${nArt} art.`:'<span style="color:var(--tx3)">—</span>')}</td>
-      <td style="${td};max-width:180px">${notaHtml}</td>
-      <td style="${td}">
-        <div style="display:flex;gap:4px;justify-content:center">
-          <button onclick="dichOpenDoc('${d.id}')" title="${d.fonteFoto?'Apri foto':'Apri PDF'}" style="background:var(--acb);border:1px solid var(--ac);color:var(--ac2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">${d.fonteFoto?'📷':'📄'} ${d.fonteFoto?'Foto':'PDF'}</button>
-          ${!isRient&&!d.fonteFoto&&puoModificare?`<button onclick="dichModifica('${d.id}')" title="Modifica" style="background:var(--bg3);border:1px solid var(--b);color:var(--tx2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✏️</button>`:''}
-          ${canManage?`<button onclick="dichElimina('${d.id}','${encUri(d.nome||'')}')" title="Elimina" style="background:none;border:1px solid var(--rd);color:var(--rd);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">🗑️</button>`:''}
-        </div>
-      </td>
-    </tr>`;
-  });
-  h+='</tbody></table></div>';
-  el.innerHTML=h;
-}
-
-function dichCardCestinoHtml(d){
-  const fmtDataL=iso=>{if(!iso)return'—';return new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});};
-  const eliminatoIl=fmtDataL(d.eliminatoAt);
-  const scadenza=new Date(d.eliminatoAt);scadenza.setDate(scadenza.getDate()+CESTINO_GIORNI);
-  const giorniRimasti=Math.max(0,Math.ceil((scadenza-new Date())/(1000*60*60*24)));
-  const nomeEnc=encUri(d.nome||'');
-  return '<div style="background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);margin-bottom:10px;overflow:hidden;opacity:.85">'+
-    '<div style="padding:11px 14px;background:rgba(239,68,68,.06);border-bottom:2px solid var(--rd)">'+
-      '<div style="font-size:14px;font-weight:700">🗑️ '+esc(d.nome||'—')+'</div>'+
-      '<div style="font-size:11px;color:var(--tx2);margin-top:2px">Eliminato il '+eliminatoIl+(d.eliminatoDa?' da '+d.eliminatoDa:'')+'</div>'+
-      '<div style="font-size:11px;color:var(--rd);margin-top:2px;font-weight:600">⏳ Cancellazione definitiva tra '+giorniRimasti+' giorni</div>'+
-    '</div>'+
-    '<div style="padding:12px 14px;display:flex;gap:8px">'+
-      '<button onclick="dichRipristina(\''+d.id+'\',\''+nomeEnc+'\')" class="btn btn-p" style="flex:1;font-size:12px;padding:9px">↩️ Ripristina</button>'+
-      '<button onclick="dichEliminaDefinitivo(\''+d.id+'\',\''+nomeEnc+'\')" class="btn" style="flex:1;font-size:12px;padding:9px;border-color:var(--rd);color:var(--rd)">🗑️ Elimina ora</button>'+
-    '</div>'+
-  '</div>';
-}
-
-function dichCardHtml(d){
-  const isRient=!!d.rientroData;
-  const fmtDataL=iso=>{
-    if(!iso)return'—';
-    return new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
-  };
-  const dataUscita=fmtDataL(d.data||d.createdAt);
-  const dataRientro=isRient?fmtDataL(d.rientroData):'<span style="color:var(--tx3)">Non rientrato</span>';
-  const nPezzi=(d.articoli||[]).reduce((s,a)=>s+(a.qty||1),0);
-
-  // Badge logica nuova con pallini colorati
-  let statoBg,statoBd,pallino,statoTxt;
-  if(isRient){
-    statoBg=d.rientrato?'rgba(34,197,94,.1)':'rgba(239,68,68,.08)';
-    statoBd=d.rientrato?'var(--gn)':'var(--rd)';
-    pallino=d.rientrato?'🟢':'🔴';
-    statoTxt=d.rientrato?'✓ Rientrato':'⚠ Incompleto';
-  } else if(d.daFinire||d.note){
-    // Arancione — preparato ma manca materiale (ha note)
-    statoBg='rgba(245,158,11,.1)';
-    statoBd='var(--am)';
-    pallino='🟠';
-    statoTxt='⚠️ Da finire';
-  } else if((d.articoli&&d.articoli.length>0)||d.fonteFoto){
-    // Verde — preparato completo (o scheda da foto)
-    statoBg='rgba(34,197,94,.1)';
-    statoBd='var(--gn)';
-    pallino='🟢';
-    statoTxt=d.fonteFoto?'✅ Pronto (foto)':'✅ Pronto';
-  } else {
-    // Rosso — da preparare
-    statoBg='rgba(239,68,68,.08)';
-    statoBd='var(--rd)';
-    pallino='🔴';
-    statoTxt='❌ Da preparare';
-  }
-
-  // Note del lavoro - espandibili
-  const noteHtml=d.note?
-    '<div style="margin:8px 0;padding:8px 10px;background:rgba(245,158,11,.08);border-left:3px solid var(--am);border-radius:0 var(--rs) var(--rs) 0;cursor:pointer" onclick="toggleNota(\''+d.id+'\')">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center">'+
-        '<span style="font-size:10px;font-weight:600;color:var(--am);text-transform:uppercase;letter-spacing:.4px">📝 Nota</span>'+
-        '<span id="nota_ico_'+d.id+'" style="font-size:10px;color:var(--am)">▼</span>'+
-      '</div>'+
-      '<div id="nota_txt_'+d.id+'" style="font-size:12px;color:var(--tx);margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+esc(d.note)+'</div>'+
-    '</div>'
-  :''
-  const puoGestire=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager');
-  const puoModificare=USER&&(USER.isAdmin===true||USER.ruolo==='Responsabile'||USER.ruolo==='Project Manager'||USER.ruolo==='Tecnico AV'||USER.ruolo==='Magazziniere');
-  const puoEliminare=puoGestire;
-  return '<div style="background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);margin-bottom:10px;overflow:hidden">'+
-    '<div style="padding:11px 14px;background:'+statoBg+';border-bottom:2px solid '+statoBd+';display:flex;justify-content:space-between;align-items:center;gap:8px">'+
-      '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">'+
-        '<span style="font-size:14px;flex-shrink:0">'+pallino+'</span>'+
-        '<div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(d.nome)+'</div>'+
-      '</div>'+
-      '<span style="font-size:11px;font-weight:600;color:'+statoBd+';background:'+statoBg+';border:1px solid '+statoBd+';border-radius:10px;padding:2px 8px;flex-shrink:0;white-space:nowrap">'+statoTxt+'</span>'+
-    '</div>'+
-    '<div style="padding:12px 14px">'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">'+
-        '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">📍 Location</div>'+
-          '<div style="font-size:12px;font-weight:500">'+esc(d.location||'—')+'</div></div>'+
-        '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">📦 Materiale</div>'+
-          '<div style="font-size:12px;font-weight:500">'+(d.fonteFoto?'📷 Da foto dichiarazione':nPezzi+' pezzi · '+(d.articoli||[]).length+' art.')+'</div></div>'+
-        '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">📅 Data uscita</div>'+
-          '<div style="font-size:12px;font-weight:500">'+dataUscita+'</div></div>'+
-        '<div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">🔙 Data rientro</div>'+
-          '<div style="font-size:12px;font-weight:500">'+dataRientro+'</div></div>'+
-        '<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">👤 Tecnico</div>'+
-          '<div style="font-size:12px;font-weight:500">'+esc(d.tecnico||'—')+(isRient&&d.rientroTecnico&&d.rientroTecnico!==d.tecnico?' · Rientro: '+esc(d.rientroTecnico):'')+'</div></div>'+
-      '</div>'+
-      (d.modificatoDa?'<div style="font-size:10px;color:var(--tx3);margin-top:6px">✏️ Ultima modifica: '+esc(d.modificatoDa)+' · '+new Date(d.modificatoIl).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})+'</div>':'')+
-      // Note visibili subito dopo la data
-      noteHtml+
-      // Note mancanti (solo per preparazioni non ancora rientrate, non per schede da foto)
-      ((!isRient&&!d.fonteFoto)?(
-        '<button onclick="apriNoteMancanti(\''+d.id+'\',\''+encUri(d.nome)+'\')" class="btn btn-f" style="font-size:13px;padding:10px;margin-top:8px;width:100%;border-color:'+(d.noteMancanti&&d.noteMancanti.some(n=>!n.completata)?'var(--am)':'var(--b)')+';color:'+(d.noteMancanti&&d.noteMancanti.some(n=>!n.completata)?'var(--am)':'var(--tx2)')+'">'+
-          '📝 Note mancanti'+(d.noteMancanti&&d.noteMancanti.some(n=>!n.completata)?' ('+d.noteMancanti.filter(n=>!n.completata).length+' aperte)':'')+
-        '</button>'
-      ):'')+
-      '<button onclick="dichOpenDoc(\''+d.id+'\')" class="btn btn-p btn-f" style="font-size:13px;padding:10px;margin-top:8px">'+
-        (d.fonteFoto?'📷 Apri foto dichiarazione'+(isRient?' / rientro':''):'📄 Apri PDF '+(isRient?'rientro':'preparazione'))+
-      '</button>'+
-      (!isRient&&!d.fonteFoto&&puoModificare?
-        '<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px">'+
-          '<button onclick="dichModifica(\''+d.id+'\')" class="btn btn-f" style="font-size:12px;padding:9px">'+
-            '✏️ Modifica'+
-          '</button>'+
-        '</div>'
-      :'')+
-      (puoEliminare?
-        '<button onclick="dichElimina(\''+d.id+'\',\''+encUri(d.nome||'')+'\')" class="btn btn-f" style="font-size:12px;padding:9px;margin-top:8px;width:100%;border-color:var(--rd);color:var(--rd)">'+
-          '🗑️ Elimina'+
-        '</button>'
-      :'')+
-    '</div>'+
-  '</div>';
-}
 
 // Stato della preparazione: ● Preparato / ◐ Da finire (legenda decisa per il calendario)
 function setBadgeLavoro(daFinire){
@@ -10614,7 +10506,7 @@ async function downloadZip(){
   if(!inclPrep&&!inclRient){toast('Seleziona almeno un tipo di documento','r');return;}
 
   const mesiN=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-  const btn=$('zipBtn');btn.textContent='⏳ Generazione...';btn.disabled=true;
+  const btn=$('zipBtn');btn.textContent='Generazione in corso…';btn.disabled=true;
 
   // Filtra i documenti per periodo
   let docs=[...cacheDich];
@@ -10629,7 +10521,7 @@ async function downloadZip(){
 
   if(!docs.length){
     toast('Nessun documento trovato per il periodo selezionato','a');
-    btn.textContent='📦 Genera e scarica ZIP';btn.disabled=false;return;
+    btn.textContent='Genera e scarica ZIP';btn.disabled=false;return;
   }
 
   toast('⏳ Creo '+docs.length+' PDF...','a');
@@ -10695,7 +10587,7 @@ async function downloadZip(){
   a.click();
   URL.revokeObjectURL(a.href);
   toast('✓ ZIP scaricato — '+docs.length+' documenti');
-  btn.textContent='📦 Genera e scarica ZIP';btn.disabled=false;
+  btn.textContent='Genera e scarica ZIP';btn.disabled=false;
 }
 
 // Helper per buildHTML — riutilizzano le funzioni esistenti ma restituiscono stringa
@@ -12727,7 +12619,7 @@ function getStatoLavoro(lav){
   if(isCal){
     if(key!=='preventivo'&&key!=='rientrato')prep=PREP_LAVORO[lav.stato==='in_preparazione'?'dafinire':'dapreparare'];
   } else if(key!=='rientrato'){
-    prep=(lav.daFinire||(lav.note||'').trim())?PREP_LAVORO.dafinire:(lav.articoli&&lav.articoli.length?PREP_LAVORO.preparato:PREP_LAVORO.dapreparare);
+    prep=(lav.daFinire||(lav.note||'').trim())?PREP_LAVORO.dafinire:((lav.articoli&&lav.articoli.length)||lav.fonteFoto?PREP_LAVORO.preparato:PREP_LAVORO.dapreparare);
   }
 
   // Problemi (rosso)
@@ -12743,7 +12635,7 @@ function getStatoLavoro(lav){
 // Badge HTML: stato colorato + etichetta di preparazione + eventuali problemi in rosso
 function statoLavoroHtml(s,opts={}){
   let h=`<span class="stb st-${s.key}"><span class="stb-dot" aria-hidden="true"></span>${s.label}</span>`;
-  if(s.prep&&!opts.noPrep)h+=`<span class="prep prep-${s.prep.key}"><span aria-hidden="true">${s.prep.icon}</span> ${s.prep.label}</span>`;
+  if(s.prep&&!opts.noPrep)h+=`<span class="prep prep-${s.prep.key}"><span class="prep-dot prep-dot-${s.prep.key}" aria-hidden="true"></span> ${s.prep.label}</span>`;
   s.problemi.forEach(p=>{h+=`<span class="bdg br">${p}</span>`;});
   return h;
 }
@@ -12866,7 +12758,7 @@ function renderDashboard(){
         ${dot(s.color)}
         <span class="ditem-main">
           <span class="ditem-title">${esc(l.nome||'—')}</span>
-          <span class="ditem-sub">${esc(l.tecnicoNome||l.tecnico||'Nessun tecnico')}${s.prep?' · '+s.prep.icon+' '+s.prep.label:''}</span>
+          <span class="ditem-sub">${esc(l.tecnicoNome||l.tecnico||'Nessun tecnico')}${s.prep?' · '+s.prep.label:''}</span>
         </span>
         ${s.problemi.length?`<span class="bdg br" title="${s.problemi.join(', ')}">${s.problemi.length===1?s.problemi[0]:s.problemi.length+' problemi'}</span>`:''}
         <span class="ditem-meta">${fmtData(l.data,{day:'2-digit',month:'short'})}</span>
@@ -13463,7 +13355,7 @@ function renderCalendario(){
     // Nomi dei lavori (visibili su desktop): bordo nel colore di stato, testo normale (leggibile in entrambi i temi)
     const nomiDesk=lavoriG.slice(0,4).map((d,i)=>{
       const st=stati[i];
-      return `<div class="cal-nome${st.problemi.length?' has-problem':''}" style="border-left-color:${st.color}">${st.prep?`<span class="cal-prep" aria-hidden="true">${st.prep.icon}</span>`:''}${esc(d.nome||'—')}</div>`;
+      return `<div class="cal-nome${st.problemi.length?' has-problem':''}" style="border-left-color:${st.color}">${st.prep?`<span class="prep-dot prep-dot-${st.prep.key} cal-prep" aria-hidden="true"></span>`:''}${esc(d.nome||'—')}</div>`;
     }).join('');
     const canAdd=(isResponsabile()||isAdmin())&&!isWeekend&&!isFestivo;
     const etichetta=GG_LUNGHI[(dow+6)%7]+' '+g+' '+MESI[calMese]+(isOggi?', oggi':'')+(isFestivo?', '+festivita.nome:'')+': '+
