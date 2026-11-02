@@ -28,7 +28,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.02b';
+const APP_VERSION='v2026.11.02c';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -3672,6 +3672,7 @@ function startListeners(){
     .where('entrata','<=',todayEnd.toISOString())
     .onSnapshot(snap=>{
       cachePresenze=snap.docs.map(d=>({id:d.id,...d.data()}));
+      syncPunchConServer();
       renderPresenze();
       if($('mieOreTable')&&$('p-presenze')&&$('p-presenze').classList.contains('on')){
         renderMieOre();
@@ -3712,6 +3713,14 @@ async function punch(){
   const btn=$('pbtn'),stat=$('pstat'),pauseBtn=$('pauseBtn');
   const now=new Date(),nowArr=arrotondaA15Min(now),t=pad(nowArr.getHours())+':'+pad(nowArr.getMinutes());
   if(!punchedIn){
+    // Entrata già aperta oggi (altro dispositivo o dati del browser cancellati): la riprendo, niente doppione
+    // Controllo anche sul server: l'aggiornamento in tempo reale potrebbe non essere ancora arrivato
+    if(_punchVerifica)return;
+    _punchVerifica=true;
+    let giaAperta=null;
+    try{giaAperta=timbraturaApertaOggi()||await entrataApertaServer();}catch(e){console.warn('Verifica entrata aperta:',e);}
+    finally{_punchVerifica=false;}
+    if(giaAperta){adottaTimbratura(giaAperta);toast('Hai già un\'entrata aperta oggi: turno ripreso','a');return;}
     // ENTRATA — il luogo si valida prima di cambiare stato
     const extra=val('luogoCustom');
     if(luogoDettaglioObbligatorio(selLuogo)&&!extra){toast('Specifica il luogo per "Altro"','r');$('luogoCustom')?.focus();return;}
@@ -3829,6 +3838,53 @@ function updateTimeline(){
   const hh=Math.floor(ms/3600000);
   const mm=Math.floor((ms%3600000)/60000);
   const ne=$('oreNette');if(ne)ne.textContent=hh+'h '+mm+'m';
+}
+// ── Timbratura personale allineata a Firestore ──
+// Prima lo stato della propria timbratura era solo nel localStorage del dispositivo: timbrando
+// da un altro telefono (o dopo aver cancellato i dati del browser) la scheda diceva
+// "Non timbrato" e si poteva timbrare una seconda entrata, creando doppioni nelle ore.
+function timbraturaApertaOggi(){
+  if(!USER)return null;
+  const oggi=new Date().toDateString();
+  return cachePresenze
+    .filter(p=>p.uid===USER.id&&p.entrata&&!p.uscita&&new Date(p.entrata).toDateString()===oggi)
+    .sort((a,b)=>b.entrata.localeCompare(a.entrata))[0]||null;
+}
+let _punchVerifica=false;
+// Entrata aperta di oggi letta dal server (stessa query di "Le mie ore", quindi con indice già esistente)
+async function entrataApertaServer(){
+  const ini=new Date();ini.setHours(0,0,0,0);const fin=new Date();fin.setHours(23,59,59,999);
+  const snap=await DB.collection('presenze').where('uid','==',USER.id).where('entrata','>=',ini.toISOString()).where('entrata','<=',fin.toISOString()).get();
+  return snap.docs.map(d=>({id:d.id,...d.data()})).filter(p=>!p.uscita).sort((a,b)=>b.entrata.localeCompare(a.entrata))[0]||null;
+}
+function adottaTimbratura(p){
+  localStorage.setItem('av_punch',JSON.stringify({docId:p.id,entrata:p.entrata,luogo:p.luogo||'',pause:p.pause||[],inPausa:false,pauseStart:null}));
+  restorePunch();
+}
+function syncPunchConServer(){
+  if(!USER)return;
+  // Timbratura in corso su questo dispositivo: entrata senza id ancora, oppure uscita non ancora salvata
+  if((punchedIn&&!punchDocId)||(!punchedIn&&punchDocId))return;
+  const aperta=timbraturaApertaOggi();
+  if(aperta&&(!punchedIn||punchDocId!==aperta.id)){
+    // Entrata aperta su Firestore che questo dispositivo non conosce: la adotto
+    adottaTimbratura(aperta);
+  } else if(punchedIn&&punchDocId&&!aperta){
+    // La mia entrata non è più aperta: se risulta chiusa (uscita fatta altrove) chiudo anche qui
+    const chiusa=cachePresenze.find(p=>p.id===punchDocId&&p.uscita);
+    if(!chiusa)return;
+    punchedIn=false;inPausa=false;pauseStart=null;punchDocId=null;punchStart=null;pause=[];
+    localStorage.removeItem('av_punch');
+    const btn=$('pbtn');if(btn){btn.className='pbtn pin';btn.textContent='⏱ Timbra entrata';}
+    const pauseBtn=$('pauseBtn');
+    if(pauseBtn){pauseBtn.style.display='none';pauseBtn.textContent='☕ Pausa';pauseBtn.style.background='var(--amb)';pauseBtn.style.color='var(--am)';}
+    const u=new Date(chiusa.uscita);
+    const stat=$('pstat');if(stat)stat.textContent='Uscita timbrata alle '+pad(u.getHours())+':'+pad(u.getMinutes());
+    const lw=$('luogoWrap');if(lw){lw.style.opacity='1';lw.style.pointerEvents='auto';}
+    const no=$('nOre');if(no)no.textContent='0h';
+    updateTimeline();
+    toast('Uscita registrata da un altro dispositivo');
+  }
 }
 function restorePunch(){
   const a=localStorage.getItem('av_punch');if(!a)return;
