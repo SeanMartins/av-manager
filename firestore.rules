@@ -276,6 +276,24 @@ service cloud.firestore {
       allow write: if isManager();
     }
 
+    // Schemi di collegamento: condivisi con il team
+    match /schemi/{id} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isManager();
+    }
+    // Porte salvate per modello di apparecchio
+    match /modelli_porte/{id} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isManager();
+    }
+    // Lista globale per i noleggi: la aggiornano solo i manager
+    match /catalogo_globale/{id} {
+      allow read: if isApproved();
+      allow write: if isManager();
+    }
+
     // Tutto il resto: negato di default
     match /{document=**} {
       allow read, write: if false;

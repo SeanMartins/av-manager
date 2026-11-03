@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Schemi collegamenti · MMG</title>
+<link rel="icon" href="/icon-192.png">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+/* Layout: strumento a tre zone. Catalogo a sinistra, piano di lavoro al centro, controlli a destra. Token dal restyling AV Manager. */
+:root{
+  color-scheme:light;
+  --bg:#F7F5F2;--surface:#FFFFFF;--surface-2:#FBFAF8;--sunken:#F0EDE8;--hover:#F0EDE8;
+  --border:#E4DFD7;--border-strong:#CFC8BD;--input:#8F877B;
+  --text:#1C1A17;--text-2:#5E574E;--text-3:#776F64;
+  --accent:#272A71;--accent-hover:#1E2059;--accent-text:#272A71;--accent-subtle:#E7E8F3;--on-accent:#FFFFFF;
+  --ok:#2F6A3E;--ok-subtle:#E3EEE5;--warn:#8A5300;--warn-subtle:#F6EBD9;--err:#B3261E;--err-subtle:#F6E4E1;
+  --overlay:rgb(21 20 18 / .48);--shadow-sm:0 1px 2px rgb(28 26 23 / .06);--shadow-md:0 1px 2px rgb(28 26 23 / .06),0 4px 12px rgb(28 26 23 / .08);
+  --grid:#DDD7CD;
+  --s-audio:#0B7A75;--s-spk:#3D5A80;--s-sdi:#B5338A;--s-hdmi:#5A5FC0;--s-net:#6F6416;--s-dmx:#C2571A;--s-usb:#6E6A62;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --gutter-l:max(16px,env(safe-area-inset-left,0px));--gutter-r:max(16px,env(safe-area-inset-right,0px));
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#151412;--surface:#1D1C19;--surface-2:#262420;--sunken:#100F0E;--hover:#262420;
+  --border:#2E2B27;--border-strong:#3D3934;--input:#736C61;
+  --text:#F3F0EB;--text-2:#B8B0A4;--text-3:#928A7E;
+  --accent:#5A5FC0;--accent-hover:#6C71CC;--accent-text:#9CA0E8;--accent-subtle:#1D1E35;--on-accent:#FFFFFF;
+  --ok:#7FBF8E;--ok-subtle:#17241B;--warn:#E0A651;--warn-subtle:#2A2013;--err:#F08A80;--err-subtle:#2A1714;
+  --overlay:rgb(0 0 0 / .6);--shadow-sm:0 1px 2px rgb(0 0 0 / .4);--shadow-md:0 1px 2px rgb(0 0 0 / .4),0 8px 24px rgb(0 0 0 / .32);
+  --grid:#2A2723;
+  --s-audio:#4FC4BC;--s-spk:#8FB3DA;--s-sdi:#E58AC8;--s-hdmi:#9CA0E8;--s-net:#CDBD57;--s-dmx:#F0A06B;--s-usb:#B0AAA0;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151412;--surface:#1D1C19;--surface-2:#262420;--sunken:#100F0E;--hover:#262420;
+  --border:#2E2B27;--border-strong:#3D3934;--input:#736C61;
+  --text:#F3F0EB;--text-2:#B8B0A4;--text-3:#928A7E;
+  --accent:#5A5FC0;--accent-hover:#6C71CC;--accent-text:#9CA0E8;--accent-subtle:#1D1E35;--on-accent:#FFFFFF;
+  --ok:#7FBF8E;--ok-subtle:#17241B;--warn:#E0A651;--warn-subtle:#2A2013;--err:#F08A80;--err-subtle:#2A1714;
+  --overlay:rgb(0 0 0 / .6);--shadow-sm:0 1px 2px rgb(0 0 0 / .4);--shadow-md:0 1px 2px rgb(0 0 0 / .4),0 8px 24px rgb(0 0 0 / .32);
+  --grid:#2A2723;
+  --s-audio:#4FC4BC;--s-spk:#8FB3DA;--s-sdi:#E58AC8;--s-hdmi:#9CA0E8;--s-net:#CDBD57;--s-dmx:#F0A06B;--s-usb:#B0AAA0;
+  color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{background:var(--bg);color:var(--text);font:400 14px/1.45 var(--font);overflow:hidden;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent-text);outline-offset:1px}
+.app{height:100%;display:grid;grid-template-rows:auto 1fr;min-height:0}
+
+/* Barra superiore */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);padding-block:8px;padding-left:var(--gutter-l);padding-right:var(--gutter-r)}
+.brand{font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.brand small{display:block;font-size:11px;font-weight:500;color:var(--text-3);letter-spacing:0}
+#project{min-width:0;flex:0 1 280px;height:34px;padding:0 8px;border:1px solid transparent;border-radius:6px;background:transparent;font-weight:500}
+#project:hover,#project:focus{border-color:var(--border-strong);background:var(--surface-2)}
+.tabs{display:flex;gap:2px;background:var(--sunken);padding:2px;border-radius:8px}
+.tabs button{border:0;background:transparent;height:30px;padding:0 12px;border-radius:6px;color:var(--text-2);font-weight:500;font-size:13px;white-space:nowrap}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm)}
+.spacer{flex:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--surface);font-weight:500;font-size:13px;white-space:nowrap}
+.btn:hover{background:var(--hover)}
+.btn.p{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.p:hover{background:var(--accent-hover)}
+.btn.s{height:28px;padding:0 9px;font-size:12px;border-radius:6px}
+.btn:disabled{opacity:.45;cursor:default}
+.src-btn{gap:7px}
+.src-btn .k{color:var(--text-3);font-weight:400}
+.status{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:500;border:0}
+.status.err{background:var(--err-subtle);color:var(--err)}
+.status.warn{background:var(--warn-subtle);color:var(--warn)}
+.status.ok{background:var(--ok-subtle);color:var(--ok)}
+
+/* Corpo */
+.body{min-height:0;display:grid;grid-template-columns:286px minmax(0,1fr) 316px}
+.body.full{grid-template-columns:minmax(0,1fr)}
+.panel{min-height:0;display:flex;flex-direction:column;background:var(--surface)}
+#cat{border-right:1px solid var(--border)}
+#side{border-left:1px solid var(--border);overflow:auto}
+.ph{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px 8px}
+.ph h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);margin:0}
+.x{display:none;width:32px;height:32px;border:0;background:transparent;border-radius:6px;font-size:18px;line-height:1}
+.field{width:100%;height:34px;padding:0 10px;border:1px solid var(--input);border-radius:6px;background:var(--surface)}
+textarea.field{height:64px;padding:7px 10px;resize:vertical}
+.cat-tools{display:flex;flex-direction:column;gap:8px;padding:0 14px 10px;border-bottom:1px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{height:26px;padding:0 9px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12px;color:var(--text-2)}
+.chip[aria-pressed="true"]{background:var(--accent-subtle);border-color:var(--accent-text);color:var(--accent-text);font-weight:500}
+.items{flex:1;min-height:0;overflow:auto;padding:4px 6px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;width:100%;text-align:left;padding:7px 8px;border:0;background:transparent;border-radius:6px}
+.item:hover{background:var(--hover)}
+.item b{font-weight:500;font-size:13px;overflow-wrap:anywhere}
+.item span.m{grid-column:1;font-size:12px;color:var(--text-3);overflow-wrap:anywhere}
+.item .av{grid-row:1/3;grid-column:2;align-self:center;text-align:right;font-size:11px;font-weight:500;line-height:1.25}
+.av.mag{color:var(--ok)}.av.low{color:var(--warn)}.av.none{color:var(--err)}.av.rent{color:var(--accent-text)}
+.more{margin:6px 8px 10px}
+.import{border-top:1px solid var(--border);padding:10px 14px;display:flex;flex-direction:column;gap:7px}
+.import p{margin:0;font-size:12px;color:var(--text-2)}
+.import .row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.empty{padding:14px;color:var(--text-3);font-size:13px}
+
+/* Piano di lavoro */
+#stage{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--sunken);touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+#stage.pan{cursor:grabbing}
+#gridbg{position:absolute;inset:0;background-image:radial-gradient(var(--grid) 1px,transparent 1.2px);pointer-events:none}
+#world{position:absolute;left:0;top:0;transform-origin:0 0}
+#wires{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible}
+.w{fill:none;stroke-width:1.8}
+.w.dash{stroke-dasharray:6 4}
+.w.sel{stroke-width:3.2}
+.wh{fill:none;stroke:transparent;stroke-width:16;cursor:pointer;pointer-events:stroke}
+.wl rect{fill:var(--surface);stroke:var(--border-strong)}
+.wl text{font:500 10.5px var(--font);fill:var(--text-2);font-variant-numeric:tabular-nums}
+.wl{cursor:pointer}
+.wl.warn rect{fill:var(--warn-subtle);stroke:var(--warn)}.wl.warn text{fill:var(--warn)}
+.wl.err rect{fill:var(--err-subtle);stroke:var(--err)}.wl.err text{fill:var(--err)}
+.wl.sel rect{stroke:var(--accent-text);stroke-width:1.6}
+.node{position:absolute;left:0;top:0;width:236px;background:var(--surface);border:1px solid var(--border-strong);border-radius:8px;box-shadow:var(--shadow-sm);cursor:move}
+.node.sel{border-color:var(--accent-text);box-shadow:0 0 0 1px var(--accent-text),var(--shadow-md)}
+.node.rent{border-style:dashed}
+.nh{height:48px;padding:6px 12px;border-bottom:1px solid var(--border);overflow:hidden}
+.nn{display:flex;gap:6px;align-items:baseline;font-weight:600;font-size:13px;white-space:nowrap}
+.nn .t{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.nn .q{color:var(--text-3);font-weight:500}
+.nm{display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--text-3);white-space:nowrap}
+.nm .b{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.nm .tag{font-weight:600}.nm .tag.rent{color:var(--accent-text)}.nm .tag.short{color:var(--warn)}
+.nb{display:grid;grid-template-columns:1fr 1fr;padding:6px 0}
+.pc{min-width:0}
+.port{position:relative;display:flex;align-items:center;gap:4px;width:100%;height:26px;border:0;background:transparent;padding:0 12px;font-size:11px;color:var(--text-2);cursor:crosshair;min-width:0}
+.pc.r .port{flex-direction:row-reverse;text-align:right}
+.port .lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.port .ct{color:var(--text-3);font-size:10px;white-space:nowrap}
+.port .d{position:absolute;top:50%;width:11px;height:11px;margin-top:-5.5px;border-radius:50%;border:2px solid var(--sc,var(--input));background:var(--surface)}
+.pc.l .d{left:-6px}.pc.r .d{right:-6px}
+.port.used .d{background:var(--sc)}
+.port:hover{background:var(--hover)}
+.port.c-ok .d{box-shadow:0 0 0 3px var(--ok-subtle);border-color:var(--ok)}
+.port.c-ok{color:var(--ok);font-weight:600}
+.port.c-adapt .d,.port.c-conv .d{box-shadow:0 0 0 3px var(--warn-subtle);border-color:var(--warn)}
+.port.c-adapt,.port.c-conv{color:var(--warn);font-weight:600}
+.port.c-no{opacity:.32}
+.port.c-src{background:var(--accent-subtle);color:var(--accent-text);font-weight:600}
+.nop{grid-column:1/3;padding:4px 12px;font-size:11px;color:var(--text-3)}
+.tools{position:absolute;left:10px;top:10px;right:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;pointer-events:none;z-index:5}
+.tools>*{pointer-events:auto}
+.bar{display:flex;align-items:center;gap:2px;padding:3px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-sm)}
+.layer{display:inline-flex;gap:6px;align-items:center;height:28px;padding:0 9px;border:0;background:transparent;border-radius:6px;font-size:12px;color:var(--text-3)}
+.layer i{width:14px;height:0;border-top:2px solid var(--c)}
+.layer[aria-pressed="true"]{color:var(--text);font-weight:500}
+.layer[aria-pressed="false"] i{opacity:.3}
+.tb{width:30px;height:28px;border:0;background:transparent;border-radius:6px;font-size:14px}
+.tb.w2{width:auto;padding:0 8px;font-size:12px}
+.tb:hover,.layer:hover{background:var(--hover)}
+.hint{position:absolute;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--accent);color:var(--on-accent);padding:7px 12px;border-radius:8px;font-size:12px;font-weight:500;max-width:calc(100% - 32px);z-index:6;display:flex;gap:10px;align-items:center}
+.hint button{border:0;background:transparent;color:inherit;text-decoration:underline;padding:0;font-size:12px}
+.mobile-nav{display:none}
+
+/* Pannello destro */
+.sec{padding:0 14px 14px;border-bottom:1px solid var(--border)}
+.sec:last-child{border-bottom:0}
+.sec h3{font-size:15px;font-weight:600;margin:0 0 2px;overflow-wrap:anywhere}
+.sub{color:var(--text-3);font-size:12px;margin:0 0 10px}
+.fld{display:flex;flex-direction:column;gap:3px;margin-bottom:8px;font-size:12px;color:var(--text-2);min-width:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px;font-size:12px;margin:0 0 10px}
+.kv dt{color:var(--text-3)}.kv dd{margin:0;overflow-wrap:anywhere}
+.plist{list-style:none;margin:0 0 8px;padding:0}
+.plist li{display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;gap:7px;align-items:center;font-size:12px;padding:3px 0}
+.plist i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.plist .n{overflow-wrap:anywhere}
+.plist .c{color:var(--text-3);white-space:nowrap}
+.rm{width:24px;height:24px;border:0;background:transparent;border-radius:4px;color:var(--text-3)}
+.rm:hover{background:var(--err-subtle);color:var(--err)}
+details.add{margin-top:6px;font-size:12px}
+details.add summary{cursor:pointer;color:var(--accent-text);font-weight:500;padding:4px 0}
+.note{font-size:12px;padding:7px 9px;border-radius:6px;background:var(--warn-subtle);color:var(--warn);margin:0 0 10px}
+.danger{color:var(--err)}
+.iss{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.iss li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 9px;padding:9px 0;border-top:1px solid var(--border)}
+.iss li:first-child{border-top:0}
+.sev{align-self:start;margin-top:1px;font-size:10px;font-weight:600;letter-spacing:.03em;padding:1px 6px;border-radius:4px;text-transform:uppercase;white-space:nowrap}
+.sev.err{background:var(--err-subtle);color:var(--err)}.sev.warn{background:var(--warn-subtle);color:var(--warn)}.sev.info{background:var(--sunken);color:var(--text-2)}
+.iss .tx{border:0;background:transparent;text-align:left;padding:0;font-size:13px;font-weight:500}
+.iss .tx:hover{text-decoration:underline}
+.iss p{margin:2px 0 0;font-size:12px;color:var(--text-2)}
+.iss .acts{grid-column:2;margin-top:6px}
+.allok{font-size:13px;color:var(--ok);padding-block:4px}
+
+/* Tabelle */
+.page{overflow:auto;padding-block:18px;padding-left:var(--gutter-l);padding-right:var(--gutter-r);min-height:0}
+.inner{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.phead{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;justify-content:space-between}
+.phead h2{font-size:22px;font-weight:600;letter-spacing:-.015em;margin:0;text-wrap:balance}
+.phead p{margin:2px 0 0;color:var(--text-2);max-width:65ch}
+.acts{display:flex;flex-wrap:wrap;gap:6px}
+.block h3{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);margin:0 0 7px}
+.tw{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{font-size:11px;font-weight:600;text-align:left;color:var(--text-2);background:var(--surface-2);padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right}
+.sg{display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.sg i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.len{width:70px;height:28px;padding:0 6px;border:1px solid var(--input);border-radius:6px;background:var(--surface);text-align:right}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;white-space:nowrap}
+.pill.ok{background:var(--ok-subtle);color:var(--ok)}.pill.warn{background:var(--warn-subtle);color:var(--warn)}.pill.err{background:var(--err-subtle);color:var(--err)}.pill.rent{background:var(--accent-subtle);color:var(--accent-text)}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.sum div{background:var(--surface);padding:10px 14px}
+.sum b{display:block;font-size:22px;font-weight:600;letter-spacing:-.015em}
+.sum span{font-size:12px;color:var(--text-2)}
+
+dialog{border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);padding:20px;width:min(520px,calc(100vw - 32px));box-shadow:var(--shadow-md)}
+dialog::backdrop{background:var(--overlay)}
+dialog h2{font-size:18px;font-weight:600;margin:0 0 4px}
+dialog p{margin:0 0 14px;color:var(--text-2)}
+.opt{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 10px;padding:10px 12px;border:1px solid var(--border-strong);border-radius:8px;margin-bottom:8px;cursor:pointer}
+.opt:has(input:checked){border-color:var(--accent-text);background:var(--accent-subtle)}
+.opt input{grid-row:1/3;margin-top:3px;accent-color:var(--accent)}
+.opt b{font-weight:600;font-size:13px}.opt span{font-size:12px;color:var(--text-2)}
+.dlg-acts{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+#toast{position:fixed;left:50%;bottom:calc(58px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);padding:9px 14px;border-radius:8px;background:var(--text);color:var(--bg);font-size:13px;font-weight:500;max-width:min(92vw,440px);z-index:50;box-shadow:var(--shadow-md)}
+
+@media (max-width:980px){
+  .body{grid-template-columns:minmax(0,1fr)}
+  .panel{position:fixed;left:0;right:0;bottom:0;top:30%;z-index:20;border:0;border-top:1px solid var(--border-strong);border-radius:14px 14px 0 0;box-shadow:var(--shadow-md);padding-bottom:env(safe-area-inset-bottom,0px);display:none}
+  .panel.open{display:flex}
+  .x{display:block}
+  .mobile-nav{display:flex;gap:6px;position:absolute;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:6}
+  .mobile-nav .btn{flex:1;height:40px;box-shadow:var(--shadow-sm)}
+  .hint{bottom:calc(60px + env(safe-area-inset-bottom,0px))}
+  .port{height:26px}
+  .brand{display:none}
+  #project{flex:1 1 150px;order:-2}
+  #statusBtn{order:-1}
+  .tabs{flex:1 0 100%;order:0}
+  .tabs button{flex:1}
+  .spacer{display:none}
+  .top .btn{height:30px;padding:0 9px;font-size:12px;order:1}
+  #srcBtn{flex:1;min-width:0}
+  .src-btn .k{display:none}
+}
+@media (max-width:600px){#zOut,#zIn{display:none}.layer{padding:0 6px}}
+@media (prefers-reduced-motion:no-preference){.btn,.chip,.port{transition:background-color .12s}}
+.saved{font-size:12px;color:var(--text-3);white-space:nowrap}
+.saved.bad{color:var(--warn)}
+.back{color:var(--text-2);text-decoration:none;font-size:13px;white-space:nowrap}
+.back:hover{color:var(--text)}
+.slist{list-style:none;margin:0 0 12px;padding:0;max-height:46vh;overflow:auto;border:1px solid var(--border);border-radius:8px}
+.slist li{border-bottom:1px solid var(--border)}.slist li:last-child{border-bottom:0}
+.slist button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;width:100%;text-align:left;border:0;background:transparent;padding:9px 12px}
+.slist button:hover{background:var(--hover)}
+.slist b{font-weight:500;overflow-wrap:anywhere}.slist span{font-size:12px;color:var(--text-3);white-space:nowrap}
+#gate{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding-inline:16px;text-align:center}
+#gate div{max-width:380px}#gate h1{font-size:20px;font-weight:600;margin:0 0 6px}#gate p{color:var(--text-2);margin:0 0 14px}
+</style>
+</head>
+<body>
+<div id="gate"><div><h1 id="gateT">Apertura schemi</h1><p id="gateP">Controllo l'accesso ad AV Manager.</p><a class="btn" id="gateA" href="/" hidden>Vai ad AV Manager</a></div></div>
+
+<div class="app">
+  <header class="top">
+    <a class="back" href="/" aria-label="Torna ad AV Manager">← AV Manager</a>
+    <div class="brand">Schemi collegamenti<small>v2026.11.03a</small></div>
+    <input id="project" aria-label="Nome dello schema" autocomplete="off">
+    <div class="tabs" role="tablist" aria-label="Viste">
+      <button id="t-schema" role="tab" aria-selected="true" data-tab="schema">Schema</button>
+      <button id="t-cavi" role="tab" aria-selected="false" data-tab="cavi">Lista cavi</button>
+      <button id="t-mat" role="tab" aria-selected="false" data-tab="mat">Materiale</button>
+    </div>
+    <button id="statusBtn" class="status ok" type="button"></button>
+    <div class="spacer"></div>
+    <button id="srcBtn" class="btn src-btn" type="button"><span class="k">Catalogo</span><span id="srcLabel"></span></button>
+    <span class="saved" id="saved" role="status"></span>
+    <button id="undoBtn" class="btn" type="button" disabled>Annulla</button>
+    <button id="openBtn" class="btn" type="button">Apri</button>
+    <button id="newBtn" class="btn" type="button">Nuovo schema</button>
+  </header>
+
+  <main class="body" id="body">
+    <aside class="panel" id="cat" aria-label="Catalogo materiale">
+      <div class="ph"><h2 id="catTitle">Catalogo</h2><button class="x" type="button" data-close="cat" aria-label="Chiudi catalogo">×</button></div>
+      <div class="cat-tools">
+        <input id="q" class="field" type="search" placeholder="Cerca nome o modello" aria-label="Cerca nel catalogo" autocomplete="off">
+        <div class="chips" id="cats"></div>
+      </div>
+      <div class="items" id="items"></div>
+      <div class="import" id="importBox" hidden>
+        <p id="importNote"></p>
+        <button class="btn s" type="button" id="impGlob">Importa lista globale da Excel</button>
+        <input type="file" id="fileGlob" accept=".xlsx,.xls,.csv" hidden>
+      </div>
+    </aside>
+
+    <section id="stage" aria-label="Piano dello schema">
+      <div id="gridbg"></div>
+      <div id="world"><svg id="wires" aria-hidden="true"></svg><div id="nodes"></div></div>
+      <div class="tools">
+        <div class="bar" id="layers"></div>
+        <div class="bar"><button class="tb" id="zOut" type="button" aria-label="Riduci">−</button><button class="tb w2" id="zFit" type="button">Adatta</button><button class="tb" id="zIn" type="button" aria-label="Ingrandisci">+</button></div>
+      </div>
+      <div class="hint" id="hint" hidden><span id="hintTx"></span><button type="button" id="hintX">Annulla</button></div>
+      <div class="mobile-nav"><button class="btn" type="button" id="mCat">Aggiungi materiale</button><button class="btn" type="button" id="mSide">Controlli</button></div>
+    </section>
+
+    <aside class="panel" id="side" aria-label="Dettagli e controlli">
+      <div class="ph" id="sideHead"><h2 id="sideTitle">Controlli</h2><button class="x" type="button" data-close="side" aria-label="Chiudi pannello">×</button></div>
+      <div id="selBox"></div>
+      <div class="ph" id="ctrlHead" hidden><h2>Controlli</h2></div>
+      <div class="sec" id="issBox"></div>
+    </aside>
+
+    <section class="page" id="vCavi" hidden></section>
+    <section class="page" id="vMat" hidden></section>
+  </main>
+</div>
+
+<dialog id="srcDlg" aria-labelledby="srcTitle">
+  <form method="dialog" id="srcForm">
+    <h2 id="srcTitle">Nuovo schema</h2>
+    <p id="srcText">Da quale catalogo vuoi prendere il materiale?</p>
+    <label class="fld" id="nameFld">Nome dello schema<input id="newName" class="field" autocomplete="off" placeholder="Es. Convention Salone Alighieri"></label>
+    <label class="opt"><input type="radio" name="src" value="mag"><b>Magazzino AV Manager</b><span>Solo il materiale interno, con la disponibilità reale.</span></label>
+    <label class="opt"><input type="radio" name="src" value="glob"><b>Lista globale</b><span>Tutto il mercato audio, video e luci. Ogni articolo va in noleggio.</span></label>
+    <label class="opt"><input type="radio" name="src" value="both"><b>Magazzino, poi lista globale</b><span>Prima il tuo materiale. Quello che non hai resta sceglibile come noleggio.</span></label>
+    <div class="dlg-acts"><button class="btn" type="button" id="srcCancel">Annulla</button><button class="btn p" type="submit" id="srcOk">Crea schema</button></div>
+  </form>
+</dialog>
+
+<dialog id="openDlg" aria-labelledby="openT">
+  <h2 id="openT">Schemi salvati</h2>
+  <p>Gli schemi sono condivisi con il team.</p>
+  <ul class="slist" id="slist"></ul>
+  <div class="dlg-acts"><button class="btn" type="button" id="openX">Chiudi</button><button class="btn p" type="button" id="openNew">Nuovo schema</button></div>
+</dialog>
+
+<dialog id="copyDlg" aria-labelledby="copyT">
+  <h2 id="copyT">Copia la lista</h2>
+  <p>Il browser ha bloccato la copia automatica. Il testo è selezionato: premi Ctrl+C.</p>
+  <textarea id="copyTx" class="field" style="height:180px" aria-label="Testo da copiare"></textarea>
+  <div class="dlg-acts"><button class="btn" type="button" id="copyX">Chiudi</button></div>
+</dialog>
+
+<div id="toast" hidden role="status"></div>
+
+<script>
+'use strict';
+/* ---------- Dominio ---------- */
+const SIG={
+  audio:{l:'Audio analogico',s:'Audio',v:'--s-audio',max:100,layer:'audio',c:'XLR'},
+  spk:{l:'Linea diffusori',s:'Speaker',v:'--s-spk',max:50,layer:'audio',c:'Speakon'},
+  hdmi:{l:'HDMI',s:'HDMI',v:'--s-hdmi',max:10,layer:'video',c:'HDMI'},
+  sdi:{l:'SDI',s:'SDI',v:'--s-sdi',max:100,layer:'video',c:'BNC'},
+  usb:{l:'USB',s:'USB',v:'--s-usb',max:5,layer:'video',c:'USB-C'},
+  net:{l:'Rete / Dante / NDI',s:'Rete',v:'--s-net',max:100,layer:'rete',c:'RJ45',dash:1},
+  dmx:{l:'DMX',s:'DMX',v:'--s-dmx',max:300,layer:'luci',c:'XLR 5'}
+};
+const LAYERS={audio:['Audio','--s-audio'],video:['Video','--s-hdmi'],rete:['Rete','--s-net'],luci:['Luci','--s-dmx']};
+const CONNS={audio:['XLR','Jack 6.3','Jack 3.5','RCA'],spk:['Speakon'],hdmi:['HDMI'],sdi:['BNC'],usb:['USB-C','USB-A'],net:['RJ45','EtherCON'],dmx:['XLR 5','XLR 3']};
+const CATS={tutti:'Tutti',audio:'Audio',video:'Video',ledwall:'LEDwall',luci:'Luci',traduzione:'Traduzione',informatica:'Informatica',strutture:'Strutture',altro:'Altro'};
+const STD_LEN=[1,2,3,5,10,15,20,30,50,75,100,150,200,300];
+const W=236,HEAD=48,PAD=6,ROW=26;
+const P=(n,d,c,s,k=1,side)=>({id:n.toLowerCase().replace(/[^a-z0-9]+/g,'-'),n,d,c,s,k,...(side?{side}:{})});
+const mic=(k)=>P('Ingressi','in','XLR','audio',k);
+const T={
+  m32r:()=>[mic(16),P('Uscite','out','XLR','audio',8),P('AES50','io','RJ45','net',2)],
+  m32:()=>[mic(32),P('Uscite','out','XLR','audio',16),P('AES50','io','RJ45','net',2)],
+  cq18:()=>[mic(16),P('Uscite','out','XLR','audio',6),P('Rete','io','RJ45','net')],
+  xr18:()=>[mic(16),P('Uscite','out','XLR','audio',8),P('Rete','io','RJ45','net')],
+  si:()=>[mic(32),P('Uscite','out','XLR','audio',16),P('Rete','io','RJ45','net')],
+  digital48:()=>[mic(48),P('Uscite','out','XLR','audio',24),P('Dante','io','RJ45','net',2)],
+  rx:()=>[P('Audio','out','XLR','audio')],
+  rx4:()=>[P('Audio','out','XLR','audio',4),P('Rete','io','RJ45','net')],
+  dicentis:()=>[P('Audio in','in','XLR','audio',2),P('Audio out','out','XLR','audio',2),P('Rete','io','RJ45','net')],
+  sysmic:()=>[P('Audio','out','XLR','audio')],
+  active:()=>[P('Ingresso','in','XLR','audio'),P('Link','out','XLR','audio')],
+  amp:()=>[P('Ingressi','in','XLR','audio',4),P('Uscite','out','Speakon','spk',4),P('Rete','io','RJ45','net')],
+  passive:()=>[P('Ingresso','in','Speakon','spk')],
+  atem:()=>[P('HDMI in','in','HDMI','hdmi',4),P('Mic','in','Jack 3.5','audio',2),P('HDMI out','out','HDMI','hdmi'),P('USB','out','USB-C','usb')],
+  atemsdi:()=>[P('SDI in','in','BNC','sdi',8),P('SDI out','out','BNC','sdi',4),P('Rete','io','RJ45','net')],
+  ptz:()=>[P('HDMI','out','HDMI','hdmi'),P('SDI','out','BNC','sdi'),P('Rete','io','RJ45','net')],
+  camsdi:()=>[P('SDI','out','BNC','sdi'),P('Ritorno','in','BNC','sdi')],
+  h2s:()=>[P('HDMI in','in','HDMI','hdmi'),P('SDI out','out','BNC','sdi')],
+  s2h:()=>[P('SDI in','in','BNC','sdi'),P('HDMI out','out','HDMI','hdmi')],
+  enc:()=>[P('HDMI in','in','HDMI','hdmi'),P('Rete','out','RJ45','net')],
+  dec:()=>[P('Rete','in','RJ45','net'),P('HDMI out','out','HDMI','hdmi')],
+  pc:()=>[P('HDMI','out','HDMI','hdmi'),P('Audio','out','Jack 3.5','audio'),P('Rete','io','RJ45','net')],
+  vmix:()=>[P('USB','in','USB-C','usb',2),P('Rete','io','RJ45','net',1,'l'),P('HDMI','out','HDMI','hdmi',2)],
+  sw8:()=>[P('Porte','io','RJ45','net',6,'l'),P('Uplink','io','RJ45','net',2,'r')],
+  vx:()=>[P('HDMI in','in','HDMI','hdmi',2),P('SDI in','in','BNC','sdi',2),P('LED out','out','RJ45','net',10)],
+  led:()=>[P('Dati','in','RJ45','net')],
+  disp:()=>[P('HDMI','in','HDMI','hdmi',2)],
+  proj:()=>[P('HDMI','in','HDMI','hdmi'),P('SDI','in','BNC','sdi'),P('Rete','io','RJ45','net')],
+  console:()=>[P('DMX','out','XLR 5','dmx',2),P('Art-Net','io','RJ45','net')],
+  fix:()=>[P('DMX in','in','XLR 5','dmx'),P('DMX thru','out','XLR 5','dmx')],
+  artnet:()=>[P('Rete','in','RJ45','net'),P('DMX','out','XLR 5','dmx',4)],
+  ir:()=>[P('Audio','in','XLR','audio',4),P('Radiatori','out','BNC','sdi',2)],
+  none:()=>[]
+};
+const MATCH=[[/m32r/i,'m32r'],[/\bm32\b/i,'m32'],[/cq.?18/i,'cq18'],[/xr.?18/i,'xr18'],[/si impact/i,'si'],[/dicentis/i,'dicentis'],[/ew.?135|ew.?100|ew.?g4|g4-500|radio/i,'rx'],[/ulxd4q/i,'rx4'],[/atem mini/i,'atem'],[/atem/i,'atemsdi'],[/ptz|angekis/i,'ptz'],[/hdmi to sdi|hdmi.?>?.?sdi/i,'h2s'],[/sdi to hdmi/i,'s2h'],[/vmix/i,'vmix'],[/switch/i,'sw8'],[/novastar|vx1000|processore led/i,'vx'],[/led ?wall|cabinet/i,'led'],[/proiettore/i,'proj'],[/monitor|tv /i,'disp'],[/notebook|laptop|\bpc\b/i,'pc'],[/console/i,'console'],[/\bpar\b|moving|wash|spot|beam|fresnel/i,'fix'],[/finale|amplificatore/i,'amp'],[/diffusore attivo|cassa attiva|subwoofer attivo/i,'active']];
+const GEN={audio:'active',video:'disp',ledwall:'led',luci:'fix',traduzione:'active',informatica:'pc',strutture:'none',altro:'none'};
+function matchTpl(nome,marca,cat){const s=nome+' '+marca;for(const[r,t]of MATCH)if(r.test(s))return{tpl:t,guess:false};const g=GEN[cat]||'none';return{tpl:g,guess:g!=='none'}}
+const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const keyOf=(nome,marca)=>norm(nome)+'|'+norm(marca);
+const baseName=n=>String(n||'').replace(/\s*(?:n\.?|#)\s*\d+\s*/i,' ').trim().replace(/\s+/g,' ');
+const mk=(src,cat,nome,marca,qty,disp,tpl)=>({key:keyOf(nome,marca),src,cat,nome,marca,qty,disp,tpl});
+
+/* Lista globale di partenza: si somma alla collezione catalogo_globale. */
+const GLOB_BASE=[
+ ['audio','Mixer digitale CL5','Yamaha','digital48'],['audio','Mixer digitale SQ-7','Allen & Heath','digital48'],['audio','Mixer digitale M32','Midas','m32'],['audio','Ricevitore quadruplo ULXD4Q','Shure','rx4'],['audio','Radiomicrofono palmare','Sennheiser EW 135 G4','rx'],['audio','Diffusore attivo','QSC K12.2','active'],['audio','Diffusore attivo ART 912-A','RCF','active'],['audio','Subwoofer attivo KS212C','QSC','active'],['audio','Finale X4','Powersoft','amp'],['audio','Diffusore passivo 12"','Generico','passive'],
+ ['video','Mixer video ATEM Television Studio HD8','Blackmagic','atemsdi'],['video','Mixer video ATEM Mini','Blackmagic','atem'],['video','Camera PTZ','Panasonic AW-UE100','ptz'],['video','Camera SDI da studio','Blackmagic URSA Broadcast','camsdi'],['video','Micro Converter HDMI to SDI','Blackmagic','h2s'],['video','Micro Converter SDI to HDMI','Blackmagic','s2h'],['video','Encoder NDI','Generico','enc'],['video','Decoder NDI','Generico','dec'],['video','Proiettore laser 12.000 lumen','Panasonic','proj'],['video','Monitor 55"','Generico','disp'],
+ ['ledwall','Processore LED VX1000','Novastar','vx'],['ledwall','LED wall P2.6 (cabinet)','Generico','led'],
+ ['luci','Console MQ80','ChamSys','console'],['luci','Console grandMA3 compact','MA Lighting','console'],['luci','Moving wash Robin 600','Robe','fix'],['luci','Moving spot MAC Encore','Martin','fix'],['luci','PAR LED RGBW','Generico','fix'],['luci','Nodo Art-Net 4 universi','Generico','artnet'],
+ ['traduzione','Radiatore IR con trasmettitore','Generico','ir'],['traduzione','Sistema congressuale DICENTIS','Bosch','dicentis'],
+ ['informatica','Switch di rete 8 porte','Generico','sw8'],['informatica','Notebook slide','Generico','pc']
+].map(r=>mk('glob',r[0],r[1],r[2],null,null,r[3]));
+
+/* ---------- Stato ---------- */
+const blank=()=>({project:'',mode:'both',devices:[],links:[],seq:1,devSeq:1,rentOk:{},adapterDone:{}});
+const S=blank();
+const CAT={mag:[],glob:GLOB_BASE,docs:[],ports:{}};
+const CL={id:null,user:null,manager:false,ready:false,timer:null,local:false};
+const U={tab:'schema',sel:null,cat:'tutti',q:'',limit:80,layers:{audio:true,video:true,rete:true,luci:true},v:{x:30,y:60,z:.8},undo:[],arm:null,draft:null,addN:0};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dev=id=>S.devices.find(d=>d.id===id);
+const port=(d,id)=>d&&d.ports.find(p=>p.id===id);
+const linkPorts=l=>{const a=dev(l.from[0]),b=dev(l.to[0]);return{a,b,pa:port(a,l.from[1]),pb:port(b,l.to[1])}};
+const sideOf=p=>p.side||(p.d==='in'?'l':'r');
+function save(){if(!CL.id||!CL.ready)return;clearTimeout(CL.timer);setSaved('Salvataggio…');CL.timer=setTimeout(flush,1200)}
+async function flush(){
+  const data=JSON.parse(JSON.stringify({nome:S.project||'Schema senza nome',mode:S.mode,devices:S.devices,links:S.links,seq:S.seq,devSeq:S.devSeq,rentOk:S.rentOk,adapterDone:S.adapterDone}));
+  data.modificatoDa=CL.user.nome||CL.user.email||'';data.modificatoIl=new Date().toISOString();
+  try{await DB.collection('schemi').doc(CL.id).set(data,{merge:false});CL.local=false;setSaved('Salvato alle '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}))}
+  catch(e){try{localStorage.setItem('schemi-bozza-'+CL.id,JSON.stringify(data))}catch(_){}CL.local=true;setSaved(e.code==='permission-denied'?'Non salvato online: regole da pubblicare':'Non salvato online: bozza su questo dispositivo',true)}
+}
+function setSaved(t,bad){const e=$('saved');e.textContent=t;e.classList.toggle('bad',!!bad)}
+function snap(){U.undo.push(JSON.stringify({devices:S.devices,links:S.links,seq:S.seq,devSeq:S.devSeq,rentOk:S.rentOk,adapterDone:S.adapterDone}));if(U.undo.length>40)U.undo.shift();$('undoBtn').disabled=false}
+function undo(){const r=U.undo.pop();if(!r)return;Object.assign(S,JSON.parse(r));U.sel=null;$('undoBtn').disabled=!U.undo.length;refresh();toast('Modifica annullata')}
+let toastT;function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3600)}
+
+/* ---------- Catalogo ---------- */
+function catalog(){
+  if(S.mode==='mag')return CAT.mag;
+  if(S.mode==='glob')return CAT.glob;
+  const own=new Set(CAT.mag.map(i=>i.key));
+  const named=new Set(CAT.mag.map(i=>norm(i.nome)+' '+norm(i.marca)));
+  return CAT.mag.concat(CAT.glob.filter(i=>!own.has(i.key)&&!named.has(norm(i.nome)+' '+norm(i.marca))));
+}
+function findItem(k){return CAT.mag.find(i=>i.key===k)||CAT.glob.find(i=>i.key===k)}
+function usedQty(k){return S.devices.filter(d=>d.key===k).reduce((n,d)=>n+d.qty,0)}
+function addDevice(it,x,y,o={}){
+  const t=it.tpl?{tpl:it.tpl,guess:!!it.guess}:matchTpl(it.nome,it.marca,it.cat),saved=CAT.ports[it.key];
+  const d={id:'d'+S.devSeq++,key:it.key,name:o.name||it.nome,marca:it.marca||'',cat:it.cat,src:it.src,qty:o.qty||1,x,y,loc:'',guess:saved?false:t.guess,ports:saved?JSON.parse(JSON.stringify(saved)):(T[t.tpl]||T.none)()};
+  S.devices.push(d);return d;
+}
+function addFromCatalog(it,wx,wy){
+  snap();
+  let x=wx,y=wy;
+  if(x==null){const r=$('stage').getBoundingClientRect();x=(r.width/2-U.v.x)/U.v.z-W/2+(U.addN%6)*18;y=(r.height/2-U.v.y)/U.v.z-70+(U.addN%6)*18;U.addN++}
+  const d=addDevice(it,Math.round(x),Math.round(y));
+  U.sel={t:'d',id:d.id};closePanels();refresh();
+  const av=it.src==='mag'?(usedQty(it.key)>it.disp?' Disponibilità superata.':''):' In noleggio.';
+  toast(d.name+' aggiunto.'+av);
+}
+
+/* ---------- Regole di collegamento ---------- */
+const CONV={'hdmi>sdi':['Micro Converter HDMI to SDI','Blackmagic'],'sdi>hdmi':['Micro Converter SDI to HDMI','Blackmagic'],'hdmi>net':['Encoder NDI','Generico'],'net>hdmi':['Decoder NDI','Generico']};
+function evalLink(p,q){
+  if(p.d==='in')return{lv:'no',why:'Hai iniziato da un ingresso: parti da un\'uscita.'};
+  if(q.d==='out')return{lv:'no',why:'Due uscite non si collegano tra loro.'};
+  if(p.s===q.s)return p.c===q.c?{lv:'ok'}:{lv:'adapt',why:`Serve un adattatore ${p.c} → ${q.c}.`};
+  const k=p.s+'>'+q.s;
+  if(CONV[k])return{lv:'conv',conv:CONV[k],why:`${SIG[p.s].s} e ${SIG[q.s].s} non sono compatibili senza convertitore.`};
+  return{lv:'no',why:`${SIG[p.s].l} non entra in ${SIG[q.s].l}.`};
+}
+const usage=(d,p)=>S.links.filter(l=>(l.from[0]===d.id&&l.from[1]===p.id)||(l.to[0]===d.id&&l.to[1]===p.id)).length;
+const capacity=(d,p)=>p.k*d.qty;
+const nextId=()=>'C-'+String(S.seq++).padStart(3,'0');
+function connect(a,pa,b,pb){
+  if(pa.d==='in'&&pb.d!=='in'){[a,pa,b,pb]=[b,pb,a,pa]}
+  if(a.id===b.id){toast('Non puoi collegare un apparecchio a se stesso.');return}
+  const e=evalLink(pa,pb);
+  if(e.lv==='no'){toast(e.why);return}
+  if(usage(a,pa)>=capacity(a,pa)){toast(`${a.name}: ${pa.n} è tutto occupato (${capacity(a,pa)}).`);return}
+  if(usage(b,pb)>=capacity(b,pb)){toast(`${b.name}: ${pb.n} è tutto occupato (${capacity(b,pb)}).`);return}
+  snap();
+  const l={id:nextId(),from:[a.id,pa.id],to:[b.id,pb.id],len:10,note:''};
+  S.links.push(l);U.sel={t:'l',id:l.id};refresh();
+  toast(`Cavo ${l.id} creato.${e.why?' '+e.why:''}`);
+}
+function removeLink(id){snap();S.links=S.links.filter(l=>l.id!==id);delete S.adapterDone[id];U.sel=null;refresh();toast('Cavo '+id+' eliminato')}
+function removeDevice(id){snap();const d=dev(id);S.links=S.links.filter(l=>l.from[0]!==id&&l.to[0]!==id);S.devices=S.devices.filter(x=>x.id!==id);U.sel=null;refresh();toast(d.name+' rimosso, con i suoi cavi')}
+function itemByName(nome){return CAT.mag.find(i=>norm(i.nome)===norm(nome))||CAT.glob.find(i=>norm(i.nome)===norm(nome))||{key:keyOf(nome,'Generico'),src:'glob',cat:'video',nome,marca:'Generico',tpl:null}}
+function insertConverter(lid,names,lens){
+  const l=S.links.find(x=>x.id===lid);if(!l)return;snap();
+  const{a,b,pa,pb}=linkPorts(l);
+  const A={x:a.x+W,y:a.y+60},B={x:b.x,y:b.y+60};
+  const chain=names.map((n,i)=>{const it=itemByName(n);const f=(i+1)/(names.length+1);return addDevice({...it,tpl:it.tpl||matchTpl(n,'','video').tpl},Math.round(A.x+(B.x-A.x)*f-W/2),Math.round(A.y+(B.y-A.y)*f-40))});
+  S.links=S.links.filter(x=>x!==l);
+  let prev=a,prevP=pa;const segs=[];
+  chain.forEach(c=>{const inP=c.ports.find(p=>p.d==='in'),outP=c.ports.find(p=>p.d==='out');segs.push([prev,prevP,c,inP]);prev=c;prevP=outP});
+  segs.push([prev,prevP,b,pb]);
+  segs.forEach((s,i)=>S.links.push({id:i===0?l.id:nextId(),from:[s[0].id,s[1].id],to:[s[2].id,s[3].id],len:lens[i]??2,note:''}));
+  U.sel=null;refresh();toast('Convertitori inseriti. Controlla la lista cavi.');
+}
+function fixLong(lid){const l=S.links.find(x=>x.id===lid);insertConverter(lid,['Micro Converter HDMI to SDI','Micro Converter SDI to HDMI'],[2,l.len,2])}
+function fixConv(lid){const{pa,pb}=linkPorts(S.links.find(x=>x.id===lid));insertConverter(lid,[CONV[pa.s+'>'+pb.s][0]],[2,S.links.find(x=>x.id===lid).len])}
+
+/* ---------- Materiale e controlli ---------- */
+function material(){
+  const m=new Map();
+  S.devices.forEach(d=>{const it0=findItem(d.key);const r=m.get(d.key)||{key:d.key,name:it0?it0.nome:d.name,marca:d.marca,cat:d.cat,src:d.src,need:0};r.need+=d.qty;m.set(d.key,r)});
+  return[...m.values()].map(r=>{
+    const it=findItem(r.key),own=r.src==='mag'&&it&&it.src==='mag';
+    const disp=own?it.disp:0,fromMag=Math.min(r.need,disp),toRent=r.need-fromMag;
+    return{...r,own,disp,fromMag,toRent,qty:own?it.qty:null,confirmed:!own||!toRent||!!S.rentOk[r.key]};
+  }).sort((a,b)=>a.cat.localeCompare(b.cat)||a.name.localeCompare(b.name));
+}
+const stdLen=n=>STD_LEN.find(x=>x>=n)||n;
+function linkState(l){
+  const{pa,pb}=linkPorts(l),e=evalLink(pa,pb),max=SIG[pa.s].max;
+  if(e.lv==='conv')return{sev:'err',t:'Serve convertitore'};
+  if(l.len>max&&pa.s===pb.s)return{sev:'warn',t:`Oltre ${max} m`};
+  if(e.lv==='adapt'&&!S.adapterDone[l.id])return{sev:'warn',t:'Serve adattatore'};
+  return{sev:'ok',t:'OK'};
+}
+function cables(){
+  const m=new Map();
+  S.links.forEach(l=>{const{pa,pb}=linkPorts(l);const c=[pa.c,pb.c].sort().join(' – ');const len=stdLen(l.len),k=pa.s+c+len;const r=m.get(k)||{sig:pa.s,c,len,n:0};r.n++;m.set(k,r)});
+  return[...m.values()].sort((a,b)=>SIG[a.sig].s.localeCompare(SIG[b.sig].s)||a.len-b.len);
+}
+function adapters(){
+  const m=new Map();
+  S.links.forEach(l=>{const{pa,pb}=linkPorts(l);if(pa.s===pb.s&&pa.c!==pb.c&&S.adapterDone[l.id]){const k=`${pa.c} → ${pb.c}`;m.set(k,(m.get(k)||0)+1)}});
+  return[...m.entries()];
+}
+function issues(){
+  const out=[];
+  S.links.forEach(l=>{
+    const{a,b,pa,pb}=linkPorts(l);const e=evalLink(pa,pb),max=SIG[pa.s].max,tag=`${l.id} · ${a.name} → ${b.name}`;
+    if(e.lv==='conv')out.push({sev:'err',text:tag,body:e.why,link:l.id,fix:['Inserisci '+e.conv[0],()=>fixConv(l.id)]});
+    if(l.len>max&&pa.s===pb.s){const can=pa.s==='hdmi';out.push({sev:'warn',text:tag,body:`${l.len} m su ${SIG[pa.s].s}: il limite indicativo è ${max} m.`,link:l.id,fix:can?['Porta in SDI con 2 convertitori',()=>fixLong(l.id)]:null})}
+    if(e.lv==='adapt'&&!S.adapterDone[l.id])out.push({sev:'warn',text:tag,body:e.why,link:l.id,fix:['Aggiungi adattatore',()=>{snap();S.adapterDone[l.id]=true;refresh();toast('Adattatore aggiunto al materiale')}]});
+  });
+  S.devices.forEach(d=>d.ports.forEach(p=>{const u=usage(d,p);if(u>capacity(d,p))out.push({sev:'err',text:`${d.name}: ${p.n}`,body:`${u} cavi su ${capacity(d,p)} porte.`,dev:d.id})}));
+  material().forEach(m=>{if(m.own&&m.toRent&&!S.rentOk[m.key])out.push({sev:'warn',text:`${m.name}: ${m.toRent===1?'ne manca 1':'ne mancano '+m.toRent}`,body:`Servono ${m.need}, disponibili ${m.disp} su ${m.qty}.`,dev:(S.devices.find(d=>d.key===m.key)||{}).id,fix:[`Noleggia ${m.toRent}`,()=>{snap();S.rentOk[m.key]=true;refresh();toast(`${m.toRent} × ${m.name} in noleggio`)}]})});
+  S.devices.forEach(d=>{if(d.guess)out.push({sev:'info',text:`${d.name}: porte stimate`,body:'Modello non riconosciuto. Controlla le porte sulla scheda tecnica.',dev:d.id});
+    else if(d.ports.length&&!d.ports.some(p=>usage(d,p)))out.push({sev:'info',text:`${d.name}: non collegato`,body:'Nessun cavo in ingresso o in uscita.',dev:d.id})});
+  const o={err:0,warn:1,info:2};return out.sort((a,b)=>o[a.sev]-o[b.sev]);
+}
+
+/* ---------- Disegno del piano ---------- */
+function applyView(){const{x,y,z}=U.v;$('world').style.transform=`translate(${x}px,${y}px) scale(${z})`;const g=$('gridbg');g.style.backgroundSize=`${22*z}px ${22*z}px`;g.style.backgroundPosition=`${x}px ${y}px`}
+function portXY(d,p){const s=sideOf(p),list=d.ports.filter(o=>sideOf(o)===s),i=list.indexOf(p);return{x:s==='l'?d.x:d.x+W,y:d.y+HEAD+PAD+i*ROW+ROW/2,s:s==='l'?-1:1}}
+function pathOf(a,b){const c=Math.max(46,Math.abs(b.x-a.x)*.48);return{d:`M${a.x} ${a.y}C${a.x+a.s*c} ${a.y} ${b.x+b.s*c} ${b.y} ${b.x} ${b.y}`,c}}
+function cubic(a,b,c,t){const p1={x:a.x+a.s*c,y:a.y},p2={x:b.x+b.s*c,y:b.y},m=1-t;return{x:m*m*m*a.x+3*m*m*t*p1.x+3*m*t*t*p2.x+t*t*t*b.x,y:m*m*m*a.y+3*m*m*t*p1.y+3*m*t*t*p2.y+t*t*t*b.y}}
+function renderNodes(){
+  const row=(d,p,side)=>{const u=usage(d,p),cap=capacity(d,p);return `<button type="button" class="port${u?' used':''}" data-d="${d.id}" data-p="${esc(p.id)}" style="--sc:var(${SIG[p.s].v})" title="${esc(p.n)} · ${esc(p.c)} · ${esc(SIG[p.s].l)}"><span class="d"></span><span class="lb">${esc(p.n)}</span><span class="ct">${cap>1?u+'/'+cap:(p.c===p.n?'':esc(p.c))}</span></button>`};
+  $('nodes').innerHTML=S.devices.map(d=>{
+    const l=d.ports.filter(p=>sideOf(p)==='l'),r=d.ports.filter(p=>sideOf(p)==='r');
+    const m=material().find(x=>x.key===d.key);
+    const tag=d.src==='glob'?'<span class="tag rent">Noleggio</span>':(m&&m.toRent?`<span class="tag short">−${m.toRent}</span>`:'');
+    return `<div class="node${U.sel&&U.sel.t==='d'&&U.sel.id===d.id?' sel':''}${d.src==='glob'?' rent':''}" data-node="${d.id}" style="transform:translate(${d.x}px,${d.y}px)">
+      <div class="nh"><div class="nn"><span class="t" title="${esc(d.name)}">${esc(d.name)}</span>${d.qty>1?`<span class="q">×${d.qty}</span>`:''}</div><div class="nm"><span class="b">${esc(d.marca)}</span>${tag}</div></div>
+      <div class="nb">${d.ports.length?`<div class="pc l">${l.map(p=>row(d,p)).join('')}</div><div class="pc r">${r.map(p=>row(d,p)).join('')}</div>`:'<div class="nop">Nessuna porta: aggiungile dai dettagli.</div>'}</div></div>`}).join('');
+}
+function visible(l){const{pa}=linkPorts(l);return U.layers[SIG[pa.s].layer]}
+function renderWires(){
+  let h='';
+  S.links.forEach((l,i)=>{
+    if(!visible(l))return;
+    const{a,b,pa,pb}=linkPorts(l),A=portXY(a,pa),B=portXY(b,pb),{d,c}=pathOf(A,B),st=linkState(l),sel=U.sel&&U.sel.t==='l'&&U.sel.id===l.id;
+    const m=cubic(A,B,c,[.5,.42,.58][i%3]),txt=`${l.id} · ${l.len} m`,w=txt.length*5.7+12;
+    h+=`<path class="w${SIG[pa.s].dash?' dash':''}${sel?' sel':''}" d="${d}" style="stroke:var(${SIG[pa.s].v})"/><path class="wh" data-l="${l.id}" d="${d}"/>
+    <g class="wl ${st.sev!=='ok'?st.sev:''}${sel?' sel':''}" data-l="${l.id}" transform="translate(${m.x-w/2} ${m.y-9})"><rect width="${w}" height="18" rx="4"/><text x="${w/2}" y="12.5" text-anchor="middle">${st.sev==='ok'?'':'! '}${txt}</text></g>`;
+  });
+  if(U.draft&&U.draft.to){const{d}=pathOf(U.draft.a,U.draft.to);h+=`<path class="w" d="${d}" style="stroke:var(--accent-text);stroke-dasharray:4 4"/>`}
+  $('wires').innerHTML=h;
+}
+function paintHints(){
+  const src=U.arm||(U.draft&&U.draft.from);
+  document.querySelectorAll('.port').forEach(el=>{
+    el.classList.remove('c-ok','c-adapt','c-conv','c-no','c-src');
+    if(!src)return;
+    const d=dev(el.dataset.d),p=port(d,el.dataset.p);
+    if(d.id===src.d&&p.id===src.p){el.classList.add('c-src');return}
+    const sd=dev(src.d),sp=port(sd,src.p);
+    if(d.id===src.d){el.classList.add('c-no');return}
+    const e=sp.d==='in'?evalLink(p,sp):evalLink(sp,p);
+    const full=usage(d,p)>=capacity(d,p);
+    el.classList.add(full||e.lv==='no'?'c-no':e.lv==='ok'?'c-ok':e.lv==='adapt'?'c-adapt':'c-conv');
+  });
+  const h=$('hint');h.hidden=!U.arm;
+  if(U.arm){const d=dev(U.arm.d),p=port(d,U.arm.p);$('hintTx').textContent=`${d.name}, ${p.n}: scegli l'altra porta`}
+}
+function fit(){
+  const r=$('stage').getBoundingClientRect();if(!S.devices.length){U.v={x:40,y:70,z:.9};applyView();return}
+  const b=S.devices.map(d=>{const n=Math.max(d.ports.filter(p=>sideOf(p)==='l').length,d.ports.filter(p=>sideOf(p)==='r').length,1);return{x:d.x,y:d.y,X:d.x+W,Y:d.y+HEAD+PAD*2+n*ROW}});
+  const x=Math.min(...b.map(o=>o.x)),y=Math.min(...b.map(o=>o.y)),X=Math.max(...b.map(o=>o.X)),Y=Math.max(...b.map(o=>o.Y));
+  if(r.width<600){U.v={z:.56,x:14,y:58};applyView();return}
+  const top=58,bot=r.width<980?64:20;
+  const z=Math.min(1,(r.width-48)/(X-x),(r.height-top-bot)/(Y-y));
+  U.v={z:Math.max(.25,z),x:(r.width-(X-x)*Math.max(.25,z))/2-x*Math.max(.25,z),y:top-y*Math.max(.25,z)};applyView();
+}
+function zoomAt(cx,cy,f){const v=U.v,z=Math.min(1.8,Math.max(.25,v.z*f));v.x=cx-(cx-v.x)*z/v.z;v.y=cy-(cy-v.y)*z/v.z;v.z=z;applyView()}
+function focusOn(wx,wy){const r=$('stage').getBoundingClientRect();U.v.x=r.width/2-wx*U.v.z;U.v.y=r.height/2-wy*U.v.z;applyView()}
+
+/* ---------- Pannelli ---------- */
+function renderHeader(){
+  $('project').value=S.project;
+  $('srcLabel').textContent={mag:'Magazzino',glob:'Lista globale',both:'Magazzino + globale'}[S.mode];
+  const is=issues(),e=is.filter(i=>i.sev==='err').length,w=is.filter(i=>i.sev==='warn').length,b=$('statusBtn');
+  b.className='status '+(e?'err':w?'warn':'ok');b.textContent=e+w?`${e+w} da risolvere`:'Schema a posto';
+  $('mSide').textContent=e+w?`Controlli (${e+w})`:'Controlli';
+}
+function renderCatalog(){
+  const t=$('catTitle');t.textContent={mag:'Magazzino',glob:'Lista globale',both:'Magazzino e lista globale'}[S.mode];
+  $('cats').innerHTML=Object.entries(CATS).filter(([k])=>k==='tutti'||catalog().some(i=>i.cat===k)).map(([k,v])=>`<button type="button" class="chip" data-cat="${k}" aria-pressed="${U.cat===k}">${v}</button>`).join('');
+  const q=norm(U.q),list=catalog().filter(i=>(U.cat==='tutti'||i.cat===U.cat)&&(!q||q.split(' ').every(w=>norm(i.nome+' '+i.marca).includes(w))));
+  const rows=list.slice(0,U.limit).map(i=>{
+    let av;
+    if(i.src==='mag'){const left=i.disp-usedQty(i.key),cl=left<=0?'none':left<=1?'low':'mag';av=`<span class="av ${cl}">${Math.max(left,0)} disp.<br>su ${i.qty}</span>`}
+    else av='<span class="av rent">Noleggio</span>';
+    return `<button type="button" class="item" draggable="true" data-item="${esc(i.key)}" data-src="${i.src}"><b>${esc(i.nome)}</b>${av}<span class="m">${esc(i.marca||'—')}</span></button>`}).join('');
+  $('items').innerHTML=(rows||`<div class="empty">Nessun risultato in questo catalogo.${S.mode!=='both'?' Prova a cambiare catalogo.':''}</div>`)+(list.length>U.limit?`<button class="btn s more" type="button" id="moreBtn">Mostra altri ${list.length-U.limit}</button>`:'');
+  if($('importNote'))$('importNote').textContent=`Lista globale: ${CAT.glob.length} articoli.`;
+}
+function renderSide(){
+  const box=$('selBox');let h='';
+  if(U.sel&&U.sel.t==='d'){
+    const d=dev(U.sel.id);
+    if(d)h=`<div class="sec"><h3>${esc(d.name)}</h3><p class="sub">${esc(d.marca)} · ${d.src==='glob'?'Lista globale, noleggio':'Magazzino'}</p>
+    ${d.guess?'<p class="note">Porte stimate dalla categoria. Controllale sulla scheda tecnica.</p>':''}
+    <label class="fld">Nome nello schema<input class="field" id="dName" value="${esc(d.name)}"></label>
+    <div class="two"><label class="fld">Quantità<input class="field" id="dQty" type="number" min="1" value="${d.qty}"></label><label class="fld">Posizione<input class="field" id="dLoc" value="${esc(d.loc)}" placeholder="Es. Regia"></label></div>
+    <div class="fld">Porte</div><ul class="plist">${d.ports.map(p=>`<li style="--c:var(${SIG[p.s].v})"><i></i><span class="n">${esc(p.n)} ${p.d==='in'?'(ingresso)':p.d==='out'?'(uscita)':'(in/out)'}</span><span class="c">${esc(p.c)} ×${p.k}</span><button type="button" class="rm" data-rmp="${esc(p.id)}" aria-label="Rimuovi porta ${esc(p.n)}">×</button></li>`).join('')||'<li><span></span><span class="n">Nessuna porta</span></li>'}</ul>
+    <details class="add" id="addPort"><summary>Aggiungi porta</summary>
+      <label class="fld">Nome<input class="field" id="npName" placeholder="Es. Uscite matrix"></label>
+      <div class="two"><label class="fld">Direzione<select class="field" id="npDir"><option value="in">Ingresso</option><option value="out">Uscita</option><option value="io">In/out</option></select></label>
+      <label class="fld">Quantità<input class="field" id="npK" type="number" min="1" value="1"></label></div>
+      <div class="two"><label class="fld">Segnale<select class="field" id="npSig">${Object.entries(SIG).map(([k,v])=>`<option value="${k}">${v.s}</option>`).join('')}</select></label>
+      <label class="fld">Connettore<select class="field" id="npConn">${CONNS.audio.map(c=>`<option>${c}</option>`).join('')}</select></label></div>
+      <button class="btn s" type="button" id="npAdd">Aggiungi porta</button></details>
+    <div class="acts" style="margin-top:10px"><button class="btn s" type="button" id="dModel">Salva porte per questo modello</button><button class="btn s danger" type="button" id="dDel">Rimuovi apparecchio</button></div></div>`;
+  }else if(U.sel&&U.sel.t==='l'){
+    const l=S.links.find(x=>x.id===U.sel.id);
+    if(l){const{a,b,pa,pb}=linkPorts(l),st=linkState(l);
+    h=`<div class="sec"><h3>Cavo ${l.id}</h3><p class="sub">${esc(SIG[pa.s].l)}</p>
+    <dl class="kv"><dt>Da</dt><dd>${esc(a.name)}, ${esc(pa.n)}</dd><dt>A</dt><dd>${esc(b.name)}, ${esc(pb.n)}</dd><dt>Connettori</dt><dd>${esc(pa.c)} → ${esc(pb.c)}</dd><dt>Stato</dt><dd>${esc(st.t)}</dd></dl>
+    <div class="two"><label class="fld">Lunghezza (m)<input class="field" id="lLen" type="number" min="1" value="${l.len}"></label><label class="fld">Taglio cavo<input class="field" value="${stdLen(l.len)} m" readonly></label></div>
+    <label class="fld">Nota<input class="field" id="lNote" value="${esc(l.note)}" placeholder="Es. Passa sotto la moquette"></label>
+    <button class="btn s danger" type="button" id="lDel">Elimina cavo</button></div>`}
+  }
+  box.innerHTML=h;$('sideTitle').textContent=h?'Dettagli':'Controlli';$('ctrlHead').hidden=!h;
+  renderIssues();
+}
+let issCache=[];
+function renderIssues(){
+  issCache=issues();
+  const main=issCache.filter(i=>i.sev!=='info'),lab={err:'Errore',warn:'Attenzione',info:'Info'};
+  if(!S.devices.length){$('issBox').innerHTML='<div class="empty" style="padding:0">Aggiungi il primo apparecchio dal catalogo. I controlli partono da soli.</div>';return}
+  $('issBox').innerHTML=(main.length?'':'<div class="allok">Nessun problema su cavi e materiale.</div>')+`<ul class="iss">${issCache.map((i,n)=>`<li><span class="sev ${i.sev}">${lab[i.sev]}</span><div><button type="button" class="tx" data-iss="${n}">${esc(i.text)}</button><p>${esc(i.body)}</p></div>${i.fix?`<div class="acts"><button type="button" class="btn s" data-fix="${n}">${esc(i.fix[0])}</button></div>`:''}</li>`).join('')}</ul>`;
+}
+function cableRows(){return S.links.map(l=>{const{a,b,pa,pb}=linkPorts(l);return{l,a,b,pa,pb,st:linkState(l)}})}
+function renderCavi(){
+  const rows=cableRows(),tot=S.links.reduce((n,l)=>n+l.len,0);
+  $('vCavi').innerHTML=`<div class="inner"><div class="phead"><div><h2>Lista cavi</h2><p>${S.links.length} cavi, ${tot} m totali. Ogni modifica qui aggiorna anche lo schema.</p></div><div class="acts"><button class="btn" type="button" data-copy="cavi">Copia per Excel</button><button class="btn p exp" type="button" hidden>Esporta Excel</button></div></div>
+  <div class="block"><h3>Patch</h3><div class="tw"><table><thead><tr><th>Cavo</th><th>Da</th><th>A</th><th>Segnale</th><th>Connettori</th><th class="n">Metri</th><th>Stato</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b style="font-weight:600">${r.l.id}</b></td><td>${esc(r.a.name)}<br><span class="sub">${esc(r.pa.n)}</span></td><td>${esc(r.b.name)}<br><span class="sub">${esc(r.pb.n)}</span></td><td><span class="sg" style="--c:var(${SIG[r.pa.s].v})"><i></i>${SIG[r.pa.s].s}</span></td><td style="white-space:nowrap">${esc(r.pa.c)} → ${esc(r.pb.c)}</td><td class="n"><input class="len" type="number" min="1" id="len-${r.l.id}" data-len="${r.l.id}" value="${r.l.len}" aria-label="Lunghezza ${r.l.id}"></td><td><span class="pill ${r.st.sev}">${esc(r.st.t)}</span></td></tr>`).join('')||'<tr><td colspan="7">Nessun cavo. Collega due porte nello schema.</td></tr>'}</tbody></table></div></div></div>`;
+  showExp();
+}
+function renderMat(){
+  const m=material(),own=m.filter(x=>x.fromMag),rent=m.filter(x=>x.toRent),ca=cables(),ad=adapters();
+  $('vMat').innerHTML=`<div class="inner"><div class="phead"><div><h2>Materiale</h2><p>Lista generata dallo schema. Quello che manca in magazzino passa nei noleggi.</p></div><div class="acts"><button class="btn" type="button" data-copy="mat">Copia per Excel</button><button class="btn exp" type="button" hidden>Esporta Excel</button><button class="btn p prep" type="button">Invia a Prepara Lavoro</button></div></div>
+  <div class="sum"><div><b>${own.reduce((n,x)=>n+x.fromMag,0)}</b><span>pezzi dal magazzino</span></div><div><b>${rent.reduce((n,x)=>n+x.toRent,0)}</b><span>pezzi da noleggiare</span></div><div><b>${S.links.length}</b><span>cavi da caricare</span></div><div><b>${ad.reduce((n,x)=>n+x[1],0)}</b><span>adattatori</span></div></div>
+  <div class="block"><h3>Dal magazzino</h3><div class="tw"><table><thead><tr><th>Articolo</th><th>Marca / Modello</th><th>Categoria</th><th class="n">Servono</th><th class="n">Disponibili</th></tr></thead><tbody>${own.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.marca)}</td><td>${esc(CATS[x.cat]||x.cat)}</td><td class="n">${x.fromMag}</td><td class="n">${x.disp}</td></tr>`).join('')||'<tr><td colspan="5">Nessun articolo dal magazzino.</td></tr>'}</tbody></table></div></div>
+  <div class="block"><h3>Da noleggiare</h3><div class="tw"><table><thead><tr><th>Articolo</th><th>Marca / Modello</th><th>Categoria</th><th class="n">Quantità</th><th>Stato</th></tr></thead><tbody>${rent.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.marca)}</td><td>${esc(CATS[x.cat]||x.cat)}</td><td class="n">${x.toRent}</td><td>${x.confirmed?'<span class="pill rent">Noleggio</span>':'<span class="pill warn">Da confermare</span>'}</td></tr>`).join('')||'<tr><td colspan="5">Nessun noleggio.</td></tr>'}</tbody></table></div></div>
+  <div class="block"><h3>Cavi per taglio</h3><div class="tw"><table><thead><tr><th>Tipo</th><th>Connettori</th><th class="n">Taglio</th><th class="n">Quantità</th></tr></thead><tbody>${ca.map(c=>`<tr><td><span class="sg" style="--c:var(${SIG[c.sig].v})"><i></i>${SIG[c.sig].s}</span></td><td>${esc(c.c)}</td><td class="n">${c.len} m</td><td class="n">${c.n}</td></tr>`).join('')||'<tr><td colspan="4">Nessun cavo.</td></tr>'}</tbody></table></div></div>
+  ${ad.length?`<div class="block"><h3>Adattatori</h3><div class="tw"><table><thead><tr><th>Tipo</th><th class="n">Quantità</th></tr></thead><tbody>${ad.map(a=>`<tr><td>${esc(a[0])}</td><td class="n">${a[1]}</td></tr>`).join('')}</tbody></table></div></div>`:''}</div>`;
+  showExp();
+}
+function render(){renderHeader();renderCatalog();renderNodes();renderWires();renderSide();paintHints();if(U.tab==='cavi')renderCavi();if(U.tab==='mat')renderMat()}
+function refresh(){render();save()}
+function setTab(t){
+  U.tab=t;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));
+  const sc=t==='schema';$('stage').hidden=!sc;$('cat').hidden=!sc;$('side').hidden=!sc;$('vCavi').hidden=t!=='cavi';$('vMat').hidden=t!=='mat';
+  $('stage').style.display=sc?'':'none';$('cat').style.display=sc?'':'none';$('side').style.display=sc?'':'none';
+  $('body').classList.toggle('full',!sc);
+  if(t==='cavi')renderCavi();if(t==='mat')renderMat();if(sc){applyView()}
+}
+function closePanels(){$('cat').classList.remove('open');$('side').classList.remove('open')}
+function openPanel(id){closePanels();$(id).classList.add('open')}
+
+/* ---------- Interazione piano ---------- */
+const stage=$('stage');const ptrs=new Map();let drag=null,pinch=null;
+function toWorld(e){const r=stage.getBoundingClientRect();return{x:(e.clientX-r.left-U.v.x)/U.v.z,y:(e.clientY-r.top-U.v.y)/U.v.z}}
+stage.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.tools,.hint,.mobile-nav'))return;
+  ptrs.set(e.pointerId,e);
+  if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),z:U.v.z};drag=null;U.draft=null;return}
+  stage.setPointerCapture(e.pointerId);
+  const pe=e.target.closest('.port');
+  if(pe){
+    const d=dev(pe.dataset.d),p=port(d,pe.dataset.p);
+    if(U.arm){const a=dev(U.arm.d),pa=port(a,U.arm.p);const same=a.id===d.id&&pa.id===p.id;U.arm=null;if(!same)connect(a,pa,d,p);paintHints();return}
+    U.draft={from:{d:d.id,p:p.id},a:portXY(d,p),to:null,sx:e.clientX,sy:e.clientY,moved:false};paintHints();return;
+  }
+  const n=e.target.closest('.node');
+  if(n){const d=dev(n.dataset.node);U.sel={t:'d',id:d.id};const w=toWorld(e);drag={t:'node',d,ox:w.x-d.x,oy:w.y-d.y,moved:false,el:n};document.querySelectorAll('.node.sel').forEach(x=>x.classList.remove('sel'));n.classList.add('sel');renderSide();renderWires();return}
+  const lk=e.target.closest('[data-l]');
+  if(lk){U.sel={t:'l',id:lk.dataset.l};refreshSel();return}
+  if(U.arm){U.arm=null;paintHints()}
+  drag={t:'pan',sx:e.clientX,sy:e.clientY,vx:U.v.x,vy:U.v.y,moved:false};stage.classList.add('pan');
+});
+function refreshSel(){renderNodes();renderWires();renderSide();paintHints()}
+stage.addEventListener('pointermove',e=>{
+  if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,e);
+  if(pinch&&ptrs.size===2){const[a,b]=[...ptrs.values()],r=stage.getBoundingClientRect(),dist=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);const cx=(a.clientX+b.clientX)/2-r.left,cy=(a.clientY+b.clientY)/2-r.top;zoomAt(cx,cy,(pinch.z*dist/pinch.d)/U.v.z);return}
+  if(U.draft){
+    if(Math.hypot(e.clientX-U.draft.sx,e.clientY-U.draft.sy)>6)U.draft.moved=true;
+    if(U.draft.moved){const w=toWorld(e);U.draft.to={x:w.x,y:w.y,s:U.draft.a.s*-1};renderWires()}
+    return;
+  }
+  if(!drag)return;
+  if(drag.t==='node'){const w=toWorld(e),nx=Math.round((w.x-drag.ox)/11)*11,ny=Math.round((w.y-drag.oy)/11)*11;if(nx!==drag.d.x||ny!==drag.d.y){if(!drag.moved){snap();drag.moved=true}drag.d.x=nx;drag.d.y=ny;drag.el.style.transform=`translate(${nx}px,${ny}px)`;renderWires()}}
+  else{U.v.x=drag.vx+e.clientX-drag.sx;U.v.y=drag.vy+e.clientY-drag.sy;drag.moved=drag.moved||Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>4;applyView()}
+});
+function endPtr(e){
+  ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;
+  if(U.draft){
+    const df=U.draft;U.draft=null;
+    if(!df.moved){U.arm=df.from;paintHints();renderWires();return}
+    const el=document.elementFromPoint(e.clientX,e.clientY),pe=el&&el.closest('.port');
+    renderWires();paintHints();
+    if(pe){const a=dev(df.from.d),pa=port(a,df.from.p),b=dev(pe.dataset.d),pb=port(b,pe.dataset.p);if(!(a.id===b.id&&pa.id===pb.id))connect(a,pa,b,pb)}
+    return;
+  }
+  if(drag){if(drag.t==='pan'&&!drag.moved&&U.sel){U.sel=null;refreshSel()}if(drag.t==='node'&&drag.moved)save();drag=null;stage.classList.remove('pan')}
+}
+stage.addEventListener('pointerup',endPtr);stage.addEventListener('pointercancel',endPtr);
+stage.addEventListener('wheel',e=>{e.preventDefault();const r=stage.getBoundingClientRect();if(e.ctrlKey||e.metaKey||Math.abs(e.deltaY)>=40&&!e.shiftKey){zoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.1:.91)}else{U.v.x-=e.deltaX;U.v.y-=e.deltaY;applyView()}},{passive:false});
+stage.addEventListener('click',e=>{const pe=e.target.closest('.port');if(pe&&e.detail===0){const d=dev(pe.dataset.d),p=port(d,pe.dataset.p);if(U.arm){const a=dev(U.arm.d),pa=port(a,U.arm.p);U.arm=null;connect(a,pa,d,p)}else U.arm={d:d.id,p:p.id};paintHints()}});
+stage.addEventListener('dragover',e=>e.preventDefault());
+stage.addEventListener('drop',e=>{e.preventDefault();const it=catalog().find(i=>i.key===e.dataTransfer.getData('text/plain'));if(it){const w=toWorld(e);addFromCatalog(it,w.x-W/2,w.y-24)}});
+$('layers').innerHTML=Object.entries(LAYERS).map(([k,v])=>`<button type="button" class="layer" data-layer="${k}" aria-pressed="true" style="--c:var(${v[1]})"><i></i>${v[0]}</button>`).join('');
+$('layers').addEventListener('click',e=>{const b=e.target.closest('[data-layer]');if(!b)return;const k=b.dataset.layer;U.layers[k]=!U.layers[k];b.setAttribute('aria-pressed',U.layers[k]);renderWires()});
+$('zIn').onclick=()=>{const r=stage.getBoundingClientRect();zoomAt(r.width/2,r.height/2,1.2)};
+$('zOut').onclick=()=>{const r=stage.getBoundingClientRect();zoomAt(r.width/2,r.height/2,.83)};
+$('zFit').onclick=fit;
+$('hintX').onclick=()=>{U.arm=null;paintHints()};
+
+/* ---------- Eventi pannelli ---------- */
+$('items').addEventListener('click',e=>{if(e.target.id==='moreBtn'){U.limit+=120;renderCatalog();return}const b=e.target.closest('.item');if(b){const it=catalog().find(i=>i.key===b.dataset.item);if(it)addFromCatalog(it)}});
+$('items').addEventListener('dragstart',e=>{const b=e.target.closest('.item');if(b)e.dataTransfer.setData('text/plain',b.dataset.item)});
+$('cats').addEventListener('click',e=>{const b=e.target.closest('[data-cat]');if(b){U.cat=b.dataset.cat;U.limit=80;renderCatalog()}});
+$('q').addEventListener('input',e=>{U.q=e.target.value;U.limit=80;renderCatalog()});
+$('project').addEventListener('change',e=>{S.project=e.target.value.trim()||'Schema senza nome';save()});
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).classList.remove('open'));
+$('mCat').onclick=()=>openPanel('cat');$('mSide').onclick=()=>openPanel('side');
+$('statusBtn').onclick=()=>{setTab('schema');if(innerWidth<=980)openPanel('side')};
+$('undoBtn').onclick=undo;
+$('side').addEventListener('click',e=>{
+  const fx=e.target.closest('[data-fix]');if(fx){issCache[+fx.dataset.fix].fix[1]();return}
+  const ix=e.target.closest('[data-iss]');
+  if(ix){const i=issCache[+ix.dataset.iss];
+    if(i.link){U.sel={t:'l',id:i.link};const l=S.links.find(x=>x.id===i.link),{a,b,pa,pb}=linkPorts(l),A=portXY(a,pa),B=portXY(b,pb);focusOn((A.x+B.x)/2,(A.y+B.y)/2)}
+    else if(i.dev){U.sel={t:'d',id:i.dev};const d=dev(i.dev);focusOn(d.x+W/2,d.y+60)}
+    refreshSel();return}
+  if(e.target.id==='dDel')removeDevice(U.sel.id);
+  if(e.target.id==='dModel')saveModel(dev(U.sel.id));
+  if(e.target.id==='lDel')removeLink(U.sel.id);
+  const rm=e.target.closest('[data-rmp]');
+  if(rm){snap();const d=dev(U.sel.id),id=rm.dataset.rmp;S.links=S.links.filter(l=>!((l.from[0]===d.id&&l.from[1]===id)||(l.to[0]===d.id&&l.to[1]===id)));d.ports=d.ports.filter(p=>p.id!==id);refresh()}
+  if(e.target.id==='npAdd'){const n=$('npName').value.trim();if(!n){toast('Scrivi il nome della porta.');return}snap();const d=dev(U.sel.id);const p=P(n,$('npDir').value,$('npConn').value,$('npSig').value,Math.max(1,+$('npK').value||1));if(d.ports.some(o=>o.id===p.id))p.id+='-'+d.ports.length;d.ports.push(p);d.guess=false;refresh();toast('Porta aggiunta')}
+});
+$('side').addEventListener('change',e=>{
+  const t=e.target;
+  if(t.id==='npSig'){$('npConn').innerHTML=CONNS[t.value].map(c=>`<option>${c}</option>`).join('');return}
+  if(t.id==='dName'||t.id==='dQty'||t.id==='dLoc'){snap();const d=dev(U.sel.id);if(t.id==='dName')d.name=t.value.trim()||d.name;if(t.id==='dLoc')d.loc=t.value;if(t.id==='dQty')d.qty=Math.max(1,+t.value||1);refresh()}
+  if(t.id==='lLen'||t.id==='lNote'){snap();const l=S.links.find(x=>x.id===U.sel.id);if(t.id==='lLen')l.len=Math.max(1,+t.value||1);else l.note=t.value;refresh()}
+});
+$('vCavi').addEventListener('change',e=>{const id=e.target.dataset.len;if(id){snap();S.links.find(x=>x.id===id).len=Math.max(1,+e.target.value||1);refresh()}});
+document.addEventListener('keydown',e=>{
+  if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
+  if(e.key==='Escape'){U.arm=null;paintHints()}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo()}
+  if((e.key==='Delete'||e.key==='Backspace')&&U.sel&&U.tab==='schema'){e.preventDefault();U.sel.t==='d'?removeDevice(U.sel.id):removeLink(U.sel.id)}
+});
+addEventListener('resize',()=>{if(U.tab==='schema')applyView()});
+
+async function saveModel(d){
+  try{await DB.collection('modelli_porte').doc(docKey(d.key)).set({key:d.key,nome:d.name,marca:d.marca,ports:JSON.parse(JSON.stringify(d.ports)),modificatoDa:CL.user.nome||'',modificatoIl:new Date().toISOString()});d.guess=false;refresh();toast('Porte salvate: valgono per i prossimi schemi con questo modello')}
+  catch(e){toast(e.code==='permission-denied'?'Salvataggio bloccato: pubblica le nuove regole Firestore.':'Salvataggio non riuscito: riprova.')}
+}
+const docKey=k=>k.replace(/[^a-z0-9]+/g,'_').slice(0,140)||'x';
+
+/* ---------- Scelta catalogo ---------- */
+let srcNew=true;
+function openSrc(isNew){srcNew=isNew;$('srcTitle').textContent=isNew?'Nuovo schema':'Cambia catalogo';$('srcText').textContent='Da quale catalogo vuoi prendere il materiale?';$('nameFld').hidden=!isNew;$('newName').value='';$('srcOk').textContent=isNew?'Crea schema':'Usa questo catalogo';document.querySelector(`[name=src][value=${S.mode}]`).checked=true;$('srcDlg').showModal()}
+$('newBtn').onclick=()=>openSrc(true);$('srcBtn').onclick=()=>openSrc(false);$('srcCancel').onclick=()=>$('srcDlg').close();
+$('srcForm').addEventListener('submit',e=>{
+  e.preventDefault();const m=document.querySelector('[name=src]:checked').value;S.mode=m;U.cat='tutti';
+  if(srcNew){const nome=$('newName').value.trim()||'Nuovo schema';startNew(nome,m)}
+  else{$('srcDlg').close();refresh();toast('Catalogo aggiornato. Gli apparecchi già nello schema restano.')}
+});
+function startNew(nome,m){
+  Object.assign(S,blank(),{project:nome,mode:m});U.sel=null;U.undo=[];$('undoBtn').disabled=true;U.v={x:40,y:70,z:.9};applyView();
+  CL.id=DB.collection('schemi').doc().id;CL.ready=true;history.replaceState(null,'','?id='+CL.id);
+  $('srcDlg').close();refresh();flush();if(innerWidth<=980)openPanel('cat');toast('Schema creato');
+}
+async function openSchema(id){
+  try{const d=await DB.collection('schemi').doc(id).get();if(!d.exists){toast('Schema non trovato.');return false}
+    const o=d.data();Object.assign(S,blank(),{project:o.nome,mode:o.mode||'both',devices:o.devices||[],links:o.links||[],seq:o.seq||1,devSeq:o.devSeq||1,rentOk:o.rentOk||{},adapterDone:o.adapterDone||{}});
+    CL.id=id;CL.ready=true;U.sel=null;U.undo=[];$('undoBtn').disabled=true;history.replaceState(null,'','?id='+id);setSaved('Aperto');render();requestAnimationFrame(fit);return true}
+  catch(e){toast(e.code==='permission-denied'?'Lettura bloccata: pubblica le nuove regole Firestore.':'Apertura non riuscita: riprova.');return false}
+}
+async function showList(){
+  const ul=$('slist');ul.innerHTML='<li class="empty">Carico gli schemi…</li>';if(!$('openDlg').open)$('openDlg').showModal();
+  try{const q=await DB.collection('schemi').orderBy('modificatoIl','desc').limit(60).get();
+    ul.innerHTML=q.docs.map(d=>{const o=d.data(),t=o.modificatoIl?new Date(o.modificatoIl).toLocaleDateString('it-IT'):'';return `<li><button type="button" data-open="${esc(d.id)}"><b>${esc(o.nome)}</b><span>${esc(o.modificatoDa||'')} · ${t}</span></button></li>`}).join('')||'<li class="empty">Nessuno schema. Crea il primo.</li>'}
+  catch(e){ul.innerHTML=`<li class="empty">${e.code==='permission-denied'?'Pubblica le nuove regole Firestore per salvare e aprire gli schemi.':'Elenco non disponibile: riprova.'}</li>`}
+}
+$('slist').addEventListener('click',async e=>{const b=e.target.closest('[data-open]');if(b&&await openSchema(b.dataset.open))$('openDlg').close()});
+$('openBtn').onclick=showList;$('openX').onclick=()=>{$('openDlg').close()};$('openNew').onclick=()=>{$('openDlg').close();openSrc(true)};
+
+/* ---------- Import Excel ---------- */
+$('impGlob').onclick=()=>$('fileGlob').click();
+$('fileGlob').onchange=e=>importFile(e.target);
+async function importFile(input){
+  const f=input.files[0];if(!f)return;
+  try{
+    if(typeof XLSX==='undefined')throw new Error('la libreria Excel non si è caricata. Ricarica la pagina.');
+    const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,defval:''});
+    const hi=rows.findIndex(r=>r.some(c=>/nome|articolo|descrizione|prodotto|item|model/i.test(String(c))));
+    if(hi<0)throw new Error('non trovo una colonna con il nome articolo.');
+    const h=rows[hi].map(c=>String(c).toLowerCase());
+    const col=(...k)=>h.findIndex(c=>k.some(x=>c.includes(x)));
+    const cN=col('nome','articolo','descrizione','prodotto','item','name'),cM=col('marca','modello','brand','model'),cC=col('categoria','reparto','famiglia');
+    const map=new Map();
+    rows.slice(hi+1).forEach(r=>{
+      const raw=String(r[cN]||'').trim();if(!raw)return;
+      const nome=baseName(raw),marca=cM>=0?String(r[cM]||'').trim():'';
+      let cat=cC>=0?norm(r[cC]).replace(/\s/g,''):'altro';if(!CATS[cat]||cat==='tutti')cat='altro';
+      const key=keyOf(nome,marca);if(!map.has(key)){const m=matchTpl(nome,marca,cat);map.set(key,{key,src:'glob',cat,nome,marca,tpl:m.tpl,guess:m.guess})}
+    });
+    const list=[...map.values()];
+    if(!list.length)throw new Error('nessuna riga con un nome articolo.');
+    for(let i=0;i<list.length;i+=400){const b=DB.batch();list.slice(i,i+400).forEach(it=>b.set(DB.collection('catalogo_globale').doc(docKey(it.key)),it));await b.commit()}
+    await loadGlobal();U.cat='tutti';render();toast(`Lista globale: ${list.length} articoli importati o aggiornati.`);
+  }catch(err){toast('Import non riuscito: '+(err.code==='permission-denied'?'pubblica le nuove regole Firestore.':err.message))}finally{input.value=''}
+}
+
+/* ---------- Export ---------- */
+function tables(){
+  const cavi=[['Cavo','Da','Porta','A','Porta','Segnale','Connettori','Metri','Taglio','Stato','Nota']].concat(cableRows().map(r=>[r.l.id,r.a.name,r.pa.n,r.b.name,r.pb.n,SIG[r.pa.s].s,`${r.pa.c} > ${r.pb.c}`,r.l.len,stdLen(r.l.len),r.st.t,r.l.note]));
+  const mat=[['Provenienza','Categoria','Nome articolo','Marca / Modello','Quantità']];
+  material().forEach(m=>{if(m.fromMag)mat.push(['Magazzino',m.cat,m.name,m.marca,m.fromMag]);if(m.toRent)mat.push(['Noleggio',m.cat,m.name,m.marca,m.toRent])});
+  cables().forEach(c=>mat.push(['Cavi','cavi',`${SIG[c.sig].s} ${c.c}`,`${c.len} m`,c.n]));
+  adapters().forEach(a=>mat.push(['Adattatori','cavi',a[0],'',a[1]]));
+  return{cavi,mat};
+}
+function showExp(){document.querySelectorAll('.exp').forEach(b=>{b.hidden=false;b.onclick=doExport});document.querySelectorAll('.prep').forEach(b=>{b.onclick=sendPrep})}
+function doExport(){
+  try{const t=tables(),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(t.cavi),'Lista cavi');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(t.mat),'Materiale');
+    XLSX.writeFile(wb,'Schema_'+(S.project||'collegamenti').replace(/[^\w-]+/g,'_')+'.xlsx');toast('File Excel scaricato')
+  }catch(e){toast('Export non riuscito. Usa Copia per Excel.')}
+}
+/* Passa il materiale a Prepara Lavoro: la lista si controlla e si salva in AV Manager. */
+function prepRows(){
+  const rows=[];
+  material().forEach(m=>{
+    const it=findItem(m.key);let left=m.fromMag;
+    if(left&&it&&it.docs){
+      const av=it.docs.slice().sort((a,b)=>b.free-a.free);
+      for(const d of av){if(left<=0)break;const q=Math.min(left,Math.max(d.free,0));if(q>0){rows.push({id:d.id,nome:d.nome,cat:d.cat||m.cat,marca:d.marca||'',ser:d.ser||'',qty:q,note:''});left-=q}}
+    }
+    if(m.toRent)rows.push({id:'',nome:m.name,cat:m.cat,marca:m.marca,ser:'',qty:m.toRent,note:'Noleggio esterno (da schema)'});
+  });
+  return rows;
+}
+function sendPrep(){
+  const rows=prepRows();if(!rows.length){toast('Lo schema non ha materiale.');return}
+  try{localStorage.setItem('mmg_schema_prep',JSON.stringify({ts:Date.now(),nome:S.project,righe:rows}));location.href='/'}
+  catch(e){toast('Invio non riuscito: memoria del browser bloccata.')}
+}
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-copy]');if(!b)return;
+  const txt=tables()[b.dataset.copy].map(r=>r.join('\t')).join('\n');
+  try{await navigator.clipboard.writeText(txt);toast('Copiato: incollalo in Excel')}catch(_){const t=$('copyTx');t.value=txt;$('copyDlg').showModal();t.select()}
+});
+$('copyX').onclick=()=>$('copyDlg').close();
+
+/* ---------- Collegamento ad AV Manager ---------- */
+firebase.initializeApp({
+  apiKey:"AIzaSyDxxvnjtKdybQStd0yUT8xKE0MBgwYPZTo",
+  authDomain:"av-manager-41c40.firebaseapp.com",
+  projectId:"av-manager-41c40",
+  storageBucket:"av-manager-41c40.firebasestorage.app",
+  messagingSenderId:"1047072296195",
+  appId:"1:1047072296195:web:d220ed9c196b185d016d36"
+});
+const DB=firebase.firestore(),AUTH=firebase.auth();
+const low=s=>String(s||'').toLowerCase().trim();
+let rawMag=[],rawLav=[];
+/* Stessa regola di getInUsoGlobale in AV Manager: id, seriale oppure nome, sui lavori non rientrati. */
+function rebuildMag(){
+  const byId=new Map(),bySer=new Map(),byNome=new Map(),put=(m,k,a)=>{if(!k)return;(m.get(k)||m.set(k,[]).get(k)).push(a)};
+  rawLav.filter(d=>!d.rientroData).forEach(d=>(d.articoli||[]).forEach(a=>{put(byId,a.id,a);put(bySer,a.ser,a);put(byNome,low(a.nome),a)}));
+  const groups=new Map();
+  rawMag.filter(m=>!m.eliminatoAt).forEach(m=>{
+    const hits=new Set([...(byId.get(m.id)||[]),...(m.ser?bySer.get(m.ser)||[]:[]),...(byNome.get(low(m.nome))||[])]);
+    let uso=0;hits.forEach(a=>uso+=a.qty||1);
+    const qty=m.qty||1,free=Math.max(0,qty-uso),nome=baseName(m.nome),marca=m.marca||'',key=keyOf(nome,marca),cat=CATS[low(m.cat)]?low(m.cat):'altro';
+    const g=groups.get(key);
+    if(g){g.qty+=qty;g.disp+=free;g.docs.push({id:m.id,nome:m.nome,cat:m.cat,marca,ser:m.ser||'',free})}
+    else{const t=matchTpl(nome,marca,cat);groups.set(key,{key,src:'mag',cat,nome,marca,qty,disp:free,tpl:t.tpl,guess:t.guess,docs:[{id:m.id,nome:m.nome,cat:m.cat,marca,ser:m.ser||'',free}]})}
+  });
+  CAT.mag=[...groups.values()].sort((a,b)=>a.nome.localeCompare(b.nome));
+  render();
+}
+async function loadGlobal(){
+  try{const q=await DB.collection('catalogo_globale').get(),own=new Map(GLOB_BASE.map(i=>[i.key,i]));q.docs.forEach(d=>{const o=d.data();if(o.key)own.set(o.key,o)});CAT.glob=[...own.values()].sort((a,b)=>a.nome.localeCompare(b.nome))}catch(e){CAT.glob=GLOB_BASE}
+}
+async function loadPorts(){try{const q=await DB.collection('modelli_porte').get();q.docs.forEach(d=>{const o=d.data();if(o.key)CAT.ports[o.key]=o.ports})}catch(e){}}
+function gate(t,p,link){$('gate').hidden=false;$('gateT').textContent=t;$('gateP').textContent=p;$('gateA').hidden=!link}
+AUTH.onAuthStateChanged(async u=>{
+  if(!u){gate('Accedi ad AV Manager','Gli schemi usano il tuo accesso. Entra in AV Manager e riapri questa pagina.',true);return}
+  try{
+    const d=await DB.collection('team').doc(u.uid).get();
+    if(!d.exists||!d.data().approvato){gate('Accesso non approvato','Il tuo account deve essere approvato in AV Manager.',true);return}
+    CL.user={id:u.uid,email:u.email,...d.data()};
+    CL.manager=CL.user.isAdmin===true||CL.user.ruolo==='Responsabile'||CL.user.ruolo==='Project Manager';
+    $('importBox').hidden=!CL.manager;
+    $('gate').hidden=true;render();
+    await Promise.all([loadGlobal(),loadPorts()]);
+    DB.collection('magazzino').orderBy('nome').onSnapshot(s=>{rawMag=s.docs.map(x=>({id:x.id,...x.data()}));rebuildMag()},()=>toast('Magazzino non leggibile: riapri AV Manager.'));
+    DB.collection('lavori').onSnapshot(s=>{rawLav=s.docs.map(x=>({id:x.id,...x.data()}));rebuildMag()},()=>{});
+    const id=new URLSearchParams(location.search).get('id');
+    if(!(id&&await openSchema(id)))showList();
+  }catch(e){gate('Connessione non riuscita','Controlla la rete e ricarica la pagina.',true)}
+});
+render();
+requestAnimationFrame(fit);
+</script>
+</body>
+</html>
