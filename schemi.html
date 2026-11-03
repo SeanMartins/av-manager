@@ -73,7 +73,8 @@ button{cursor:pointer}
 .btn.p:hover{background:var(--accent-hover)}
 .btn.s{height:28px;padding:0 9px;font-size:12px;border-radius:6px}
 .btn:disabled{opacity:.45;cursor:default}
-.src-btn{gap:7px}
+.src-btn{gap:7px;max-width:290px}
+#srcLabel{overflow:hidden;text-overflow:ellipsis}
 .src-btn .k{color:var(--text-3);font-weight:400}
 .status{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:500;border:0}
 .status.err{background:var(--err-subtle);color:var(--err)}
@@ -253,6 +254,29 @@ dialog p{margin:0 0 14px;color:var(--text-2)}
 }
 @media (max-width:600px){#zOut,#zIn{display:none}.layer{padding:0 6px}}
 @media (prefers-reduced-motion:no-preference){.btn,.chip,.port{transition:background-color .12s}}
+.plan{min-height:0;display:grid;grid-template-columns:260px minmax(0,1fr) 316px}
+#pLeft{border-right:1px solid var(--border)}
+#pRight{border-left:1px solid var(--border);overflow:auto}
+#pStage{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--sunken);touch-action:none;user-select:none;-webkit-user-select:none}
+#pWorld{position:absolute;left:0;top:0;transform-origin:0 0}
+#pImg{display:block;max-width:none;background:#fff;box-shadow:var(--shadow-md);pointer-events:none}
+#pSvg{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible}
+.pempty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-inline:16px;text-align:center}
+.pempty div{max-width:400px}.pempty h2{font-size:20px;font-weight:600;margin:0 0 6px}.pempty p{color:var(--text-2);margin:0 0 14px}
+.pdev{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:7px 8px;border-radius:6px}
+.pdev.on{background:var(--accent-subtle)}
+.pdev .n{border:0;background:transparent;text-align:left;padding:0;font-weight:500;font-size:13px;overflow-wrap:anywhere}
+.pdev .s{grid-column:1;font-size:12px;color:var(--text-3)}
+.pdev .acts{grid-row:1/3;grid-column:2}
+.cl{list-style:none;margin:0;padding:0}
+.cl li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 8px;padding:6px 0;border-top:1px solid var(--border)}
+.cl li:first-child{border-top:0}
+.cl button{border:0;background:transparent;text-align:left;padding:0;font-size:12px;overflow-wrap:anywhere}
+.cl button b{font-weight:600}.cl li.on button b{color:var(--accent-text)}
+.cl .m{font-size:12px;font-weight:600;white-space:nowrap}.cl .o{grid-column:1/-1;font-size:11px;color:var(--text-3)}
+.formula{font-size:12px;color:var(--text-2);margin:0 0 8px}
+.pm{font:500 11px var(--font);fill:var(--text)}
+.mk{cursor:move}.mk text{paint-order:stroke;stroke:var(--surface);stroke-width:3px}
 .saved{font-size:12px;color:var(--text-3);white-space:nowrap}
 .saved.bad{color:var(--warn)}
 .back{color:var(--text-2);text-decoration:none;font-size:13px;white-space:nowrap}
@@ -264,6 +288,8 @@ dialog p{margin:0 0 14px;color:var(--text-2)}
 .slist b{font-weight:500;overflow-wrap:anywhere}.slist span{font-size:12px;color:var(--text-3);white-space:nowrap}
 #gate{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding-inline:16px;text-align:center}
 #gate div{max-width:380px}#gate h1{font-size:20px;font-weight:600;margin:0 0 6px}#gate p{color:var(--text-2);margin:0 0 14px}
+@media (max-width:980px){.plan{display:block;height:100%}#pStage{height:100%}.back{order:-3}#project{flex:1 1 60px;min-width:60px}.saved{display:none}.saved.bad{display:inline;flex:1 0 100%;order:2;max-width:none}#srcBtn{flex:1 1 90px}}
+@media (max-width:600px){#pOut,#pIn{display:none}}
 </style>
 </head>
 <body>
@@ -272,16 +298,17 @@ dialog p{margin:0 0 14px;color:var(--text-2)}
 <div class="app">
   <header class="top">
     <a class="back" href="/" aria-label="Torna ad AV Manager">← AV Manager</a>
-    <div class="brand">Schemi collegamenti<small>v2026.11.03a</small></div>
+    <div class="brand">Schemi collegamenti<small>v2026.11.03b</small></div>
     <input id="project" aria-label="Nome dello schema" autocomplete="off">
     <div class="tabs" role="tablist" aria-label="Viste">
       <button id="t-schema" role="tab" aria-selected="true" data-tab="schema">Schema</button>
       <button id="t-cavi" role="tab" aria-selected="false" data-tab="cavi">Lista cavi</button>
+      <button id="t-plan" role="tab" aria-selected="false" data-tab="plan">Planimetria</button>
       <button id="t-mat" role="tab" aria-selected="false" data-tab="mat">Materiale</button>
     </div>
     <button id="statusBtn" class="status ok" type="button"></button>
     <div class="spacer"></div>
-    <button id="srcBtn" class="btn src-btn" type="button"><span class="k">Catalogo</span><span id="srcLabel"></span></button>
+    <button id="srcBtn" class="btn src-btn" type="button" title="Lavoro, date e catalogo"><span id="srcLabel"></span></button>
     <span class="saved" id="saved" role="status"></span>
     <button id="undoBtn" class="btn" type="button" disabled>Annulla</button>
     <button id="openBtn" class="btn" type="button">Apri</button>
@@ -321,6 +348,28 @@ dialog p{margin:0 0 14px;color:var(--text-2)}
       <div class="sec" id="issBox"></div>
     </aside>
 
+    <section class="plan" id="vPlan" hidden>
+      <aside class="panel" id="pLeft" aria-label="Apparecchi sulla planimetria">
+        <div class="ph"><h2>Apparecchi</h2><button class="x" type="button" data-close="pLeft" aria-label="Chiudi">×</button></div>
+        <div class="items" id="pDevs"></div>
+      </aside>
+      <div id="pStage" aria-label="Planimetria">
+        <div id="pWorld"><img id="pImg" alt="Planimetria caricata" draggable="false" hidden><svg id="pSvg" aria-hidden="true"></svg></div>
+        <div class="pempty" id="pEmpty"><div><h2>Carica la planimetria</h2><p>Immagine o PDF della sala. Poi imposti la scala, posizioni gli apparecchi e i cavi si misurano da soli.</p><button class="btn p" type="button" id="pLoad">Scegli file</button></div></div>
+        <div class="tools" id="pTools" hidden>
+          <div class="bar" id="pModes"><button class="layer" type="button" data-pm="move" aria-pressed="true">Sposta</button><button class="layer" type="button" data-pm="cal" aria-pressed="false">Scala</button><button class="layer" type="button" data-pm="route" aria-pressed="false">Percorso</button></div>
+          <div class="bar"><button class="tb" id="pOut" type="button" aria-label="Riduci">−</button><button class="tb w2" id="pFit" type="button">Adatta</button><button class="tb" id="pIn" type="button" aria-label="Ingrandisci">+</button></div>
+        </div>
+        <div class="hint" id="pHint" hidden><span id="pHintTx"></span><button type="button" id="pHintX">Annulla</button></div>
+        <div class="mobile-nav"><button class="btn" type="button" id="mpL">Apparecchi</button><button class="btn" type="button" id="mpR">Scala e cavi</button></div>
+        <input type="file" id="pFile" accept="image/*,.pdf,application/pdf" hidden>
+      </div>
+      <aside class="panel" id="pRight" aria-label="Scala e cavi">
+        <div class="ph"><h2>Scala e cavi</h2><button class="x" type="button" data-close="pRight" aria-label="Chiudi">×</button></div>
+        <div id="pSide"></div>
+      </aside>
+    </section>
+
     <section class="page" id="vCavi" hidden></section>
     <section class="page" id="vMat" hidden></section>
   </main>
@@ -329,8 +378,13 @@ dialog p{margin:0 0 14px;color:var(--text-2)}
 <dialog id="srcDlg" aria-labelledby="srcTitle">
   <form method="dialog" id="srcForm">
     <h2 id="srcTitle">Nuovo schema</h2>
-    <p id="srcText">Da quale catalogo vuoi prendere il materiale?</p>
+    <p id="srcText">Scegli il lavoro, se c'è, e il catalogo del materiale.</p>
     <label class="fld" id="nameFld">Nome dello schema<input id="newName" class="field" autocomplete="off" placeholder="Es. Convention Salone Alighieri"></label>
+    <div class="two" id="jobBox">
+      <label class="fld" style="grid-column:1/-1">Lavoro collegato (facoltativo)<select id="jobSel" class="field"><option value="">Nessun lavoro</option></select></label>
+      <label class="fld">Dal<input id="dDal" class="field" type="date"></label>
+      <label class="fld">Al<input id="dAl" class="field" type="date"></label>
+    </div>
     <label class="opt"><input type="radio" name="src" value="mag"><b>Magazzino AV Manager</b><span>Solo il materiale interno, con la disponibilità reale.</span></label>
     <label class="opt"><input type="radio" name="src" value="glob"><b>Lista globale</b><span>Tutto il mercato audio, video e luci. Ogni articolo va in noleggio.</span></label>
     <label class="opt"><input type="radio" name="src" value="both"><b>Magazzino, poi lista globale</b><span>Prima il tuo materiale. Quello che non hai resta sceglibile come noleggio.</span></label>
@@ -427,11 +481,11 @@ const GLOB_BASE=[
 ].map(r=>mk('glob',r[0],r[1],r[2],null,null,r[3]));
 
 /* ---------- Stato ---------- */
-const blank=()=>({project:'',mode:'both',devices:[],links:[],seq:1,devSeq:1,rentOk:{},adapterDone:{}});
+const blank=()=>({project:'',mode:'both',devices:[],links:[],seq:1,devSeq:1,rentOk:{},adapterDone:{},job:null,dal:'',al:'',plan:{hasImg:false,w:0,h:0,mPerPx:null,scorta:10,extra:1}});
 const S=blank();
 const CAT={mag:[],glob:GLOB_BASE,docs:[],ports:{}};
 const CL={id:null,user:null,manager:false,ready:false,timer:null,local:false};
-const U={tab:'schema',sel:null,cat:'tutti',q:'',limit:80,layers:{audio:true,video:true,rete:true,luci:true},v:{x:30,y:60,z:.8},undo:[],arm:null,draft:null,addN:0};
+const U={tab:'schema',sel:null,cat:'tutti',q:'',limit:80,layers:{audio:true,video:true,rete:true,luci:true},v:{x:30,y:60,z:.8},undo:[],arm:null,draft:null,addN:0,pm:'move',pv:{x:20,y:60,z:.5},pDev:null,pLink:null,place:null,cal:null,planImg:null,replace:false};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dev=id=>S.devices.find(d=>d.id===id);
@@ -440,13 +494,13 @@ const linkPorts=l=>{const a=dev(l.from[0]),b=dev(l.to[0]);return{a,b,pa:port(a,l
 const sideOf=p=>p.side||(p.d==='in'?'l':'r');
 function save(){if(!CL.id||!CL.ready)return;clearTimeout(CL.timer);setSaved('Salvataggio…');CL.timer=setTimeout(flush,1200)}
 async function flush(){
-  const data=JSON.parse(JSON.stringify({nome:S.project||'Schema senza nome',mode:S.mode,devices:S.devices,links:S.links,seq:S.seq,devSeq:S.devSeq,rentOk:S.rentOk,adapterDone:S.adapterDone}));
+  const data=JSON.parse(JSON.stringify({nome:S.project||'Schema senza nome',mode:S.mode,devices:S.devices,links:S.links,seq:S.seq,devSeq:S.devSeq,rentOk:S.rentOk,adapterDone:S.adapterDone,job:S.job,dal:S.dal,al:S.al,plan:S.plan}));
   data.modificatoDa=CL.user.nome||CL.user.email||'';data.modificatoIl=new Date().toISOString();
   try{await DB.collection('schemi').doc(CL.id).set(data,{merge:false});CL.local=false;setSaved('Salvato alle '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}))}
   catch(e){try{localStorage.setItem('schemi-bozza-'+CL.id,JSON.stringify(data))}catch(_){}CL.local=true;setSaved(e.code==='permission-denied'?'Non salvato online: regole da pubblicare':'Non salvato online: bozza su questo dispositivo',true)}
 }
 function setSaved(t,bad){const e=$('saved');e.textContent=t;e.classList.toggle('bad',!!bad)}
-function snap(){U.undo.push(JSON.stringify({devices:S.devices,links:S.links,seq:S.seq,devSeq:S.devSeq,rentOk:S.rentOk,adapterDone:S.adapterDone}));if(U.undo.length>40)U.undo.shift();$('undoBtn').disabled=false}
+function snap(){U.undo.push(JSON.stringify({devices:S.devices,links:S.links,seq:S.seq,devSeq:S.devSeq,rentOk:S.rentOk,adapterDone:S.adapterDone,plan:S.plan}));if(U.undo.length>40)U.undo.shift();$('undoBtn').disabled=false}
 function undo(){const r=U.undo.pop();if(!r)return;Object.assign(S,JSON.parse(r));U.sel=null;$('undoBtn').disabled=!U.undo.length;refresh();toast('Modifica annullata')}
 let toastT;function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3600)}
 
@@ -558,6 +612,10 @@ function issues(){
   material().forEach(m=>{if(m.own&&m.toRent&&!S.rentOk[m.key])out.push({sev:'warn',text:`${m.name}: ${m.toRent===1?'ne manca 1':'ne mancano '+m.toRent}`,body:`Servono ${m.need}, disponibili ${m.disp} su ${m.qty}.`,dev:(S.devices.find(d=>d.key===m.key)||{}).id,fix:[`Noleggia ${m.toRent}`,()=>{snap();S.rentOk[m.key]=true;refresh();toast(`${m.toRent} × ${m.name} in noleggio`)}]})});
   S.devices.forEach(d=>{if(d.guess)out.push({sev:'info',text:`${d.name}: porte stimate`,body:'Modello non riconosciuto. Controlla le porte sulla scheda tecnica.',dev:d.id});
     else if(d.ports.length&&!d.ports.some(p=>usage(d,p)))out.push({sev:'info',text:`${d.name}: non collegato`,body:'Nessun cavo in ingresso o in uscita.',dev:d.id})});
+  if(S.plan.hasImg){
+    if(!S.plan.mPerPx)out.push({sev:'info',text:'Planimetria senza scala',body:'Imposta la scala per misurare i cavi.'});
+    else{const n=S.links.filter(l=>!l.manual&&!planLen(l)).length;if(n)out.push({sev:'info',text:`${n} ${n===1?'cavo stimato':'cavi stimati'}`,body:'Posiziona gli apparecchi sulla planimetria per misurarli.'})}
+  }
   const o={err:0,warn:1,info:2};return out.sort((a,b)=>o[a.sev]-o[b.sev]);
 }
 
@@ -620,7 +678,7 @@ function focusOn(wx,wy){const r=$('stage').getBoundingClientRect();U.v.x=r.width
 /* ---------- Pannelli ---------- */
 function renderHeader(){
   $('project').value=S.project;
-  $('srcLabel').textContent={mag:'Magazzino',glob:'Lista globale',both:'Magazzino + globale'}[S.mode];
+  $('srcLabel').textContent=(S.job?S.job.nome:'Nessun lavoro')+' · '+{mag:'Magazzino',glob:'Globale',both:'Mag. + globale'}[S.mode];
   const is=issues(),e=is.filter(i=>i.sev==='err').length,w=is.filter(i=>i.sev==='warn').length,b=$('statusBtn');
   b.className='status '+(e?'err':w?'warn':'ok');b.textContent=e+w?`${e+w} da risolvere`:'Schema a posto';
   $('mSide').textContent=e+w?`Controlli (${e+w})`:'Controlli';
@@ -658,10 +716,10 @@ function renderSide(){
     const l=S.links.find(x=>x.id===U.sel.id);
     if(l){const{a,b,pa,pb}=linkPorts(l),st=linkState(l);
     h=`<div class="sec"><h3>Cavo ${l.id}</h3><p class="sub">${esc(SIG[pa.s].l)}</p>
-    <dl class="kv"><dt>Da</dt><dd>${esc(a.name)}, ${esc(pa.n)}</dd><dt>A</dt><dd>${esc(b.name)}, ${esc(pb.n)}</dd><dt>Connettori</dt><dd>${esc(pa.c)} → ${esc(pb.c)}</dd><dt>Stato</dt><dd>${esc(st.t)}</dd></dl>
+    <dl class="kv"><dt>Da</dt><dd>${esc(a.name)}, ${esc(pa.n)}</dd><dt>A</dt><dd>${esc(b.name)}, ${esc(pb.n)}</dd><dt>Connettori</dt><dd>${esc(pa.c)} → ${esc(pb.c)}</dd><dt>Stato</dt><dd>${esc(st.t)}</dd><dt>Lunghezza</dt><dd>${lenOrigin(l)}</dd></dl>
     <div class="two"><label class="fld">Lunghezza (m)<input class="field" id="lLen" type="number" min="1" value="${l.len}"></label><label class="fld">Taglio cavo<input class="field" value="${stdLen(l.len)} m" readonly></label></div>
     <label class="fld">Nota<input class="field" id="lNote" value="${esc(l.note)}" placeholder="Es. Passa sotto la moquette"></label>
-    <button class="btn s danger" type="button" id="lDel">Elimina cavo</button></div>`}
+    ${l.manual&&planLen(l)?`<button class="btn s" type="button" id="lAuto">Usa la misura da planimetria (${planLen(l).m} m)</button> `:""}<button class="btn s danger" type="button" id="lDel">Elimina cavo</button></div>`}
   }
   box.innerHTML=h;$('sideTitle').textContent=h?'Dettagli':'Controlli';$('ctrlHead').hidden=!h;
   renderIssues();
@@ -677,7 +735,7 @@ function cableRows(){return S.links.map(l=>{const{a,b,pa,pb}=linkPorts(l);return
 function renderCavi(){
   const rows=cableRows(),tot=S.links.reduce((n,l)=>n+l.len,0);
   $('vCavi').innerHTML=`<div class="inner"><div class="phead"><div><h2>Lista cavi</h2><p>${S.links.length} cavi, ${tot} m totali. Ogni modifica qui aggiorna anche lo schema.</p></div><div class="acts"><button class="btn" type="button" data-copy="cavi">Copia per Excel</button><button class="btn p exp" type="button" hidden>Esporta Excel</button></div></div>
-  <div class="block"><h3>Patch</h3><div class="tw"><table><thead><tr><th>Cavo</th><th>Da</th><th>A</th><th>Segnale</th><th>Connettori</th><th class="n">Metri</th><th>Stato</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b style="font-weight:600">${r.l.id}</b></td><td>${esc(r.a.name)}<br><span class="sub">${esc(r.pa.n)}</span></td><td>${esc(r.b.name)}<br><span class="sub">${esc(r.pb.n)}</span></td><td><span class="sg" style="--c:var(${SIG[r.pa.s].v})"><i></i>${SIG[r.pa.s].s}</span></td><td style="white-space:nowrap">${esc(r.pa.c)} → ${esc(r.pb.c)}</td><td class="n"><input class="len" type="number" min="1" id="len-${r.l.id}" data-len="${r.l.id}" value="${r.l.len}" aria-label="Lunghezza ${r.l.id}"></td><td><span class="pill ${r.st.sev}">${esc(r.st.t)}</span></td></tr>`).join('')||'<tr><td colspan="7">Nessun cavo. Collega due porte nello schema.</td></tr>'}</tbody></table></div></div></div>`;
+  <div class="block"><h3>Patch</h3><div class="tw"><table><thead><tr><th>Cavo</th><th>Da</th><th>A</th><th>Segnale</th><th>Connettori</th><th class="n">Metri</th><th>Misura</th><th>Stato</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b style="font-weight:600">${r.l.id}</b></td><td>${esc(r.a.name)}<br><span class="sub">${esc(r.pa.n)}</span></td><td>${esc(r.b.name)}<br><span class="sub">${esc(r.pb.n)}</span></td><td><span class="sg" style="--c:var(${SIG[r.pa.s].v})"><i></i>${SIG[r.pa.s].s}</span></td><td style="white-space:nowrap">${esc(r.pa.c)} → ${esc(r.pb.c)}</td><td class="n"><input class="len" type="number" min="1" id="len-${r.l.id}" data-len="${r.l.id}" value="${r.l.len}" aria-label="Lunghezza ${r.l.id}"></td><td>${lenOrigin(r.l)}</td><td><span class="pill ${r.st.sev}">${esc(r.st.t)}</span></td></tr>`).join('')||'<tr><td colspan="8">Nessun cavo. Collega due porte nello schema.</td></tr>'}</tbody></table></div></div></div>`;
   showExp();
 }
 function renderMat(){
@@ -690,16 +748,16 @@ function renderMat(){
   ${ad.length?`<div class="block"><h3>Adattatori</h3><div class="tw"><table><thead><tr><th>Tipo</th><th class="n">Quantità</th></tr></thead><tbody>${ad.map(a=>`<tr><td>${esc(a[0])}</td><td class="n">${a[1]}</td></tr>`).join('')}</tbody></table></div></div>`:''}</div>`;
   showExp();
 }
-function render(){renderHeader();renderCatalog();renderNodes();renderWires();renderSide();paintHints();if(U.tab==='cavi')renderCavi();if(U.tab==='mat')renderMat()}
-function refresh(){render();save()}
+function render(){renderHeader();renderCatalog();renderNodes();renderWires();renderSide();paintHints();if(U.tab==='cavi')renderCavi();if(U.tab==='mat')renderMat();if(U.tab==='plan')renderPlan()}
+function refresh(){recalc();render();save()}
 function setTab(t){
   U.tab=t;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));
-  const sc=t==='schema';$('stage').hidden=!sc;$('cat').hidden=!sc;$('side').hidden=!sc;$('vCavi').hidden=t!=='cavi';$('vMat').hidden=t!=='mat';
+  const sc=t==='schema';$('stage').hidden=!sc;$('cat').hidden=!sc;$('side').hidden=!sc;$('vCavi').hidden=t!=='cavi';$('vMat').hidden=t!=='mat';$('vPlan').hidden=t!=='plan';
   $('stage').style.display=sc?'':'none';$('cat').style.display=sc?'':'none';$('side').style.display=sc?'':'none';
   $('body').classList.toggle('full',!sc);
-  if(t==='cavi')renderCavi();if(t==='mat')renderMat();if(sc){applyView()}
+  if(t==='cavi')renderCavi();if(t==='mat')renderMat();if(sc){applyView()}if(t==='plan'){renderPlan();requestAnimationFrame(pFitView)}
 }
-function closePanels(){$('cat').classList.remove('open');$('side').classList.remove('open')}
+function closePanels(){['cat','side','pLeft','pRight'].forEach(i=>$(i).classList.remove('open'))}
 function openPanel(id){closePanels();$(id).classList.add('open')}
 
 /* ---------- Interazione piano ---------- */
@@ -781,6 +839,7 @@ $('side').addEventListener('click',e=>{
   if(e.target.id==='dDel')removeDevice(U.sel.id);
   if(e.target.id==='dModel')saveModel(dev(U.sel.id));
   if(e.target.id==='lDel')removeLink(U.sel.id);
+  if(e.target.id==='lAuto'){snap();S.links.find(x=>x.id===U.sel.id).manual=false;refresh()}
   const rm=e.target.closest('[data-rmp]');
   if(rm){snap();const d=dev(U.sel.id),id=rm.dataset.rmp;S.links=S.links.filter(l=>!((l.from[0]===d.id&&l.from[1]===id)||(l.to[0]===d.id&&l.to[1]===id)));d.ports=d.ports.filter(p=>p.id!==id);refresh()}
   if(e.target.id==='npAdd'){const n=$('npName').value.trim();if(!n){toast('Scrivi il nome della porta.');return}snap();const d=dev(U.sel.id);const p=P(n,$('npDir').value,$('npConn').value,$('npSig').value,Math.max(1,+$('npK').value||1));if(d.ports.some(o=>o.id===p.id))p.id+='-'+d.ports.length;d.ports.push(p);d.guess=false;refresh();toast('Porta aggiunta')}
@@ -789,16 +848,16 @@ $('side').addEventListener('change',e=>{
   const t=e.target;
   if(t.id==='npSig'){$('npConn').innerHTML=CONNS[t.value].map(c=>`<option>${c}</option>`).join('');return}
   if(t.id==='dName'||t.id==='dQty'||t.id==='dLoc'){snap();const d=dev(U.sel.id);if(t.id==='dName')d.name=t.value.trim()||d.name;if(t.id==='dLoc')d.loc=t.value;if(t.id==='dQty')d.qty=Math.max(1,+t.value||1);refresh()}
-  if(t.id==='lLen'||t.id==='lNote'){snap();const l=S.links.find(x=>x.id===U.sel.id);if(t.id==='lLen')l.len=Math.max(1,+t.value||1);else l.note=t.value;refresh()}
+  if(t.id==='lLen'||t.id==='lNote'){snap();const l=S.links.find(x=>x.id===U.sel.id);if(t.id==='lLen'){l.len=Math.max(1,+t.value||1);l.manual=true}else l.note=t.value;refresh()}
 });
-$('vCavi').addEventListener('change',e=>{const id=e.target.dataset.len;if(id){snap();S.links.find(x=>x.id===id).len=Math.max(1,+e.target.value||1);refresh()}});
+$('vCavi').addEventListener('change',e=>{const id=e.target.dataset.len;if(id){snap();const l=S.links.find(x=>x.id===id);l.len=Math.max(1,+e.target.value||1);l.manual=true;refresh()}});
 document.addEventListener('keydown',e=>{
   if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
   if(e.key==='Escape'){U.arm=null;paintHints()}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo()}
   if((e.key==='Delete'||e.key==='Backspace')&&U.sel&&U.tab==='schema'){e.preventDefault();U.sel.t==='d'?removeDevice(U.sel.id):removeLink(U.sel.id)}
 });
-addEventListener('resize',()=>{if(U.tab==='schema')applyView()});
+addEventListener('resize',()=>{if(U.tab==='schema')applyView();if(U.tab==='plan')pFitView()});
 
 async function saveModel(d){
   try{await DB.collection('modelli_porte').doc(docKey(d.key)).set({key:d.key,nome:d.name,marca:d.marca,ports:JSON.parse(JSON.stringify(d.ports)),modificatoDa:CL.user.nome||'',modificatoIl:new Date().toISOString()});d.guess=false;refresh();toast('Porte salvate: valgono per i prossimi schemi con questo modello')}
@@ -808,22 +867,41 @@ const docKey=k=>k.replace(/[^a-z0-9]+/g,'_').slice(0,140)||'x';
 
 /* ---------- Scelta catalogo ---------- */
 let srcNew=true;
-function openSrc(isNew){srcNew=isNew;$('srcTitle').textContent=isNew?'Nuovo schema':'Cambia catalogo';$('srcText').textContent='Da quale catalogo vuoi prendere il materiale?';$('nameFld').hidden=!isNew;$('newName').value='';$('srcOk').textContent=isNew?'Crea schema':'Usa questo catalogo';document.querySelector(`[name=src][value=${S.mode}]`).checked=true;$('srcDlg').showModal()}
+async function openSrc(isNew){
+  srcNew=isNew;$('srcTitle').textContent=isNew?'Nuovo schema':'Impostazioni schema';$('nameFld').hidden=!isNew;$('newName').value='';$('srcOk').textContent=isNew?'Crea schema':'Salva';
+  document.querySelector(`[name=src][value=${S.mode}]`).checked=true;
+  $('dDal').value=isNew?'':S.dal;$('dAl').value=isNew?'':S.al;
+  $('srcDlg').showModal();await fillJobs(isNew?null:S.job);
+}
+let JOBS=[];
+async function fillJobs(cur){
+  let cal=[];try{const q=await DB.collection('lavori_cal').get();cal=q.docs.map(d=>({id:d.id,...d.data()})).filter(d=>!d.eliminatoAt)}catch(e){}
+  const day=d=>String(d||'').slice(0,10),srt=(a,b)=>day(b.data).localeCompare(day(a.data));
+  const a=cal.map(d=>({src:'lavori_cal',id:d.id,nome:d.nome||'Senza nome',location:d.location||'',data:day(d.data),dataFine:day(d.dataFine)})).sort(srt).slice(0,120);
+  const b=rawLav.filter(d=>!d.eliminatoAt).map(d=>({src:'lavori',id:d.id,nome:d.nome||'Senza nome',location:d.location||'',data:day(d.data),dataFine:day(d.dataFine)})).sort(srt).slice(0,120);
+  JOBS=a.concat(b);
+  const opt=j=>`<option value="${j.src}:${esc(j.id)}">${esc(j.data?j.data.split('-').reverse().join('/')+' · ':'')}${esc(j.nome)}</option>`;
+  $('jobSel').innerHTML='<option value="">Nessun lavoro</option>'+(a.length?`<optgroup label="Calendario">${a.map(opt).join('')}</optgroup>`:'')+(b.length?`<optgroup label="Archivio">${b.map(opt).join('')}</optgroup>`:'');
+  if(cur){const v=cur.src+':'+cur.id;if(!JOBS.some(j=>j.src+':'+j.id===v))$('jobSel').insertAdjacentHTML('beforeend',`<option value="${esc(v)}">${esc(cur.nome)}</option>`);$('jobSel').value=v}
+}
+$('jobSel').addEventListener('change',e=>{const j=JOBS.find(x=>x.src+':'+x.id===e.target.value);if(!j)return;$('dDal').value=j.data||'';$('dAl').value=j.dataFine||j.data||'';if(srcNew&&!$('newName').value)$('newName').value=j.nome});
 $('newBtn').onclick=()=>openSrc(true);$('srcBtn').onclick=()=>openSrc(false);$('srcCancel').onclick=()=>$('srcDlg').close();
 $('srcForm').addEventListener('submit',e=>{
-  e.preventDefault();const m=document.querySelector('[name=src]:checked').value;S.mode=m;U.cat='tutti';
-  if(srcNew){const nome=$('newName').value.trim()||'Nuovo schema';startNew(nome,m)}
-  else{$('srcDlg').close();refresh();toast('Catalogo aggiornato. Gli apparecchi già nello schema restano.')}
+  e.preventDefault();const m=document.querySelector('[name=src]:checked').value;U.cat='tutti';
+  const v=$('jobSel').value,j=JOBS.find(x=>x.src+':'+x.id===v);
+  const job=v?(j?{id:j.id,src:j.src,nome:j.nome,location:j.location}:S.job):null,dal=$('dDal').value,al=$('dAl').value||dal;
+  if(srcNew){const nome=$('newName').value.trim()||(job&&job.nome)||'Nuovo schema';startNew(nome,m);S.job=job;S.dal=dal;S.al=al;rebuildMag();flush()}
+  else{S.mode=m;S.job=job;S.dal=dal;S.al=al;$('srcDlg').close();rebuildMag();save();toast('Impostazioni aggiornate. Gli apparecchi già nello schema restano.')}
 });
 function startNew(nome,m){
-  Object.assign(S,blank(),{project:nome,mode:m});U.sel=null;U.undo=[];$('undoBtn').disabled=true;U.v={x:40,y:70,z:.9};applyView();
+  Object.assign(S,blank(),{project:nome,mode:m});U.sel=null;U.undo=[];U.planImg=null;$('undoBtn').disabled=true;U.v={x:40,y:70,z:.9};applyView();
   CL.id=DB.collection('schemi').doc().id;CL.ready=true;history.replaceState(null,'','?id='+CL.id);
   $('srcDlg').close();refresh();flush();if(innerWidth<=980)openPanel('cat');toast('Schema creato');
 }
 async function openSchema(id){
   try{const d=await DB.collection('schemi').doc(id).get();if(!d.exists){toast('Schema non trovato.');return false}
-    const o=d.data();Object.assign(S,blank(),{project:o.nome,mode:o.mode||'both',devices:o.devices||[],links:o.links||[],seq:o.seq||1,devSeq:o.devSeq||1,rentOk:o.rentOk||{},adapterDone:o.adapterDone||{}});
-    CL.id=id;CL.ready=true;U.sel=null;U.undo=[];$('undoBtn').disabled=true;history.replaceState(null,'','?id='+id);setSaved('Aperto');render();requestAnimationFrame(fit);return true}
+    const o=d.data();Object.assign(S,blank(),{project:o.nome,mode:o.mode||'both',devices:o.devices||[],links:o.links||[],seq:o.seq||1,devSeq:o.devSeq||1,rentOk:o.rentOk||{},adapterDone:o.adapterDone||{},job:o.job||null,dal:o.dal||'',al:o.al||'',plan:{...blank().plan,...(o.plan||{})}});
+    CL.id=id;CL.ready=true;U.sel=null;U.undo=[];U.planImg=null;$('undoBtn').disabled=true;history.replaceState(null,'','?id='+id);setSaved('Aperto');await loadPlanImg();rebuildMag();requestAnimationFrame(fit);return true}
   catch(e){toast(e.code==='permission-denied'?'Lettura bloccata: pubblica le nuove regole Firestore.':'Apertura non riuscita: riprova.');return false}
 }
 async function showList(){
@@ -865,7 +943,7 @@ async function importFile(input){
 
 /* ---------- Export ---------- */
 function tables(){
-  const cavi=[['Cavo','Da','Porta','A','Porta','Segnale','Connettori','Metri','Taglio','Stato','Nota']].concat(cableRows().map(r=>[r.l.id,r.a.name,r.pa.n,r.b.name,r.pb.n,SIG[r.pa.s].s,`${r.pa.c} > ${r.pb.c}`,r.l.len,stdLen(r.l.len),r.st.t,r.l.note]));
+  const cavi=[['Cavo','Da','Porta','A','Porta','Segnale','Connettori','Metri','Taglio','Misura','Stato','Nota']].concat(cableRows().map(r=>[r.l.id,r.a.name,r.pa.n,r.b.name,r.pb.n,SIG[r.pa.s].s,`${r.pa.c} > ${r.pb.c}`,r.l.len,stdLen(r.l.len),lenOrigin(r.l),r.st.t,r.l.note]));
   const mat=[['Provenienza','Categoria','Nome articolo','Marca / Modello','Quantità']];
   material().forEach(m=>{if(m.fromMag)mat.push(['Magazzino',m.cat,m.name,m.marca,m.fromMag]);if(m.toRent)mat.push(['Noleggio',m.cat,m.name,m.marca,m.toRent])});
   cables().forEach(c=>mat.push(['Cavi','cavi',`${SIG[c.sig].s} ${c.c}`,`${c.len} m`,c.n]));
@@ -893,7 +971,7 @@ function prepRows(){
 }
 function sendPrep(){
   const rows=prepRows();if(!rows.length){toast('Lo schema non ha materiale.');return}
-  try{localStorage.setItem('mmg_schema_prep',JSON.stringify({ts:Date.now(),nome:S.project,righe:rows}));location.href='/'}
+  try{localStorage.setItem('mmg_schema_prep',JSON.stringify({ts:Date.now(),nome:S.project,location:S.job?S.job.location:'',data:S.dal,dataFine:S.al,righe:rows}));location.href='/'}
   catch(e){toast('Invio non riuscito: memoria del browser bloccata.')}
 }
 document.addEventListener('click',async e=>{
@@ -902,6 +980,181 @@ document.addEventListener('click',async e=>{
   try{await navigator.clipboard.writeText(txt);toast('Copiato: incollalo in Excel')}catch(_){const t=$('copyTx');t.value=txt;$('copyDlg').showModal();t.select()}
 });
 $('copyX').onclick=()=>$('copyDlg').close();
+
+/* ---------- Planimetria ---------- */
+const P_MAX=2200,IMG_MAX=900000;
+function devEnds(l,side){
+  const d=dev(l[side][0]);if(!d||!d.pts||!d.pts.length)return null;
+  const mine=S.links.filter(x=>x.from[0]===d.id||x.to[0]===d.id),i=mine.indexOf(l);
+  return d.pts[(i<0?0:i)%d.pts.length];
+}
+function pathPts(l){
+  const a=devEnds(l,'from'),b=devEnds(l,'to');if(!a||!b)return null;
+  const w=l.way||[];return w.length?[a,...w,b]:[a,{x:b.x,y:a.y},b];
+}
+const pathPx=p=>p.slice(1).reduce((n,q,i)=>n+Math.hypot(q.x-p[i].x,q.y-p[i].y),0);
+/* Metri = (percorso + extra per 2 estremità + altezze) maggiorato della scorta, arrotondato per eccesso. */
+function planLen(l){
+  const k=S.plan.mPerPx;if(!k)return null;const p=pathPts(l);if(!p)return null;
+  const a=dev(l.from[0]),b=dev(l.to[0]),floor=pathPx(p)*k,up=(+a.h||0)+(+b.h||0),extra=S.plan.extra*2;
+  const m=Math.max(1,Math.ceil((floor+up+extra)*(1+S.plan.scorta/100)-1e-9));
+  return{m,floor,up,extra};
+}
+function recalc(){S.links.forEach(l=>{if(l.manual)return;const r=planLen(l);if(r)l.len=r.m})}
+function lenOrigin(l){return l.manual?'Manuale':planLen(l)?'Planimetria':'Stimata'}
+function applyPlanView(){const{x,y,z}=U.pv;$('pWorld').style.transform=`translate(${x}px,${y}px) scale(${z})`}
+function pFitView(){
+  const r=$('pStage').getBoundingClientRect();if(!S.plan.hasImg||!r.width)return;
+  const top=58,bot=innerWidth<=980?64:16,z=Math.min((r.width-32)/S.plan.w,(r.height-top-bot)/S.plan.h);
+  U.pv={z,x:(r.width-S.plan.w*z)/2,y:top+(r.height-top-bot-S.plan.h*z)/2};applyPlanView();renderPlanSvg();
+}
+function renderPlan(){
+  const has=S.plan.hasImg&&U.planImg;
+  $('pEmpty').hidden=!!has;$('pTools').hidden=!has;$('pImg').hidden=!has;
+  if(has&&$('pImg').dataset.k!==String(U.planImg.length)){$('pImg').src=U.planImg;$('pImg').dataset.k=U.planImg.length;$('pImg').style.width=S.plan.w+'px';$('pImg').style.height=S.plan.h+'px'}
+  document.querySelectorAll('[data-pm]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.pm===U.pm));
+  $('pDevs').innerHTML=S.devices.map(d=>{const n=(d.pts||[]).length,can=n<Math.min(d.qty,24);
+    return `<div class="pdev${U.pDev===d.id?' on':''}"><button type="button" class="n" data-pd="${d.id}">${esc(d.name)}</button><span class="s">${n?`Posizionato ${n}/${d.qty}`:'Da posizionare'}${d.h?` · a ${d.h} m`:''}</span><div class="acts">${can&&has?`<button class="btn s" type="button" data-place="${d.id}">${n?'Aggiungi':'Posiziona'}</button>`:''}${n?`<button class="rm" type="button" data-unp="${d.id}" aria-label="Togli l'ultima posizione di ${esc(d.name)}">×</button>`:''}</div></div>`}).join('')||'<div class="empty">Aggiungi gli apparecchi nella vista Schema.</div>';
+  renderPlanSide();renderPlanSvg();
+  const h=$('pHint'),m=U.place?`Tocca la planimetria per posizionare ${dev(U.place)?.name||''}`:U.pm==='cal'?(U.cal&&U.cal.b?'':U.cal?'Tocca il secondo punto':'Tocca il primo punto di una misura nota'):U.pm==='route'?(U.pLink?`${U.pLink}: tocca dove passa il cavo`:'Scegli un cavo dalla lista'):'';
+  h.hidden=!m;$('pHintTx').textContent=m;
+}
+function renderPlanSide(){
+  const p=S.plan,box=$('pSide');let h='';
+  if(!p.hasImg||!U.planImg){box.innerHTML=`<div class="sec"><p class="sub">${p.hasImg?'Carico la planimetria…':'Nessuna planimetria caricata.'}</p></div>`;return}
+  h+=`<div class="sec"><p class="formula">${p.mPerPx?`Scala impostata: 1 m = ${(1/p.mPerPx).toFixed(1)} pixel`:'Scala mancante: usa una misura che conosci, per esempio la larghezza del palco.'}</p>`;
+  if(U.cal&&U.cal.b){const px=Math.hypot(U.cal.b.x-U.cal.a.x,U.cal.b.y-U.cal.a.y);h+=`<label class="fld">Distanza reale tra i due punti (m)<input class="field" id="calM" type="number" min="0.1" step="0.1"></label><div class="acts"><button class="btn s p" type="button" id="calOk">Imposta scala</button><button class="btn s" type="button" id="calNo">Annulla</button></div><p class="sub" style="margin-top:6px">${Math.round(px)} pixel sulla planimetria</p>`}
+  else h+=`<button class="btn s" type="button" id="calGo">${p.mPerPx?'Rifai la scala':'Imposta la scala'}</button>`;
+  h+=`</div>`;
+  const d=U.pDev&&dev(U.pDev);
+  if(d)h+=`<div class="sec"><h3>${esc(d.name)}</h3><label class="fld">Altezza da terra (m)<input class="field" id="pH" type="number" min="0" step="0.5" value="${+d.h||0}"></label><p class="sub">Si somma ai cavi di questo apparecchio. Utile per truss e casse appese.</p></div>`;
+  h+=`<div class="sec"><p class="formula">Regole per tutti i cavi</p><div class="two"><label class="fld">Scorta (%)<input class="field" id="pSc" type="number" min="0" max="100" value="${p.scorta}"></label><label class="fld">Extra per estremità (m)<input class="field" id="pEx" type="number" min="0" step="0.5" value="${p.extra}"></label></div></div>`;
+  const l=U.pLink&&S.links.find(x=>x.id===U.pLink);
+  if(l){const r=planLen(l),a=dev(l.from[0]),b=dev(l.to[0]);h+=`<div class="sec"><h3>Cavo ${l.id}</h3><p class="sub">${esc(a.name)} → ${esc(b.name)}</p>${r?`<dl class="kv"><dt>Percorso</dt><dd>${r.floor.toFixed(1)} m</dd><dt>Estremità</dt><dd>${r.extra} m</dd><dt>Altezze</dt><dd>${r.up} m</dd><dt>Scorta</dt><dd>${p.scorta}%</dd><dt>Totale</dt><dd><b>${r.m} m</b>${l.manual?` (in lista: ${l.len} m, manuale)`:''}</dd></dl>`:'<p class="sub">Posiziona i due apparecchi e imposta la scala.</p>'}<div class="acts">${(l.way||[]).length?`<button class="btn s" type="button" id="wUndo">Togli ultimo punto</button><button class="btn s" type="button" id="wClear">Percorso automatico</button>`:'<button class="btn s" type="button" id="wEdit">Disegna percorso</button>'}${l.manual&&r?`<button class="btn s" type="button" id="wAuto">Usa questa misura</button>`:''}</div></div>`}
+  h+=`<div class="sec"><p class="formula">Cavi</p><ul class="cl">${S.links.map(x=>{const a=dev(x.from[0]),b=dev(x.to[0]);return `<li class="${U.pLink===x.id?'on':''}"><button type="button" data-pl="${x.id}"><b>${x.id}</b> ${esc(a.name)} → ${esc(b.name)}</button><span class="m">${x.len} m</span><span class="o">${lenOrigin(x)}</span></li>`}).join('')||'<li><span class="o">Nessun cavo nello schema.</span></li>'}</ul></div>`;
+  h+=`<div class="sec"><div class="acts"><button class="btn s" type="button" id="pReplace">${U.replace?'Conferma: azzera scala e posizioni':'Sostituisci planimetria'}</button></div></div>`;
+  box.innerHTML=h;
+}
+function renderPlanSvg(){
+  const z=U.pv.z,u=1/z;let h='';
+  S.links.forEach(l=>{const p=pathPts(l);if(!p)return;const{pa}=linkPorts(l),on=U.pLink===l.id;
+    h+=`<polyline points="${p.map(q=>q.x+','+q.y).join(' ')}" fill="none" style="stroke:var(${SIG[pa.s].v})" stroke-width="${(on?3.5:1.8)*u}" ${SIG[pa.s].dash?`stroke-dasharray="${6*u} ${4*u}"`:''}/><polyline data-pl="${l.id}" points="${p.map(q=>q.x+','+q.y).join(' ')}" fill="none" stroke="transparent" stroke-width="${14*u}" style="cursor:pointer;pointer-events:stroke"/>`;
+    if(on)(l.way||[]).forEach((w,i)=>{h+=`<circle class="mk" data-w="${l.id}:${i}" cx="${w.x}" cy="${w.y}" r="${6*u}" style="fill:var(--surface);stroke:var(--accent-text)" stroke-width="${2*u}"/>`});
+  });
+  S.devices.forEach(d=>(d.pts||[]).forEach((q,i)=>{const on=U.pDev===d.id;
+    h+=`<g class="mk" data-m="${d.id}:${i}"><circle cx="${q.x}" cy="${q.y}" r="${(on?9:7)*u}" style="fill:var(--accent);stroke:var(--surface)" stroke-width="${2*u}"/><text class="pm" x="${q.x+11*u}" y="${q.y+4*u}" style="font-size:${11*u}px;stroke-width:${3*u}px">${esc(d.name)}${d.pts.length>1?' '+(i+1):''}</text></g>`}));
+  if(U.cal){const a=U.cal.a,b=U.cal.b||U.cal.c;h+=`<circle cx="${a.x}" cy="${a.y}" r="${5*u}" style="fill:var(--err)"/>`;if(b)h+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" style="stroke:var(--err)" stroke-width="${2*u}"/><circle cx="${b.x}" cy="${b.y}" r="${5*u}" style="fill:var(--err)"/>`}
+  $('pSvg').innerHTML=h;
+}
+const pStage=$('pStage'),pPtrs=new Map();let pDrag=null,pPinch=null;
+function pWorldAt(e){const r=pStage.getBoundingClientRect();return{x:Math.round((e.clientX-r.left-U.pv.x)/U.pv.z),y:Math.round((e.clientY-r.top-U.pv.y)/U.pv.z)}}
+function inPlan(q){return q.x>=0&&q.y>=0&&q.x<=S.plan.w&&q.y<=S.plan.h}
+function pZoomAt(cx,cy,f){const v=U.pv,z=Math.min(6,Math.max(.05,v.z*f));v.x=cx-(cx-v.x)*z/v.z;v.y=cy-(cy-v.y)*z/v.z;v.z=z;applyPlanView();renderPlanSvg()}
+pStage.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.tools,.hint,.mobile-nav,.pempty'))return;
+  pPtrs.set(e.pointerId,e);
+  if(pPtrs.size===2){const[a,b]=[...pPtrs.values()];pPinch={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),z:U.pv.z};pDrag=null;return}
+  pStage.setPointerCapture(e.pointerId);
+  const m=e.target.closest('[data-m]'),w=e.target.closest('[data-w]'),pl=e.target.closest('[data-pl]');
+  if(!U.place&&U.pm!=='cal'){
+    if(m){const[id,i]=m.dataset.m.split(':');U.pDev=id;pDrag={t:'m',q:dev(id).pts[+i],moved:false};return}
+    if(w){const[id,i]=w.dataset.w.split(':');pDrag={t:'m',q:S.links.find(x=>x.id===id).way[+i],moved:false};return}
+    if(pl&&U.pm==='move'){U.pLink=pl.dataset.pl;pDrag={t:'tap'};renderPlan();return}
+  }
+  pDrag={t:'pan',sx:e.clientX,sy:e.clientY,vx:U.pv.x,vy:U.pv.y,moved:false};
+});
+pStage.addEventListener('pointermove',e=>{
+  if(pPtrs.has(e.pointerId))pPtrs.set(e.pointerId,e);
+  if(pPinch&&pPtrs.size===2){const[a,b]=[...pPtrs.values()],r=pStage.getBoundingClientRect(),d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);pZoomAt((a.clientX+b.clientX)/2-r.left,(a.clientY+b.clientY)/2-r.top,(pPinch.z*d/pPinch.d)/U.pv.z);return}
+  if(!pDrag)return;
+  if(pDrag.t==='m'){const q=pWorldAt(e);if(!inPlan(q))return;if(!pDrag.moved){snap();pDrag.moved=true}pDrag.q.x=q.x;pDrag.q.y=q.y;renderPlanSvg()}
+  if(pDrag.t==='pan'){const dx=e.clientX-pDrag.sx,dy=e.clientY-pDrag.sy;if(Math.hypot(dx,dy)>5)pDrag.moved=true;if(pDrag.moved){U.pv.x=pDrag.vx+dx;U.pv.y=pDrag.vy+dy;applyPlanView()}}
+});
+function pEnd(e){
+  pPtrs.delete(e.pointerId);if(pPtrs.size<2)pPinch=null;
+  const dr=pDrag;pDrag=null;if(!dr)return;
+  if(dr.t==='m'){if(dr.moved)refresh();else renderPlan();return}
+  if(dr.t!=='pan'||dr.moved||!S.plan.hasImg)return;
+  const q=pWorldAt(e);if(!inPlan(q))return;
+  if(U.place){const d=dev(U.place);snap();(d.pts=d.pts||[]).push(q);U.pDev=d.id;if(d.pts.length>=Math.min(d.qty,24))U.place=null;refresh();return}
+  if(U.pm==='cal'){if(!U.cal||U.cal.b)U.cal={a:q};else U.cal.b=q;renderPlan();if(U.cal.b){if(innerWidth<=980)openPanel('pRight');$('calM')?.focus()}return}
+  if(U.pm==='route'&&U.pLink){const l=S.links.find(x=>x.id===U.pLink);snap();(l.way=l.way||[]).push(q);refresh()}
+}
+pStage.addEventListener('pointerup',pEnd);pStage.addEventListener('pointercancel',pEnd);
+pStage.addEventListener('wheel',e=>{e.preventDefault();const r=pStage.getBoundingClientRect();pZoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.1:.91)},{passive:false});
+$('pIn').onclick=()=>{const r=pStage.getBoundingClientRect();pZoomAt(r.width/2,r.height/2,1.25)};
+$('pOut').onclick=()=>{const r=pStage.getBoundingClientRect();pZoomAt(r.width/2,r.height/2,.8)};
+$('pFit').onclick=pFitView;
+$('pHintX').onclick=()=>{U.place=null;U.cal=null;U.pm='move';renderPlan()};
+$('pModes').addEventListener('click',e=>{const b=e.target.closest('[data-pm]');if(!b)return;U.pm=b.dataset.pm;U.place=null;U.cal=null;renderPlan();if(U.pm==='route'&&innerWidth<=980&&!U.pLink)openPanel('pRight')});
+$('mpL').onclick=()=>openPanel('pLeft');$('mpR').onclick=()=>openPanel('pRight');
+$('pLoad').onclick=()=>$('pFile').click();
+$('pFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(f)await loadPlanFile(f)};
+$('pLeft').addEventListener('click',e=>{
+  const pl=e.target.closest('[data-place]');if(pl){U.place=pl.dataset.place;U.pDev=U.place;U.pm='move';closePanels();renderPlan();return}
+  const un=e.target.closest('[data-unp]');if(un){snap();dev(un.dataset.unp).pts.pop();refresh();return}
+  const n=e.target.closest('[data-pd]');if(n){U.pDev=n.dataset.pd;const d=dev(U.pDev);if(d.pts&&d.pts[0]){const r=pStage.getBoundingClientRect();U.pv.x=r.width/2-d.pts[0].x*U.pv.z;U.pv.y=r.height/2-d.pts[0].y*U.pv.z;applyPlanView()}renderPlan()}
+});
+$('pRight').addEventListener('click',e=>{
+  const id=e.target.id,l=U.pLink&&S.links.find(x=>x.id===U.pLink);
+  const b=e.target.closest('[data-pl]');if(b){U.pLink=b.dataset.pl;renderPlan();return}
+  if(id==='calGo'){U.pm='cal';U.cal=null;U.place=null;closePanels();renderPlan()}
+  if(id==='calNo'){U.cal=null;U.pm='move';renderPlan()}
+  if(id==='calOk'){const m=+$('calM').value,px=Math.hypot(U.cal.b.x-U.cal.a.x,U.cal.b.y-U.cal.a.y);if(!(m>0)||!px){toast('Scrivi la distanza in metri.');return}snap();S.plan.mPerPx=m/px;U.cal=null;U.pm='move';refresh();toast('Scala impostata: i cavi si misurano da soli')}
+  if(id==='wEdit'){U.pm='route';closePanels();renderPlan()}
+  if(id==='wUndo'&&l){snap();l.way.pop();refresh()}
+  if(id==='wClear'&&l){snap();l.way=[];refresh()}
+  if(id==='wAuto'&&l){snap();l.manual=false;refresh()}
+  if(id==='pReplace'){if(!U.replace){U.replace=true;renderPlan();return}U.replace=false;$('pFile').click()}
+});
+$('pRight').addEventListener('change',e=>{
+  const t=e.target;
+  if(t.id==='pSc'){snap();S.plan.scorta=Math.max(0,+t.value||0);refresh()}
+  if(t.id==='pEx'){snap();S.plan.extra=Math.max(0,+t.value||0);refresh()}
+  if(t.id==='pH'){snap();dev(U.pDev).h=Math.max(0,+t.value||0);refresh()}
+});
+function loadScript(src){return new Promise((ok,no)=>{const x=document.createElement('script');x.src=src;x.onload=ok;x.onerror=()=>no(new Error('libreria PDF non disponibile'));document.head.appendChild(x)})}
+async function pdfCanvas(f){
+  const base='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  if(!window.pdfjsLib){await loadScript(base+'pdf.min.js');pdfjsLib.GlobalWorkerOptions.workerSrc=base+'pdf.worker.min.js'}
+  const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise,pg=await pdf.getPage(1);
+  const b=pg.getViewport({scale:1}),sc=P_MAX/Math.max(b.width,b.height),v=pg.getViewport({scale:sc});
+  const c=document.createElement('canvas');c.width=v.width;c.height=v.height;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);
+  await pg.render({canvasContext:g,viewport:v}).promise;
+  return{c,pages:pdf.numPages};
+}
+async function imgCanvas(f){
+  const u=URL.createObjectURL(f);
+  try{const i=await new Promise((ok,no)=>{const x=new Image();x.onload=()=>ok(x);x.onerror=()=>no(new Error('immagine non leggibile'));x.src=u});
+    const sc=Math.min(1,P_MAX/Math.max(i.naturalWidth,i.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(i.naturalWidth*sc);c.height=Math.round(i.naturalHeight*sc);
+    const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(i,0,0,c.width,c.height);return{c,pages:1}}
+  finally{URL.revokeObjectURL(u)}
+}
+/* Il documento Firestore ha un limite di 1 MB: riduce qualità e misura finché la planimetria ci sta. */
+function compress(c){
+  let q=.82,cur=c,d=cur.toDataURL('image/jpeg',q);
+  while(d.length>IMG_MAX){
+    if(q>.5)q-=.1;else{const n=document.createElement('canvas');n.width=Math.round(cur.width*.8);n.height=Math.round(cur.height*.8);n.getContext('2d').drawImage(cur,0,0,n.width,n.height);cur=n}
+    d=cur.toDataURL('image/jpeg',q);
+  }
+  return{data:d,w:cur.width,h:cur.height};
+}
+async function loadPlanFile(f){
+  if(!CL.id){toast('Crea o apri prima uno schema.');return}
+  try{
+    toast('Preparo la planimetria…');
+    const isPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name),{c,pages}=isPdf?await pdfCanvas(f):await imgCanvas(f),r=compress(c);
+    snap();U.planImg=r.data;Object.assign(S.plan,{hasImg:true,w:r.w,h:r.h,mPerPx:null});
+    S.devices.forEach(d=>delete d.pts);S.links.forEach(l=>delete l.way);U.cal=null;U.place=null;$('pImg').dataset.k='';
+    refresh();requestAnimationFrame(pFitView);
+    await DB.collection('schemi_planimetrie').doc(CL.id).set({data:r.data,w:r.w,h:r.h,nome:f.name});
+    toast(pages>1?`Planimetria caricata: uso la pagina 1 di ${pages}. Ora imposta la scala.`:'Planimetria caricata. Ora imposta la scala.');
+  }catch(e){toast(e.code==='permission-denied'?'Planimetria non salvata: pubblica le nuove regole Firestore.':'Caricamento non riuscito: '+e.message)}
+}
+async function loadPlanImg(){
+  if(!S.plan.hasImg)return;
+  try{const d=await DB.collection('schemi_planimetrie').doc(CL.id).get();U.planImg=d.exists?d.data().data:null;if(!d.exists)S.plan.hasImg=false}catch(e){toast('Planimetria non leggibile: pubblica le nuove regole Firestore.')}
+}
 
 /* ---------- Collegamento ad AV Manager ---------- */
 firebase.initializeApp({
@@ -916,9 +1169,20 @@ const DB=firebase.firestore(),AUTH=firebase.auth();
 const low=s=>String(s||'').toLowerCase().trim();
 let rawMag=[],rawLav=[];
 /* Stessa regola di getInUsoGlobale in AV Manager: id, seriale oppure nome, sui lavori non rientrati. */
+/* Con le date: conta i lavori che si sovrappongono e quelli in ritardo sul rientro. Senza date: tutti i non rientrati. */
+function occupying(){
+  const from=S.dal,to=S.al||S.dal,oggi=new Date().toISOString().slice(0,10);
+  return rawLav.filter(d=>{
+    if(d.rientroData)return false;
+    if(S.job&&S.job.src==='lavori'&&S.job.id===d.id)return false;
+    if(!from||!d.data)return true;
+    const a=String(d.data).slice(0,10),b=String(d.dataFine||d.data).slice(0,10);
+    return b<oggi||(a<=to&&b>=from);
+  });
+}
 function rebuildMag(){
   const byId=new Map(),bySer=new Map(),byNome=new Map(),put=(m,k,a)=>{if(!k)return;(m.get(k)||m.set(k,[]).get(k)).push(a)};
-  rawLav.filter(d=>!d.rientroData).forEach(d=>(d.articoli||[]).forEach(a=>{put(byId,a.id,a);put(bySer,a.ser,a);put(byNome,low(a.nome),a)}));
+  occupying().forEach(d=>(d.articoli||[]).forEach(a=>{put(byId,a.id,a);put(bySer,a.ser,a);put(byNome,low(a.nome),a)}));
   const groups=new Map();
   rawMag.filter(m=>!m.eliminatoAt).forEach(m=>{
     const hits=new Set([...(byId.get(m.id)||[]),...(m.ser?bySer.get(m.ser)||[]:[]),...(byNome.get(low(m.nome))||[])]);

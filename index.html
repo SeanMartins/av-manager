@@ -28,7 +28,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.03a';
+const APP_VERSION='v2026.11.03b';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -7837,8 +7837,15 @@ function plImportaDaSchema(){
     return m?{...m,qtyPrep:r.qty,note:r.note||''}:{id:'',nome:r.nome,cat:r.cat||'',marca:r.marca||'',ser:'',qty:r.qty,qtyPrep:r.qty,note:r.note||''};
   });
   document.getElementById('plNome').value=dati.nome||'';
+  if(dati.data)document.getElementById('plData').value=dati.data;
+  if(dati.dataFine)document.getElementById('plDataFine').value=dati.dataFine;
+  if(dati.location){
+    const sel=document.getElementById('plLoc');
+    if(![...sel.options].some(o=>o.value===dati.location)){const o=document.createElement('option');o.value=dati.location;o.textContent=dati.location;sel.appendChild(o);}
+    sel.value=dati.location;
+  }
   renderPlItems();
-  toast('Materiale dallo schema: '+plArticoli.length+' righe. Completa location e date.');
+  toast('Materiale dallo schema: '+plArticoli.length+' righe. Controlla e salva.');
 }
 
 function plGoScan(){
