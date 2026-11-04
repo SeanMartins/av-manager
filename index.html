@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01l';
+const APP_VERSION='v2026.11.01m';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -742,6 +742,28 @@ body.desktop-mode #calGriglia .cal-nome{display:-webkit-box!important;-webkit-li
 @media(min-width:900px){.ces-facts{grid-template-columns:repeat(4,1fr)}}
 .ces-note{font-size:var(--text-sm);color:var(--color-text-secondary);margin-top:8px;overflow-wrap:anywhere}
 .ces-actions{display:flex;gap:6px;flex-shrink:0}
+/* ── SCADENZARIO ── */
+.sn-danger,.sn[data-tono="danger"]{color:var(--color-danger)}
+.sc-card{background:var(--color-surface);border:1px solid var(--color-border);border-left:4px solid var(--color-border-strong);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px}
+.sc-card.sc-scaduta{border-left-color:var(--color-danger)}
+.sc-card.sc-vicina{border-left-color:var(--color-warning)}
+.sc-card.sc-arch{opacity:.85}
+.sc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.sc-open{flex:1;min-width:0;background:none;border:none;padding:0;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.sc-open:disabled{cursor:default}
+.sc-open:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px;border-radius:4px}
+.sc-open .cal-job-title{margin:0}
+.sc-meta{font-size:var(--text-xs);color:var(--color-text-secondary);margin-top:3px}
+.sc-giorni{font-size:var(--text-sm);font-weight:var(--weight-semibold);white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--color-text-secondary)}
+.sc-scaduta .sc-giorni{color:var(--color-danger)}
+.sc-vicina .sc-giorni{color:var(--color-warning)}
+.sc-note{font-size:var(--text-sm);color:var(--color-text-secondary);margin-top:6px;overflow-wrap:anywhere}
+.sc-actions{display:flex;gap:8px;margin-top:10px}
+.sc-actions .btn-p{flex:1}
+@media(min-width:700px){.sc-actions .btn-p{flex:0 0 auto}}
+.sc-tools{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
+.sc-test-msg{font-size:var(--text-xs);color:var(--color-text-secondary);margin:-6px 0 12px}
+.sc-test-msg:empty{display:none}
 .ai-err{color:var(--color-danger);background:var(--color-danger-subtle);padding:12px;border-radius:var(--radius-md)}
 
 /* ── FORUM ── */
@@ -1481,24 +1503,27 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- SCADENZARIO -->
     <div class="page" id="p-scadenzario">
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-        <div class="sc"><div class="sn" id="scNumScadute" style="color:var(--rd)">0</div><div class="sl">🔴 Scadute</div></div>
-        <div class="sc"><div class="sn" id="scNumEntro30" style="color:var(--am)">0</div><div class="sl">🟡 Entro 30gg</div></div>
-        <div class="sc"><div class="sn" id="scNumAttive">0</div><div class="sl">Totali attive</div></div>
+      <div class="page-head desk-only"><div><h1 class="page-title">Scadenzario</h1></div></div>
+      <div class="sg3">
+        <div class="sc"><span class="sn" id="scNumScadute">0</span><span class="sl">Scadute</span></div>
+        <div class="sc"><span class="sn" id="scNumEntro30">0</span><span class="sl">Entro 30 giorni</span></div>
+        <div class="sc"><span class="sn" id="scNumAttive">0</span><span class="sl">Attive in totale</span></div>
       </div>
-      <button class="btn btn-p btn-f" style="margin-bottom:12px" onclick="apriNuovaScadenza()">+ Nuova scadenza</button>
-      <button class="btn btn-f" style="margin-bottom:12px" onclick="scTestaNotifiche()">🔔 Testa notifiche scadenze</button>
-      <button class="btn btn-f" style="margin-bottom:12px" onclick="resetMieNotifiche()">🔄 Resetta le mie notifiche (se arrivano doppie/triple)</button>
-      <div id="scTestMsg" style="font-size:11px;color:var(--tx3);margin-bottom:8px"></div>
-      <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto">
-        <button class="chip on" id="scfTutti" onclick="scFiltra('tutti',this)">Tutti</button>
-        <button class="chip" id="scfCorso" onclick="scFiltra('Corso obbligatorio',this)">🎓 Corsi</button>
-        <button class="chip" id="scfManut" onclick="scFiltra('Manutenzione sicurezza',this)">🔧 Manutenzione</button>
-        <button class="chip" id="scfVisita" onclick="scFiltra('Visita medica',this)">🩺 Visite mediche</button>
-        <button class="chip" id="scfAltro" onclick="scFiltra('Altro',this)">📌 Altro</button>
-        <button class="chip" id="scfArchiviate" onclick="scFiltra('archiviate',this)">🗄 Archiviate</button>
+      <button type="button" class="btn btn-p btn-f" onclick="apriNuovaScadenza()">+ Nuova scadenza</button>
+      <div class="sc-tools">
+        <button type="button" class="btn btn-sm" onclick="scTestaNotifiche()">Prova le notifiche</button>
+        <button type="button" class="btn btn-sm" onclick="resetMieNotifiche()" title="Se ricevi la stessa notifica più volte">Reimposta i miei dispositivi</button>
       </div>
-      <div id="scadenzarioList"><div class="empty">Caricamento...</div></div>
+      <div id="scTestMsg" class="sc-test-msg" role="status"></div>
+      <div class="pv-filtri" role="radiogroup" aria-label="Filtra per tipo">
+        <button type="button" class="chip on" id="scfTutti" role="radio" aria-checked="true" onclick="scFiltra('tutti',this)">Tutte</button>
+        <button type="button" class="chip" id="scfCorso" role="radio" aria-checked="false" onclick="scFiltra('Corso obbligatorio',this)">Corsi</button>
+        <button type="button" class="chip" id="scfManut" role="radio" aria-checked="false" onclick="scFiltra('Manutenzione sicurezza',this)">Manutenzione</button>
+        <button type="button" class="chip" id="scfVisita" role="radio" aria-checked="false" onclick="scFiltra('Visita medica',this)">Visite mediche</button>
+        <button type="button" class="chip" id="scfAltro" role="radio" aria-checked="false" onclick="scFiltra('Altro',this)">Altro</button>
+        <button type="button" class="chip" id="scfArchiviate" role="radio" aria-checked="false" onclick="scFiltra('archiviate',this)">Archiviate</button>
+      </div>
+      <div id="scadenzarioList"><div class="empty">Caricamento…</div></div>
     </div>
 
     <!-- DETTAGLIO PERSONALE -->
@@ -10749,8 +10774,7 @@ function initScadenzarioPage(){
 
 function scFiltra(tipo,btn){
   scFiltroTipo=tipo;
-  document.querySelectorAll('#p-scadenzario .chip').forEach(c=>c.classList.remove('on'));
-  btn.classList.add('on');
+  document.querySelectorAll('#p-scadenzario .chip').forEach(c=>{const on=c===btn;c.classList.toggle('on',on);c.setAttribute('aria-checked',on?'true':'false');});
   renderScadenzario();
 }
 
@@ -10768,7 +10792,7 @@ function scListaCombinata(){
     return {
       id:m.id,virtuale:true,
       tipo:'Manutenzione sicurezza',
-      titolo:'🔧 Verifica: '+m.nome,
+      titolo:'Verifica: '+m.nome,
       dataScadenza:toLocalISO(scadenza),
       promemoriaGiorni:14,
       collegatoTipo:'articolo',collegatoNome:m.nome,
@@ -10785,54 +10809,57 @@ function renderScadenzario(){
   const entro30=combinata.filter(s=>{const g=scGiorniA(s.dataScadenza);return g>=0&&g<=30;});
   const nScadute=$('scNumScadute'),nEntro30=$('scNumEntro30'),nAttive=$('scNumAttive');
   if(!nScadute||!nEntro30||!nAttive)return; // pagina Scadenzario non aperta
-  nScadute.textContent=scadute.length;
-  nEntro30.textContent=entro30.length;
+  nScadute.textContent=scadute.length;nScadute.dataset.tono=scadute.length?'danger':'';
+  nEntro30.textContent=entro30.length;nEntro30.dataset.tono=entro30.length?'warning':'';
   nAttive.textContent=combinata.length;
 
   const lista=(scFiltroTipo==='tutti'?combinata:combinata.filter(s=>s.tipo===scFiltroTipo))
     .sort((a,b)=>a.dataScadenza.localeCompare(b.dataScadenza));
 
   const el=$('scadenzarioList');if(!el)return;
-  const tipoIcon={'Corso obbligatorio':'🎓','Manutenzione sicurezza':'🔧','Visita medica':'🩺','Altro':'📌'};
+  const fmtLungo=iso=>new Date(iso+'T12:00:00').toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'});
 
   if(scFiltroTipo==='archiviate'){
     const archiviate=cacheScadenzario.filter(s=>s.stato==='archiviata').sort((a,b)=>(b.archiviataIl||'').localeCompare(a.archiviataIl||''));
     if(!archiviate.length){el.innerHTML='<div class="empty">Nessuna scadenza archiviata</div>';return;}
     el.innerHTML=archiviate.map(s=>
-      '<div class="card" style="margin-bottom:10px;border-left:3px solid var(--tx3);opacity:.75">'+
-        '<div style="font-size:13px;font-weight:600">'+(tipoIcon[s.tipo]||'📌')+' '+esc(s.titolo)+'</div>'+
-        '<div style="font-size:11px;color:var(--tx2);margin-top:2px">Scadeva il '+new Date(s.dataScadenza+'T12:00:00').toLocaleDateString('it-IT')+' · archiviata da '+(s.archiviataDa||'—')+'</div>'+
-        '<button onclick="scRiattivaScadenza(\''+s.id+'\')" class="btn btn-f" style="width:100%;font-size:12px;padding:7px;margin-top:8px">↩️ Riattiva</button>'+
-      '</div>'
+      '<article class="sc-card sc-arch">'+
+        '<h3 class="cal-job-title">'+esc(s.titolo)+'</h3>'+
+        '<div class="sc-meta">'+esc(s.tipo||'')+' · scadeva il '+new Date(s.dataScadenza+'T12:00:00').toLocaleDateString('it-IT')+' · archiviata da '+esc(s.archiviataDa||'—')+'</div>'+
+        '<div class="sc-actions"><button type="button" class="btn btn-sm" onclick="scRiattivaScadenza(\''+escJs(s.id)+'\')">Riattiva</button></div>'+
+      '</article>'
     ).join('');
     return;
   }
 
-  if(!lista.length){el.innerHTML='<div class="empty">Nessuna scadenza attiva'+(scFiltroTipo!=='tutti'?' in questa categoria':'')+' 🎉</div>';return;}
+  if(!lista.length){el.innerHTML='<div class="empty">Nessuna scadenza attiva'+(scFiltroTipo!=='tutti'?' in questa categoria':'')+'</div>';return;}
   el.innerHTML=lista.map(s=>{
     const g=scGiorniA(s.dataScadenza);
     const scaduta=g<0,vicina=g>=0&&g<=(s.promemoriaGiorni||30);
-    const colore=scaduta?'var(--rd)':vicina?'var(--am)':'var(--gn)';
-    const collegatoLabel=s.collegatoNome?' · '+(s.collegatoTipo==='dipendente'?'👤 ':'📦 ')+s.collegatoNome:'';
-    const responsabileLabel=s.responsabileNome?' · 🧑‍💼 '+s.responsabileNome:'';
-    const clickHandler=s.virtuale?'':'apriModificaScadenza(\''+s.id+'\')';
-    const completaBtn=s.virtuale
-      ?'<button onclick="event.stopPropagation();segnaManutenzioneVerificata(\''+s.id+'\',\''+encUri(s.collegatoNome)+'\')" class="btn btn-p" style="width:100%;font-size:12px;padding:7px;margin-top:8px">✓ Verificato oggi</button>'
-      :'<div style="display:flex;gap:8px;margin-top:8px">'+
-        '<button onclick="event.stopPropagation();scCompletaScadenza(\''+s.id+'\')" class="btn btn-p" style="flex:1;font-size:12px;padding:7px">✓ Completata'+(s.ricorrenzaMesi?' (genera prossima)':'')+'</button>'+
-        '<button onclick="event.stopPropagation();scArchiviaScadenza(\''+s.id+'\')" class="btn btn-f" style="font-size:12px;padding:7px 10px" title="Smetti di ricevere avvisi senza segnarla come completata">🗄 Archivia</button>'+
+    const stato=scaduta?' sc-scaduta':vicina?' sc-vicina':'';
+    const giorni=scaduta?'Scaduta da '+Math.abs(g)+(Math.abs(g)===1?' giorno':' giorni'):g===0?'Oggi':g===1?'Domani':'Tra '+g+' giorni';
+    const meta=[esc(s.tipo||''),
+      s.collegatoNome?(s.collegatoTipo==='dipendente'?'Persona: ':'Articolo: ')+esc(s.collegatoNome):'',
+      s.responsabileNome?'Responsabile: '+esc(s.responsabileNome):'',
+      s.ricorrenzaMesi?'Ogni '+esc(s.ricorrenzaMesi)+' mesi':'',
+      s.virtuale?'dal Magazzino':''].filter(Boolean).join(' · ');
+    const azioni=s.virtuale
+      ?'<div class="sc-actions"><button type="button" class="btn btn-p btn-sm" onclick="segnaManutenzioneVerificata(\''+escJs(s.id)+'\',\''+encUri(s.collegatoNome)+'\')">Verificato oggi</button></div>'
+      :'<div class="sc-actions">'+
+        '<button type="button" class="btn btn-p btn-sm" onclick="scCompletaScadenza(\''+escJs(s.id)+'\')">Completata'+(s.ricorrenzaMesi?' · genera la prossima':'')+'</button>'+
+        '<button type="button" class="btn btn-sm" onclick="scArchiviaScadenza(\''+escJs(s.id)+'\')" title="Smetti di ricevere avvisi senza segnarla come completata">Archivia</button>'+
       '</div>';
-    return '<div class="card" style="margin-bottom:10px;border-left:3px solid '+colore+(s.virtuale?';opacity:.92':'')+'" '+(clickHandler?'onclick="'+clickHandler+'"':'')+'>'+
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
-        '<div style="flex:1;min-width:0">'+
-          '<div style="font-size:13px;font-weight:600">'+(tipoIcon[s.tipo]||'📌')+' '+esc(s.titolo)+'</div>'+
-          '<div style="font-size:11px;color:var(--tx2);margin-top:2px">'+new Date(s.dataScadenza+'T12:00:00').toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'})+collegatoLabel+responsabileLabel+(s.ricorrenzaMesi?' · 🔁 ogni '+s.ricorrenzaMesi+' mesi':'')+(s.virtuale?' · dal Magazzino':'')+'</div>'+
-        '</div>'+
-        '<div style="font-size:12px;font-weight:700;color:'+colore+';white-space:nowrap">'+(scaduta?'Scaduta da '+Math.abs(g)+'gg':g+'gg')+'</div>'+
+    return '<article class="sc-card'+stato+'">'+
+      '<div class="sc-head">'+
+        '<button type="button" class="sc-open"'+(s.virtuale?' disabled':' onclick="apriModificaScadenza(\''+escJs(s.id)+'\')"')+'>'+
+          '<h3 class="cal-job-title">'+esc(s.titolo)+'</h3>'+
+          '<div class="sc-meta">'+fmtLungo(s.dataScadenza)+(meta?' · '+meta:'')+'</div>'+
+        '</button>'+
+        '<div class="sc-giorni">'+giorni+'</div>'+
       '</div>'+
-      (s.note?'<div style="font-size:11px;color:var(--tx3);margin-top:6px">'+esc(s.note)+'</div>':'')+
-      completaBtn+
-    '</div>';
+      (s.note?'<p class="sc-note">'+esc(s.note)+'</p>':'')+
+      azioni+
+    '</article>';
   }).join('');
 }
 
@@ -11005,7 +11032,7 @@ async function scEliminaScadenza(){
 async function scTestaNotifiche(){
   const key=prompt('Codice SCADENZARIO_SECRET (configurato su Vercel):');
   if(!key)return;
-  const msg=$('scTestMsg');if(msg)msg.textContent='⏳ Controllo in corso...';
+  const msg=$('scTestMsg');if(msg)msg.textContent='Controllo in corso…';
   try{
     const resp=await fetch('/api/scadenzario-check',{headers:{'Authorization':'Bearer '+key}});
     const data=await resp.json();
