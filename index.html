@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01n';
+const APP_VERSION='v2026.11.01o';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -795,6 +795,21 @@ body.desktop-mode #calGriglia .cal-nome{display:-webkit-box!important;-webkit-li
 .mezzo-facts{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin:8px 0 0}
 .mezzo-facts dt{font-size:11px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:var(--tracking-caps)}
 .mezzo-facts dd{font-size:13px;font-weight:var(--weight-medium);margin:1px 0 0;font-variant-numeric:tabular-nums}
+/* ── PERSONALE ── */
+.per-anno{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:var(--text-sm);color:var(--color-text-secondary)}
+.per-anno select{width:auto}
+.per-nums{display:flex;gap:14px;flex-shrink:0;text-align:right}
+.per-nums div b{display:block;font-size:var(--text-sm);font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums}
+.per-nums div span{font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:var(--tracking-caps)}
+.per-nums .per-warn b{color:var(--color-warning)}
+@media(max-width:420px){.per-nums{gap:10px}}
+.per-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.per-sub{font-size:var(--text-xs);color:var(--color-text-secondary);text-align:center;margin:-6px 0 14px}
+.per-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+@media(max-width:420px){.per-actions{grid-template-columns:1fr}}
+.per-sec{font-size:var(--text-xs);font-weight:var(--weight-semibold);color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:var(--tracking-caps);margin:18px 0 8px}
+.per-vuoto{font-size:var(--text-sm);color:var(--color-text-tertiary);padding:2px 0 6px}
+.per-back{margin-bottom:12px}
 .ai-err{color:var(--color-danger);background:var(--color-danger-subtle);padding:12px;border-radius:var(--radius-md)}
 
 /* ── FORUM ── */
@@ -1474,34 +1489,37 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- PERSONALE (Ferie/Permessi/Straordinari) -->
     <div class="page" id="p-personale">
-      <div style="display:flex;gap:6px;margin-bottom:14px;background:var(--bg2);border-radius:var(--rs);padding:3px">
-        <button id="perTabBtn_riepilogo" onclick="perSwitchTab('riepilogo')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:var(--ac);color:#fff">👥 Riepilogo</button>
-        <button id="perTabBtn_export" onclick="perSwitchTab('export')" style="flex:1;padding:9px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2)">📥 Esporta presenze</button>
+      <div class="page-head desk-only"><div><h1 class="page-title">Personale</h1></div></div>
+      <div class="seg" role="tablist" aria-label="Personale" style="margin-bottom:14px">
+        <button type="button" class="seg-btn on" id="perTabBtn_riepilogo" role="tab" aria-selected="true" aria-controls="perTab_riepilogo" onclick="perSwitchTab('riepilogo')">Riepilogo</button>
+        <button type="button" class="seg-btn" id="perTabBtn_export" role="tab" aria-selected="false" aria-controls="perTab_export" onclick="perSwitchTab('export')">Esporta ore</button>
       </div>
 
-      <div id="perTab_riepilogo">
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">Anno di riferimento: <select id="perAnnoSel" onchange="renderPersonaleList()" style="display:inline-block;width:auto;padding:4px 8px;font-size:12px"></select></div>
+      <div id="perTab_riepilogo" role="tabpanel" aria-labelledby="perTabBtn_riepilogo">
+        <div class="per-anno"><label for="perAnnoSel">Anno di riferimento</label><select id="perAnnoSel" onchange="renderPersonaleList()"></select></div>
         <div id="personaleList"></div>
       </div>
 
-      <div id="perTab_export" style="display:none">
-        <div class="ig"><label class="il">Dipendente</label>
-          <select id="perExpUid"><option value="all">👥 Tutto il team</option></select>
-        </div>
-        <div class="ig"><label class="il">Periodo</label>
-          <select id="perExpPeriodo" onchange="perUpdateExportRange()">
-            <option value="mensile">📅 Mensile</option>
-            <option value="trimestrale">📅 Trimestrale</option>
-            <option value="semestrale">📅 Semestrale</option>
-            <option value="annuale">📅 Annuale</option>
-            <option value="custom">📅 Date personalizzate</option>
-          </select>
-        </div>
-        <div id="perExpSelettori"></div>
-        <div id="perExpRangePreview" style="font-size:11px;color:var(--tx2);margin-bottom:14px"></div>
-        <div style="display:flex;gap:8px">
-          <button id="perExpExcelBtn" class="btn btn-f" style="flex:1" onclick="perExportPresenzeExcel()">📊 Scarica Excel</button>
-          <button id="perExpPdfBtn" class="btn btn-f" style="flex:1" onclick="perExportPresenzePdf()">📄 Scarica PDF</button>
+      <div id="perTab_export" role="tabpanel" aria-labelledby="perTabBtn_export" style="display:none">
+        <div class="card">
+          <div class="ig"><label class="il" for="perExpUid">Dipendente</label>
+            <select id="perExpUid"><option value="all">Tutto il team</option></select>
+          </div>
+          <div class="ig"><label class="il" for="perExpPeriodo">Periodo</label>
+            <select id="perExpPeriodo" onchange="perUpdateExportRange()">
+              <option value="mensile">Mensile</option>
+              <option value="trimestrale">Trimestrale</option>
+              <option value="semestrale">Semestrale</option>
+              <option value="annuale">Annuale</option>
+              <option value="custom">Date personalizzate</option>
+            </select>
+          </div>
+          <div id="perExpSelettori"></div>
+          <p id="perExpRangePreview" class="pv-hint" role="status"></p>
+          <div class="pv-actions" style="margin-bottom:0">
+            <button type="button" id="perExpExcelBtn" class="btn btn-p" onclick="perExportPresenzeExcel()">Scarica Excel</button>
+            <button type="button" id="perExpPdfBtn" class="btn" onclick="perExportPresenzePdf()">Scarica PDF</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1533,7 +1551,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- DETTAGLIO PERSONALE -->
     <div class="page" id="p-personale-dett">
-      <button class="btn btn-f" style="margin-bottom:12px;width:auto;padding:8px 14px;font-size:12px" onclick="goPage('personale')">← Torna alla lista</button>
+      <button type="button" class="btn btn-sm per-back" onclick="goPage('personale')">← Torna all'elenco</button>
       <div id="perDettBody"></div>
     </div>
 
@@ -8103,13 +8121,13 @@ function pvUpdateExportZipRange(){
   if(periodo==='tutti'){
     box.innerHTML='';
   } else if(periodo==='mensile'){
-    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    box.innerHTML=`<div class="grid2">
       <div class="ig"><label class="il">Mese</label><select id="pvExpMese">${MESI.map((m,i)=>`<option value="${i}" ${i===oggi.getMonth()?'selected':''}>${m}</option>`).join('')}</select></div>
       <div class="ig"><label class="il">Anno</label><select id="pvExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>
     </div>`;
   } else if(periodo==='trimestrale'){
     const trimCorrente=Math.floor(oggi.getMonth()/3);
-    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    box.innerHTML=`<div class="grid2">
       <div class="ig"><label class="il">Trimestre</label><select id="pvExpTrim">
         <option value="0" ${trimCorrente===0?'selected':''}>T1 (Gen-Mar)</option>
         <option value="1" ${trimCorrente===1?'selected':''}>T2 (Apr-Giu)</option>
@@ -8120,7 +8138,7 @@ function pvUpdateExportZipRange(){
     </div>`;
   } else if(periodo==='semestrale'){
     const semCorrente=oggi.getMonth()<6?0:1;
-    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    box.innerHTML=`<div class="grid2">
       <div class="ig"><label class="il">Semestre</label><select id="pvExpSem">
         <option value="0" ${semCorrente===0?'selected':''}>S1 (Gen-Giu)</option>
         <option value="1" ${semCorrente===1?'selected':''}>S2 (Lug-Dic)</option>
@@ -8131,7 +8149,7 @@ function pvUpdateExportZipRange(){
     box.innerHTML=`<div class="ig"><label class="il">Anno</label><select id="pvExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>`;
   } else {
     const isoOggi=toLocalISO(oggi);
-    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    box.innerHTML=`<div class="grid2">
       <div class="ig"><label class="il">Data inizio</label><input type="date" id="pvExpDataInizio" value="${isoOggi.slice(0,8)}01"></div>
       <div class="ig"><label class="il">Data fine</label><input type="date" id="pvExpDataFine" value="${isoOggi}"></div>
     </div>`;
@@ -8177,7 +8195,7 @@ function pvRefreshExportZipPreview(){
     prev.textContent=cachePvDoc.length+' preventivi totali in archivio';
     return;
   }
-  if(!r.inizio||!r.fine||r.fine<r.inizio){prev.innerHTML='<span style="color:var(--rd)">⚠️ Periodo non valido</span>';return;}
+  if(!r.inizio||!r.fine||r.fine<r.inizio){prev.innerHTML='<span class="t-danger">Periodo non valido</span>';return;}
   const count=cachePvDoc.filter(d=>{
     const data=(d.createdAt||'').slice(0,10);
     return data>=r.inizio&&data<=r.fine;
@@ -11207,41 +11225,31 @@ function renderPersonaleList(){
   const anno=parseInt($('perAnnoSel')?.value)||perAnnoCorrente;
   const membri=cacheTeam.filter(m=>m.approvato).sort((a,b)=>(a.cognome||'').localeCompare(b.cognome||''));
 
-  let h='<button class="btn btn-f" style="margin-bottom:14px;font-size:12px" onclick="perRicalcolaStraordinari()">🔄 Ricalcola straordinari da timbrature</button>';
+  let h='<button type="button" class="btn btn-sm" style="margin-bottom:12px" onclick="perRicalcolaStraordinari()">Ricalcola straordinari dalle timbrature</button>';
 
   if(!membri.length){
-    list.innerHTML=h+'<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessun dipendente approvato</div>';
+    list.innerHTML=h+'<div class="empty">Nessun dipendente approvato</div>';
     return;
   }
 
-  h+=membri.map(m=>{
+  h+='<div class="card pv-list">'+membri.map(m=>{
     const esterno=isCollabEsterno(m);
     const permessi=perGetPermessiPerUid(m.id,anno).length;
     const straordOre=perOreStraordinarioTotali(m.id,anno);
     const oreSett=perGetOreSettimanali(m);
-    const ferieBlock=esterno
-      ?`<div><div style="font-size:13px;font-weight:700;color:var(--tx3)">N/A</div><div style="font-size:9px;color:var(--tx3);text-transform:uppercase">Ferie</div></div>`
-      :(()=>{const goduti=perGiorniFerieGoduti(m.id,anno);const rimanenti=FERIE_GIORNI_ANNO-goduti;
-        return`<div><div style="font-size:13px;font-weight:700;color:${rimanenti<5?'var(--am)':'var(--ac2)'}">${rimanenti}</div><div style="font-size:9px;color:var(--tx3);text-transform:uppercase">Ferie rim.</div></div>`;})();
-    return `<div onclick="apriPersonaleDettaglio('${m.id}')" class="row" style="align-items:center;padding:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px;cursor:pointer">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600">${esc(m.nome)} ${esc(m.cognome)}${esterno?' <span style="font-size:9px;background:rgba(168,85,247,.15);color:#c084fc;padding:1px 6px;border-radius:8px">ext</span>':''}</div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${esc(m.ruolo)}${esterno?'':' · '+oreSett+'h/sett'}</div>
-      </div>
-      <div style="text-align:right;flex-shrink:0;display:flex;gap:14px;align-items:center">
-        ${ferieBlock}
-        <div>
-          <div style="font-size:13px;font-weight:700">${permessi}</div>
-          <div style="font-size:9px;color:var(--tx3);text-transform:uppercase">Permessi</div>
-        </div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:${straordOre>0?'var(--gn)':'var(--tx)'}">${straordOre}h</div>
-          <div style="font-size:9px;color:var(--tx3);text-transform:uppercase">Straord.</div>
-        </div>
-        <div style="color:var(--tx3);font-size:16px">›</div>
-      </div>
-    </div>`;
-  }).join('');
+    const rimanenti=esterno?null:FERIE_GIORNI_ANNO-perGiorniFerieGoduti(m.id,anno);
+    return '<div class="ditem">'+
+      '<button type="button" class="pv-item-main" onclick="apriPersonaleDettaglio(\''+escJs(m.id)+'\')">'+
+        '<span class="ditem-title">'+esc(m.nome)+' '+esc(m.cognome)+(esterno?' <span class="bdg bdg-xs bn">Esterno</span>':'')+'</span>'+
+        '<span class="ditem-sub">'+esc(m.ruolo)+(esterno?'':' · '+oreSett+' h/sett.')+'</span>'+
+      '</button>'+
+      '<div class="per-nums">'+
+        '<div'+(rimanenti!==null&&rimanenti<5?' class="per-warn"':'')+'><b>'+(esterno?'—':rimanenti)+'</b><span>Ferie</span></div>'+
+        '<div><b>'+permessi+'</b><span>Permessi</span></div>'+
+        '<div><b>'+straordOre+' h</b><span>Straord.</span></div>'+
+      '</div>'+
+    '</div>';
+  }).join('')+'</div>';
   list.innerHTML=h;
 }
 
@@ -11268,64 +11276,47 @@ function renderPersonaleDettaglio(uid){
   const straordPagate=straordinari.filter(s=>s.pagato).reduce((s,o)=>s+pvSafeNum(o.oreExtra),0);
   const straordRecupero=straordTot-straordPagate;
 
-  const rigaAssenza=(f)=>`<div class="row" style="align-items:center;padding:10px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:6px">
-    <div style="flex:1;min-width:0">
-      <div style="font-size:12px;font-weight:600">${f.dataInizio===f.dataFine?fmtDataIT(f.dataInizio):fmtDataIT(f.dataInizio)+' → '+fmtDataIT(f.dataFine)}</div>
-      <div style="font-size:11px;color:var(--tx2)">${f.giorniLavorativi||0} giorni lavorativi${f.note?' · '+esc(f.note):''}</div>
-    </div>
-    <button onclick="perDeleteFeriePermesso('${f.id}')" style="flex-shrink:0;width:30px;height:30px;border-radius:var(--rs);border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">🗑</button>
-  </div>`;
+  const rigaAssenza=(f)=>'<div class="ditem"><div class="ditem-main">'+
+      '<span class="ditem-title">'+(f.dataInizio===f.dataFine?fmtDataIT(f.dataInizio):fmtDataIT(f.dataInizio)+' → '+fmtDataIT(f.dataFine))+'</span>'+
+      '<span class="ditem-sub">'+(f.giorniLavorativi||0)+' giorni lavorativi'+(f.note?' · '+esc(f.note):'')+'</span>'+
+    '</div><button type="button" class="btn btn-sm btn-danger-text" onclick="perDeleteFeriePermesso(\''+escJs(f.id)+'\')">Elimina</button></div>';
 
-  const rigaStraord=(s)=>`<div class="row" style="align-items:center;padding:10px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:6px">
-    <div style="flex:1;min-width:0">
-      <div style="font-size:12px;font-weight:600">${fmtDataIT(s.data)} · ${pvSafeNum(s.oreExtra)}h ${s.pagato?'💰 pagato':'🔄 recupero'}</div>
-      <div style="font-size:11px;color:var(--tx2)">${s.fonte==='auto'?'🤖 da timbrature':'✏️ manuale'}${s.note?' · '+esc(s.note):''}</div>
-    </div>
-    <button onclick="perDeleteStraordinario('${s.id}')" style="flex-shrink:0;width:30px;height:30px;border-radius:var(--rs);border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:12px;cursor:pointer">🗑</button>
-  </div>`;
+  const rigaStraord=(s)=>'<div class="ditem"><div class="ditem-main">'+
+      '<span class="ditem-title">'+fmtDataIT(s.data)+' · '+pvSafeNum(s.oreExtra)+' h <span class="bdg bdg-xs '+(s.pagato?'bg':'bn')+'">'+(s.pagato?'Pagato':'Da recuperare')+'</span></span>'+
+      '<span class="ditem-sub">'+(s.fonte==='auto'?'Dalle timbrature':'Inserito a mano')+(s.note?' · '+esc(s.note):'')+'</span>'+
+    '</div><button type="button" class="btn btn-sm btn-danger-text" onclick="perDeleteStraordinario(\''+escJs(s.id)+'\')">Elimina</button></div>';
 
-  const ferieBoxRimanenti=esterno
-    ?`<div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--tx3)">N/A</div><div style="font-size:9px;color:var(--tx2);text-transform:uppercase">Ferie</div></div>`
-    :`<div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:${rimanenti<5?'var(--am)':'var(--ac2)'}">${rimanenti}</div><div style="font-size:9px;color:var(--tx2);text-transform:uppercase">Ferie rimanenti</div></div>`;
-  const ferieBoxGodute=esterno
-    ?`<div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--tx3)">—</div><div style="font-size:9px;color:var(--tx2);text-transform:uppercase">Non applicabile</div></div>`
-    :`<div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:18px;font-weight:800">${goduti}/${FERIE_GIORNI_ANNO}</div><div style="font-size:9px;color:var(--tx2);text-transform:uppercase">Ferie godute</div></div>`;
+  const elenco=(arr,riga,vuoto)=>arr.length?'<div class="card pv-list">'+arr.map(riga).join('')+'</div>':'<p class="per-vuoto">'+vuoto+'</p>';
+  const nomeJs=escJs(m.nome+' '+m.cognome);
 
   body.innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+    <div class="per-head">
       <div>
-        <div class="stl">${esc(m.nome)} ${esc(m.cognome)}${esterno?' <span style="font-size:10px;background:rgba(168,85,247,.15);color:#c084fc;padding:1px 7px;border-radius:10px;vertical-align:middle">esterno</span>':''}</div>
-        <div style="font-size:12px;color:var(--tx2);margin-top:2px">${esc(m.ruolo)}${esterno?'':' · '+oreSett+'h/settimana'}</div>
+        <h1 class="stl">${esc(m.nome)} ${esc(m.cognome)}${esterno?' <span class="bdg bdg-xs bn">Esterno</span>':''}</h1>
+        <div class="ditem-sub">${esc(m.ruolo)}${esterno?'':' · '+oreSett+' h/settimana'}</div>
       </div>
-      ${esterno?'':`<button class="btn btn-f" style="width:auto;padding:6px 10px;font-size:11px" onclick="perOpenOreContratto('${m.id}','${escJs(m.nome+' '+m.cognome)}',${oreSett})">⚙️ Orario</button>`}
+      ${esterno?'':`<button type="button" class="btn btn-sm" onclick="perOpenOreContratto('${escJs(m.id)}','${nomeJs}',${oreSett})">Orario</button>`}
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
-      ${ferieBoxRimanenti}
-      ${ferieBoxGodute}
-      <div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">
-        <div style="font-size:18px;font-weight:800;color:var(--gn)">${straordTot}h</div>
-        <div style="font-size:9px;color:var(--tx2);text-transform:uppercase">Straordinari</div>
-      </div>
+    <div class="sg3">
+      <div class="sc"><span class="sn"${!esterno&&rimanenti<5?' data-tono="warning"':''}>${esterno?'—':rimanenti}</span><span class="sl">${esterno?'Ferie: non applicabile':'Ferie rimanenti'}</span></div>
+      <div class="sc"><span class="sn">${esterno?'—':goduti+'/'+FERIE_GIORNI_ANNO}</span><span class="sl">Ferie godute</span></div>
+      <div class="sc"><span class="sn">${straordTot} h</span><span class="sl">Straordinari</span></div>
     </div>
-    <div style="font-size:11px;color:var(--tx2);margin-bottom:16px;text-align:center">di cui ${straordPagate}h pagate · ${straordRecupero}h da recuperare</div>
+    <p class="per-sub">di cui ${straordPagate} h pagate · ${straordRecupero} h da recuperare</p>
 
-    <button class="btn btn-p btn-f" style="margin-bottom:8px" onclick="perOpenFeriePermesso('${m.id}','${escJs(m.nome+' '+m.cognome)}')">+ Aggiungi ${esterno?'permesso/malattia':'ferie/permesso/malattia'}</button>
-    <button class="btn btn-f" style="margin-bottom:18px" onclick="perOpenStraordinario('${m.id}','${escJs(m.nome+' '+m.cognome)}')">+ Aggiungi straordinario manuale</button>
+    <div class="per-actions">
+      <button type="button" class="btn btn-p" onclick="perOpenFeriePermesso('${escJs(m.id)}','${nomeJs}')">+ ${esterno?'Permesso o malattia':'Ferie, permesso o malattia'}</button>
+      <button type="button" class="btn" onclick="perOpenStraordinario('${escJs(m.id)}','${nomeJs}')">+ Straordinario manuale</button>
+    </div>
 
-    ${esterno?'':`
-    <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">🏖 Ferie (${ferie.length})</div>
-    ${ferie.length?ferie.map(rigaAssenza).join(''):'<div style="font-size:12px;color:var(--tx3);padding:6px 0 14px">Nessuna ferie registrata</div>'}
-    `}
-
-    <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin:16px 0 8px">📋 Permessi (${permessi.length})</div>
-    ${permessi.length?permessi.map(rigaAssenza).join(''):'<div style="font-size:12px;color:var(--tx3);padding:6px 0 14px">Nessun permesso registrato</div>'}
-
-    <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin:16px 0 8px">🤒 Malattia (${malattie.length})</div>
-    ${malattie.length?malattie.map(rigaAssenza).join(''):'<div style="font-size:12px;color:var(--tx3);padding:6px 0 14px">Nessuna malattia registrata</div>'}
-
-    <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin:16px 0 8px">⏱ Straordinari (${straordinari.length})</div>
-    ${straordinari.length?straordinari.map(rigaStraord).join(''):'<div style="font-size:12px;color:var(--tx3);padding:6px 0 14px">Nessuno straordinario registrato</div>'}
+    ${esterno?'':'<h2 class="per-sec">Ferie ('+ferie.length+')</h2>'+elenco(ferie,rigaAssenza,'Nessuna ferie registrata')}
+    <h2 class="per-sec">Permessi (${permessi.length})</h2>
+    ${elenco(permessi,rigaAssenza,'Nessun permesso registrato')}
+    <h2 class="per-sec">Malattia (${malattie.length})</h2>
+    ${elenco(malattie,rigaAssenza,'Nessuna malattia registrata')}
+    <h2 class="per-sec">Straordinari (${straordinari.length})</h2>
+    ${elenco(straordinari,rigaStraord,'Nessuno straordinario registrato')}
   `;
 }
 
@@ -11448,8 +11439,7 @@ async function perSaveOreContratto(){
 function perSwitchTab(tab){
   ['riepilogo','export'].forEach(t=>{
     $('perTab_'+t).style.display=t===tab?'block':'none';
-    $('perTabBtn_'+t).style.background=t===tab?'var(--ac)':'transparent';
-    $('perTabBtn_'+t).style.color=t===tab?'#fff':'var(--tx2)';
+    const b=$('perTabBtn_'+t);b.classList.toggle('on',t===tab);b.setAttribute('aria-selected',t===tab?'true':'false');
   });
   if(tab==='export')perInitExportTab();
 }
@@ -11473,37 +11463,37 @@ function perUpdateExportRange(){
   const MESI=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 
   if(periodo==='mensile'){
-    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="ig"><label class="il">Mese</label><select id="perExpMese">${MESI.map((m,i)=>`<option value="${i}" ${i===oggi.getMonth()?'selected':''}>${m}</option>`).join('')}</select></div>
-      <div class="ig"><label class="il">Anno</label><select id="perExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>
+    box.innerHTML=`<div class="grid2">
+      <div class="ig"><label class="il" for="perExpMese">Mese</label><select id="perExpMese">${MESI.map((m,i)=>`<option value="${i}" ${i===oggi.getMonth()?'selected':''}>${m}</option>`).join('')}</select></div>
+      <div class="ig"><label class="il" for="perExpAnno">Anno</label><select id="perExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>
     </div>`;
   } else if(periodo==='trimestrale'){
     const trimCorrente=Math.floor(oggi.getMonth()/3);
-    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="ig"><label class="il">Trimestre</label><select id="perExpTrim">
+    box.innerHTML=`<div class="grid2">
+      <div class="ig"><label class="il" for="perExpTrim">Trimestre</label><select id="perExpTrim">
         <option value="0" ${trimCorrente===0?'selected':''}>T1 (Gen-Mar)</option>
         <option value="1" ${trimCorrente===1?'selected':''}>T2 (Apr-Giu)</option>
         <option value="2" ${trimCorrente===2?'selected':''}>T3 (Lug-Set)</option>
         <option value="3" ${trimCorrente===3?'selected':''}>T4 (Ott-Dic)</option>
       </select></div>
-      <div class="ig"><label class="il">Anno</label><select id="perExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>
+      <div class="ig"><label class="il" for="perExpAnno">Anno</label><select id="perExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>
     </div>`;
   } else if(periodo==='semestrale'){
     const semCorrente=oggi.getMonth()<6?0:1;
-    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="ig"><label class="il">Semestre</label><select id="perExpSem">
+    box.innerHTML=`<div class="grid2">
+      <div class="ig"><label class="il" for="perExpSem">Semestre</label><select id="perExpSem">
         <option value="0" ${semCorrente===0?'selected':''}>S1 (Gen-Giu)</option>
         <option value="1" ${semCorrente===1?'selected':''}>S2 (Lug-Dic)</option>
       </select></div>
-      <div class="ig"><label class="il">Anno</label><select id="perExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>
+      <div class="ig"><label class="il" for="perExpAnno">Anno</label><select id="perExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>
     </div>`;
   } else if(periodo==='annuale'){
-    box.innerHTML=`<div class="ig"><label class="il">Anno</label><select id="perExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>`;
+    box.innerHTML=`<div class="ig"><label class="il" for="perExpAnno">Anno</label><select id="perExpAnno">${[annoOggi-1,annoOggi,annoOggi+1].map(a=>`<option value="${a}" ${a===annoOggi?'selected':''}>${a}</option>`).join('')}</select></div>`;
   } else {
     const isoOggi=toLocalISO(oggi);
-    box.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="ig"><label class="il">Data inizio</label><input type="date" id="perExpDataInizio" value="${isoOggi.slice(0,8)}01"></div>
-      <div class="ig"><label class="il">Data fine</label><input type="date" id="perExpDataFine" value="${isoOggi}"></div>
+    box.innerHTML=`<div class="grid2">
+      <div class="ig"><label class="il" for="perExpDataInizio">Data inizio</label><input type="date" id="perExpDataInizio" value="${isoOggi.slice(0,8)}01"></div>
+      <div class="ig"><label class="il" for="perExpDataFine">Data fine</label><input type="date" id="perExpDataFine" value="${isoOggi}"></div>
     </div>`;
   }
   ['perExpMese','perExpAnno','perExpTrim','perExpSem','perExpDataInizio','perExpDataFine'].forEach(id=>{
@@ -11542,7 +11532,7 @@ function perGetExportRange(){
 function perRefreshExportPreview(){
   const r=perGetExportRange();
   const prev=$('perExpRangePreview');if(!prev)return;
-  if(!r.inizio||!r.fine||r.fine<r.inizio){prev.innerHTML='<span style="color:var(--rd)">⚠️ Periodo non valido</span>';return;}
+  if(!r.inizio||!r.fine||r.fine<r.inizio){prev.innerHTML='<span class="t-danger">Periodo non valido</span>';return;}
   const giorniLav=contaGiorniLavorativi(r.inizio,r.fine);
   prev.textContent='Periodo: '+fmtDataIT(r.inizio)+' → '+fmtDataIT(r.fine)+' ('+giorniLav+' giorni lavorativi)';
 }
