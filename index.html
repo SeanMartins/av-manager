@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01t';
+const APP_VERSION='v2026.11.01u';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -826,6 +826,31 @@ body.desktop-mode #calGriglia .cal-nome{display:-webkit-box!important;-webkit-li
 .loc-foto{font-size:var(--text-xs);color:var(--color-text-secondary);margin-top:8px}
 .loc-sec{font-size:var(--text-xs);font-weight:var(--weight-semibold);color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:var(--tracking-caps);margin:0 0 8px}
 .loc-note{font-size:var(--text-sm);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+/* ── FANTACALCIO ── */
+.ff-admin{margin-bottom:14px}
+.ff-admin .dcard-title{margin-bottom:10px}
+.ff-admin-sec{border-top:1px solid var(--color-border);padding-top:12px;margin-top:12px}
+.ff-tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.ff-tools .btn{cursor:pointer}
+.ff-sec{font-size:var(--text-xs);font-weight:var(--weight-semibold);color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:var(--tracking-caps);margin:16px 0 8px}
+.ff-conta{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
+.ff-conta .sc{padding:10px}
+.ff-conta .sn{font-size:18px}
+.ff-conta .sn[data-tono="ok"]{color:var(--color-success)}
+.ff-tot{font-size:var(--text-xs);color:var(--color-text-secondary);text-align:center;margin-bottom:12px}
+.ff-ruolo{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:var(--radius-sm);font-size:11px;font-weight:var(--weight-semibold);background:var(--color-surface-sunken);color:var(--color-text-secondary);border:1px solid var(--color-border);flex-shrink:0}
+.ff-ricerca{max-height:280px;overflow-y:auto;margin-top:8px}
+.ff-avviso{background:var(--color-warning-subtle);color:var(--color-warning);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:14px;font-size:var(--text-sm);font-weight:var(--weight-medium)}
+.ff-pos{font-weight:var(--weight-semibold);min-width:28px;font-variant-numeric:tabular-nums;color:var(--color-text-secondary)}
+.ff-mia{background:var(--color-accent-subtle)}
+.ff-pt{font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums;color:var(--color-accent-text);white-space:nowrap}
+.ff-match{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border);font-size:var(--text-sm)}
+.ff-match:last-child{border-bottom:none}
+.ff-match .ff-casa{text-align:right}
+.ff-match .ff-vince{font-weight:var(--weight-semibold)}
+.ff-ris{min-width:64px;text-align:center;font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums;color:var(--color-accent-text)}
+.ff-riposa{font-size:var(--text-xs);color:var(--color-text-secondary);padding:6px 0 2px}
+.ff-det{display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--color-text-secondary);padding:3px 0}
 .ai-err{color:var(--color-danger);background:var(--color-danger-subtle);padding:12px;border-radius:var(--radius-md)}
 
 /* ── FORUM ── */
@@ -1753,85 +1778,86 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
   <!-- FANTACALCIO MMG -->
   <div class="page" id="p-fantacalcio">
-    <div id="ffDisabledMsg" class="empty" style="display:none;padding:40px 20px;text-align:center">😴 Il Fantacalcio è temporaneamente disattivato.<br>Chiedi a un Admin di riattivarlo.</div>
+    <div class="page-head desk-only"><div><h1 class="page-title">Fantacalcio</h1></div></div>
+    <div id="ffDisabledMsg" class="empty" style="display:none">Il Fantacalcio è temporaneamente disattivato.<br>Chiedi a un Admin di riattivarlo.</div>
     <div id="ffContentWrap">
-    <div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto">
-      <button class="btn btn-p" id="ffTabBtn-rosa" style="white-space:nowrap" onclick="ffTab('rosa')">📋 Rosa</button>
-      <button class="btn" id="ffTabBtn-squadra" style="white-space:nowrap" onclick="ffTab('squadra')">⚽ Titolari</button>
-      <button class="btn" id="ffTabBtn-classifica" style="white-space:nowrap" onclick="ffTab('classifica')">🏆 Classifica</button>
-      <button class="btn" id="ffTabBtn-sfide" style="white-space:nowrap" onclick="ffTab('sfide')">⚔️ Sfide</button>
-      <button class="btn" id="ffTabBtn-giornata" style="white-space:nowrap" onclick="ffTab('giornata')">📅 Ultima giornata</button>
+    <div class="seg pv-tabs" role="tablist" aria-label="Fantacalcio">
+      <button type="button" class="seg-btn on" id="ffTabBtn-rosa" role="tab" aria-selected="true" aria-controls="ffPageRosa" onclick="ffTab('rosa')">Rosa</button>
+      <button type="button" class="seg-btn" id="ffTabBtn-squadra" role="tab" aria-selected="false" aria-controls="ffPageSquadra" onclick="ffTab('squadra')">Titolari</button>
+      <button type="button" class="seg-btn" id="ffTabBtn-classifica" role="tab" aria-selected="false" aria-controls="ffPageClassifica" onclick="ffTab('classifica')">Classifica</button>
+      <button type="button" class="seg-btn" id="ffTabBtn-sfide" role="tab" aria-selected="false" aria-controls="ffPageSfide" onclick="ffTab('sfide')">Sfide</button>
+      <button type="button" class="seg-btn" id="ffTabBtn-giornata" role="tab" aria-selected="false" aria-controls="ffPageGiornata" onclick="ffTab('giornata')">Ultima giornata</button>
     </div>
 
     <!-- Admin: strumenti sincronizzazione -->
-    <div id="ffAdminTools" style="display:none;background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:12px;margin-bottom:14px">
-      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">🔧 Strumenti Admin/Responsabile</div>
-      <div id="ffToggleStato" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--b)"></div>
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">📥 Il piano gratuito dell'API sportiva non include le rose giocatori: importale da Excel (un "listone" — se ne trovano di gratuiti online ogni stagione).</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-        <button class="btn" style="font-size:12px" onclick="ffExportTemplateGiocatori()">📋 Scarica template</button>
-        <label class="btn" style="font-size:12px;cursor:pointer">📥 Importa giocatori da Excel<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="ffHandleImportGiocatori(this)"></label>
+    <section id="ffAdminTools" class="card ff-admin" style="display:none" aria-labelledby="ffAdminTit">
+      <h2 class="dcard-title" id="ffAdminTit">Strumenti Admin e Responsabile</h2>
+      <div id="ffToggleStato"></div>
+      <div class="ff-admin-sec">
+        <p class="pv-hint">Il piano gratuito dell'API sportiva non include le rose: importale da Excel (un "listone": se ne trovano di gratuiti online ogni stagione).</p>
+        <div class="ff-tools">
+          <button type="button" class="btn btn-sm" onclick="ffExportTemplateGiocatori()">Scarica modello</button>
+          <label class="btn btn-sm">Importa giocatori da Excel<input type="file" accept=".xlsx,.xls,.csv" hidden onchange="ffHandleImportGiocatori(this)"></label>
+        </div>
+        <div id="ffImportPreview"></div>
+        <div class="ff-tools">
+          <button type="button" class="btn btn-sm" onclick="ffAggiornaGiocatori()">Aggiorna da API (sperimentale)</button>
+          <button type="button" class="btn btn-sm" onclick="ffForzaSync()">Forza calcolo punteggi</button>
+          <button type="button" class="btn btn-sm" onclick="ffGeneraCalendarioSfide()">Genera calendario sfide</button>
+        </div>
       </div>
-      <div id="ffImportPreview"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-        <button class="btn" style="font-size:12px" onclick="ffAggiornaGiocatori()">🔄 Aggiorna da API (sperimentale)</button>
-        <button class="btn" style="font-size:12px" onclick="ffForzaSync()">⚡ Forza calcolo punteggi</button>
-        <button class="btn" style="font-size:12px" onclick="ffGeneraCalendarioSfide()">⚔️ Genera calendario sfide</button>
+      <div class="ff-admin-sec">
+        <p class="pv-hint">Voto base (pagella) da Gazzetta o altra fonte: non è nell'API gratuita, va caricato a mano dopo ogni giornata. Carica l'Excel (affidabile) o il PDF (riconoscimento automatico da rivedere sempre prima di confermare).</p>
+        <div class="ff-tools" style="align-items:center">
+          <label class="il" for="ffVotiGiornata" style="margin:0">Giornata</label>
+          <input type="number" id="ffVotiGiornata" min="1" style="width:80px" placeholder="N.">
+          <button type="button" class="btn btn-sm" onclick="ffScaricaTemplateVoti()">Scarica modello</button>
+          <label class="btn btn-sm">Carica Excel voti<input type="file" accept=".xlsx,.xls,.csv" hidden onchange="ffHandleUploadVotiExcel(this)"></label>
+          <label class="btn btn-sm">Carica PDF voti<input type="file" accept=".pdf" hidden onchange="ffHandleUploadVotiPdf(this)"></label>
+        </div>
+        <div id="ffVotiPreview"></div>
+        <div id="ffAdminMsg" class="pv-hint" role="status" style="margin-top:8px"></div>
       </div>
-      <div style="font-size:11px;color:var(--tx3);margin:14px 0 10px;padding-top:10px;border-top:1px solid var(--b)">📊 Voto base (pagella) da Gazzetta/fonte a scelta — non disponibile nell'API gratuita, va caricato a mano dopo ogni giornata. Carica Excel (affidabile) o PDF (riconoscimento automatico da rivedere sempre prima di confermare).</div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-        <label class="il" style="margin:0">Giornata</label>
-        <input type="number" id="ffVotiGiornata" min="1" style="width:70px" placeholder="N.">
-        <button class="btn" style="font-size:12px" onclick="ffScaricaTemplateVoti()">📋 Scarica template</button>
-        <label class="btn" style="font-size:12px;cursor:pointer">📥 Carica Excel voti<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="ffHandleUploadVotiExcel(this)"></label>
-        <label class="btn" style="font-size:12px;cursor:pointer">📄 Carica PDF voti<input type="file" accept=".pdf" style="display:none" onchange="ffHandleUploadVotiPdf(this)"></label>
-      </div>
-      <div id="ffVotiPreview"></div>
-      <div id="ffAdminMsg" style="font-size:11px;color:var(--tx3);margin-top:8px"></div>
-    </div>
+    </section>
 
     <!-- TAB: La mia squadra -->
     <!-- TAB: Rosa completa -->
-    <div id="ffPageRosa">
-      <div class="card" style="margin-bottom:14px">
-        <div class="ig"><label class="il">Nome squadra</label><input type="text" id="ffNomeSquadra" placeholder="Es: I Bomber di Firenze"></div>
+    <div id="ffPageRosa" role="tabpanel" aria-labelledby="ffTabBtn-rosa">
+      <div class="card">
+        <div class="ig" style="margin:0"><label class="il" for="ffNomeSquadra">Nome squadra</label><input type="text" id="ffNomeSquadra" placeholder="Es.: I Bomber di Firenze"></div>
       </div>
-      <div id="ffRosaContatori" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px"></div>
+      <div id="ffRosaContatori"></div>
       <div id="ffRosaWrap"></div>
-      <div style="margin-top:14px">
-        <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">🔍 Aggiungi alla rosa (max 25: 3 P, 8 D, 8 C, 6 A)</div>
-        <input type="text" id="ffSearchPlayerRosa" placeholder="Cerca giocatore o squadra..." oninput="ffRenderRicercaGiocatoriRosa()">
-        <div id="ffRicercaGiocatoriRosa" style="max-height:260px;overflow-y:auto;margin-top:8px"></div>
-      </div>
+      <h2 class="ff-sec">Aggiungi alla rosa (massimo 25: 3 P, 8 D, 8 C, 6 A)</h2>
+      <input type="search" id="ffSearchPlayerRosa" placeholder="Cerca giocatore o squadra" aria-label="Cerca giocatore da aggiungere alla rosa" oninput="ffRenderRicercaGiocatoriRosa()">
+      <div id="ffRicercaGiocatoriRosa" class="ff-ricerca"></div>
     </div>
 
     <!-- TAB: Titolari (formazione da 11, scelti dalla rosa) -->
-    <div id="ffPageSquadra" style="display:none">
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Scegli gli 11 titolari di questa giornata tra i giocatori già presenti nella tua Rosa.</div>
+    <div id="ffPageSquadra" role="tabpanel" aria-labelledby="ffTabBtn-squadra" style="display:none">
+      <p class="pv-hint">Scegli gli 11 titolari di questa giornata tra i giocatori della tua Rosa.</p>
       <div id="ffFormazioneWrap"></div>
-      <div style="margin-top:14px">
-        <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">🔍 Aggiungi ai titolari (dalla rosa)</div>
-        <input type="text" id="ffSearchPlayer" placeholder="Cerca nella tua rosa..." oninput="ffRenderRicercaGiocatori()">
-        <div id="ffRicercaGiocatori" style="max-height:260px;overflow-y:auto;margin-top:8px"></div>
-      </div>
-      <button class="btn btn-p btn-f" style="margin-top:16px" onclick="ffSalvaSquadra()">💾 Salva squadra</button>
+      <h2 class="ff-sec">Aggiungi ai titolari (dalla rosa)</h2>
+      <input type="search" id="ffSearchPlayer" placeholder="Cerca nella tua rosa" aria-label="Cerca nella tua rosa" oninput="ffRenderRicercaGiocatori()">
+      <div id="ffRicercaGiocatori" class="ff-ricerca"></div>
+      <button type="button" class="btn btn-p btn-f" style="margin-top:16px" onclick="ffSalvaSquadra()">Salva squadra</button>
     </div>
 
     <!-- TAB: Classifica -->
-    <div id="ffPageClassifica" style="display:none">
+    <div id="ffPageClassifica" role="tabpanel" aria-labelledby="ffTabBtn-classifica" style="display:none">
       <div id="ffClassificaList"><div class="empty">Nessun punteggio calcolato ancora</div></div>
     </div>
 
     <!-- TAB: Sfide (scontri diretti) -->
-    <div id="ffPageSfide" style="display:none">
-      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">🏆 Classifica a punti (scontri diretti)</div>
-      <div id="ffClassificaSfideList" style="margin-bottom:20px"><div class="empty">Calendario non ancora generato — chiedi a un Admin di premere "Genera calendario sfide"</div></div>
-      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px">📅 Calendario</div>
+    <div id="ffPageSfide" role="tabpanel" aria-labelledby="ffTabBtn-sfide" style="display:none">
+      <h2 class="ff-sec" style="margin-top:0">Classifica a punti (scontri diretti)</h2>
+      <div id="ffClassificaSfideList"><div class="empty">Calendario non ancora generato: chiedi a un Admin di premere "Genera calendario sfide"</div></div>
+      <h2 class="ff-sec">Calendario</h2>
       <div id="ffCalendarioSfideList"><div class="empty">Nessun calendario generato</div></div>
     </div>
 
     <!-- TAB: Ultima giornata -->
-    <div id="ffPageGiornata" style="display:none">
+    <div id="ffPageGiornata" role="tabpanel" aria-labelledby="ffTabBtn-giornata" style="display:none">
       <div id="ffGiornataDettaglio"><div class="empty">Nessuna giornata sincronizzata ancora</div></div>
     </div>
   </div>
@@ -15983,8 +16009,8 @@ async function ffToggleFeature(){
 function ffRenderToggleStato(){
   const el=$('ffToggleStato');if(!el)return;
   el.innerHTML=ffFeatureEnabled
-    ? '<button class="btn" style="font-size:12px;border-color:var(--rd);color:var(--rd)" onclick="ffToggleFeature()">🔴 Disattiva Fantacalcio per tutti</button><span style="font-size:11px;color:var(--tx3);margin-left:8px">Attivo — visibile a tutti gli utenti</span>'
-    : '<button class="btn" style="font-size:12px;border-color:var(--gn);color:var(--gn)" onclick="ffToggleFeature()">🟢 Riattiva Fantacalcio per tutti</button><span style="font-size:11px;color:var(--tx3);margin-left:8px">Disattivato — visibile solo ad Admin/Responsabile</span>';
+    ? '<div class="ff-tools" style="align-items:center;margin:0"><span class="bdg bdg-xs bg">Attivo</span><span class="pv-hint" style="margin:0">Visibile a tutti</span><button type="button" class="btn btn-sm btn-danger-text" onclick="ffToggleFeature()">Disattiva per tutti</button></div>'
+    : '<div class="ff-tools" style="align-items:center;margin:0"><span class="bdg bdg-xs bn">Disattivato</span><span class="pv-hint" style="margin:0">Visibile solo ad Admin e Responsabile</span><button type="button" class="btn btn-sm" onclick="ffToggleFeature()">Riattiva per tutti</button></div>';
 }
 let ffTeamNome={}; // uid -> nomeSquadra, popolato dalle rose per la classifica
 let ffFormazioneCorrente={P:[],D:[],C:[],A:[]};
@@ -16081,7 +16107,7 @@ function ffTab(tab){
     const page=$('ffPage'+t.charAt(0).toUpperCase()+t.slice(1));
     const btn=$('ffTabBtn-'+t);
     if(page)page.style.display=(t===tab)?'block':'none';
-    if(btn)btn.className=(t===tab)?'btn btn-p':'btn';
+    if(btn){btn.classList.toggle('on',t===tab);btn.setAttribute('aria-selected',t===tab?'true':'false');}
   });
 }
 
@@ -16092,41 +16118,43 @@ function ffGiornataCongelata(){
   return !!(g&&g.congelata&&!g.sincronizzata);
 }
 
+// Riga giocatore (rosa, titolari, ricerca)
+const FF_RUOLO_NOME={P:'Portieri',D:'Difensori',C:'Centrocampisti',A:'Attaccanti'};
+function ffRigaGiocatore(g,pid,azione){
+  return '<div class="ditem">'+
+    '<span class="ff-ruolo" aria-hidden="true">'+(g?esc(g.ruolo||''):'?')+'</span>'+
+    '<div class="ditem-main"><span class="ditem-title">'+(g?esc(g.nome):'Giocatore non trovato')+'</span>'+
+    '<span class="ditem-sub">'+(g?esc(g.squadra||''):esc(pid))+'</span></div>'+azione+'</div>';
+}
 function ffRenderFormazione(){
   const wrap=$('ffFormazioneWrap');if(!wrap)return;
   const bloccata=ffGiornataCongelata();
   const slot=ffSlotAttuale();
-  const ruoliLabel={P:'🧤 Portiere ('+slot.P+')',D:'🛡 Difensori ('+slot.D+')',C:'⚙️ Centrocampisti ('+slot.C+')',A:'⚔️ Attaccanti ('+slot.A+')'};
   let h='';
-  h+='<div class="ig" style="margin-bottom:14px"><label class="il">Modulo</label>'+
+  h+='<div class="ig"><label class="il" for="ffModuloSelect">Modulo</label>'+
     '<select id="ffModuloSelect" '+(bloccata?'disabled':'')+' onchange="ffCambiaModulo(this.value)">'+
     Object.keys(FF_MODULI).map(mod=>'<option value="'+mod+'" '+(mod===ffModuloCorrente?'selected':'')+'>'+mod+'</option>').join('')+
     '</select></div>';
   if(bloccata){
-    h+='<div style="background:var(--amb);border:1px solid var(--am);border-radius:var(--rs);padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--am);font-weight:600">🔒 Formazione congelata — le partite di questa giornata sono già iniziate. Puoi comunque sostituire un giocatore in caso di infortunio, usando "🩹 Sostituisci" qui sotto.</div>';
+    h+='<div class="ff-avviso" role="status">Formazione bloccata: le partite di questa giornata sono già iniziate. Puoi comunque sostituire un giocatore infortunato con «Sostituisci».</div>';
   }
   ['P','D','C','A'].forEach(r=>{
-    h+='<div style="margin-bottom:14px">';
-    h+='<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">'+ruoliLabel[r]+'</div>';
+    h+='<h3 class="ff-sec">'+FF_RUOLO_NOME[r]+' ('+(ffFormazioneCorrente[r]||[]).length+'/'+slot[r]+')</h3>';
     const ids=ffFormazioneCorrente[r]||[];
-    if(!ids.length){
-      h+='<div class="empty" style="padding:10px">Nessun giocatore selezionato</div>';
-    } else {
-      ids.forEach(pid=>{
-        const g=cacheFfGiocatori.find(x=>x.id===pid);
-        h+='<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border-radius:var(--rs);padding:8px 10px;margin-bottom:6px">'+
-          '<div style="font-size:13px">'+(g?esc(g.nome)+' <span style="color:var(--tx3)">· '+esc(g.squadra)+'</span>':'⚠️ giocatore non trovato ('+pid+')')+'</div>'+
-          (bloccata?'<button style="background:none;border:1px solid var(--am);color:var(--am);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer" onclick="apriSostituzioneInfortunio(\''+r+'\',\''+pid+'\')">🩹 Sostituisci</button>':'<button style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:16px" onclick="ffRimuoviGiocatore(\''+r+'\',\''+pid+'\')">✕</button>')+
-        '</div>';
-      });
-    }
-    h+='</div>';
+    if(!ids.length){h+='<p class="per-vuoto">Nessun giocatore selezionato</p>';return;}
+    h+='<div class="card pv-list">'+ids.map(pid=>{
+      const g=cacheFfGiocatori.find(x=>x.id===pid);
+      const azione=bloccata
+        ?'<button type="button" class="btn btn-sm" onclick="apriSostituzioneInfortunio(\''+r+'\',\''+escJs(pid)+'\')">Sostituisci</button>'
+        :'<button type="button" class="btn btn-sm btn-danger-text" aria-label="Togli '+(g?esc(g.nome):'giocatore')+'" onclick="ffRimuoviGiocatore(\''+r+'\',\''+escJs(pid)+'\')">Togli</button>';
+      return ffRigaGiocatore(g,pid,azione);
+    }).join('')+'</div>';
   });
   wrap.innerHTML=h;
   const searchWrap=$('ffSearchPlayer');
   if(searchWrap){
     searchWrap.disabled=bloccata;
-    searchWrap.placeholder=bloccata?'🔒 Bloccato durante la giornata in corso':'Cerca nella tua rosa...';
+    searchWrap.placeholder=bloccata?'Bloccato durante la giornata in corso':'Cerca nella tua rosa';
   }
   const ricercaEl=$('ffRicercaGiocatori');
   if(ricercaEl&&bloccata)ricercaEl.innerHTML='';
@@ -16245,50 +16273,35 @@ function ffRenderRicercaGiocatori(){
   if(q)lista=lista.filter(g=>(g.nome||'').toLowerCase().includes(q)||(g.squadra||'').toLowerCase().includes(q));
   lista=lista.slice(0,60);
   if(!inRosa.size){
-    el.innerHTML='<div class="empty">La tua Rosa è vuota — vai prima nella scheda "📋 Rosa" e aggiungi i tuoi 25 calciatori</div>';
+    el.innerHTML='<div class="empty">La tua Rosa è vuota: vai prima nella scheda «Rosa» e aggiungi i tuoi 25 calciatori</div>';
     return;
   }
   if(!lista.length){el.innerHTML='<div class="empty">Nessun risultato (o hai già usato tutti i giocatori della rosa in questo ruolo)</div>';return;}
-  const ruoloIcon={P:'🧤',D:'🛡',C:'⚙️',A:'⚔️'};
-  el.innerHTML=lista.map(g=>
-    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--b);cursor:pointer" onclick="ffAggiungiGiocatore(\''+g.id+'\')">'+
-      '<div style="font-size:13px">'+ruoloIcon[g.ruolo]+' '+esc(g.nome)+' <span style="color:var(--tx3);font-size:11px">· '+esc(g.squadra)+'</span></div>'+
-      '<span style="color:var(--ac2);font-size:16px">+</span>'+
-    '</div>'
-  ).join('');
+  el.innerHTML='<div class="card pv-list">'+lista.map(g=>ffRigaGiocatore(g,g.id,
+    '<button type="button" class="btn btn-sm" aria-label="Aggiungi '+esc(g.nome)+'" onclick="ffAggiungiGiocatore(\''+escJs(g.id)+'\')">Aggiungi</button>')).join('')+'</div>';
 }
 
 // ── ROSA COMPLETA (modalità Classic: 3 P, 8 D, 8 C, 6 A = 25 calciatori) ──
 
 function ffRenderRosa(){
   const contatori=$('ffRosaContatori');
-  const ruoliLabel={P:'🧤 Portieri',D:'🛡 Difensori',C:'⚙️ Centrocampisti',A:'⚔️ Attaccanti'};
   if(contatori){
     const totale=['P','D','C','A'].reduce((s,r)=>s+(ffRosaCompleta[r]||[]).length,0);
-    contatori.innerHTML=['P','D','C','A'].map(r=>{
+    contatori.innerHTML='<div class="ff-conta">'+['P','D','C','A'].map(r=>{
       const n=(ffRosaCompleta[r]||[]).length;
-      const pieno=n>=FF_SLOT_ROSA[r];
-      return '<div class="sc"><div class="sn" style="font-size:16px;color:'+(pieno?'var(--gn)':'var(--tx)')+'">'+n+'/'+FF_SLOT_ROSA[r]+'</div><div class="sl" style="font-size:9px">'+ruoliLabel[r].split(' ')[1]+'</div></div>';
-    }).join('')+'<div style="grid-column:1/-1;text-align:center;font-size:11px;color:var(--tx3);margin-top:4px">Totale rosa: '+totale+' / 25</div>';
+      return '<div class="sc"><span class="sn"'+(n>=FF_SLOT_ROSA[r]?' data-tono="ok"':'')+'>'+n+'/'+FF_SLOT_ROSA[r]+'</span><span class="sl">'+FF_RUOLO_NOME[r]+'</span></div>';
+    }).join('')+'</div><p class="ff-tot">Totale rosa: '+totale+' / 25</p>';
   }
   const wrap=$('ffRosaWrap');if(!wrap)return;
   let h='';
   ['P','D','C','A'].forEach(r=>{
-    h+='<div style="margin-bottom:14px">';
-    h+='<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">'+ruoliLabel[r]+' ('+(ffRosaCompleta[r]||[]).length+'/'+FF_SLOT_ROSA[r]+')</div>';
     const ids=ffRosaCompleta[r]||[];
-    if(!ids.length){
-      h+='<div class="empty" style="padding:10px">Nessun giocatore selezionato</div>';
-    } else {
-      ids.forEach(pid=>{
-        const g=cacheFfGiocatori.find(x=>x.id===pid);
-        h+='<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border-radius:var(--rs);padding:8px 10px;margin-bottom:6px">'+
-          '<div style="font-size:13px">'+(g?esc(g.nome)+' <span style="color:var(--tx3)">· '+esc(g.squadra)+'</span>':'⚠️ giocatore non trovato ('+pid+')')+'</div>'+
-          '<button style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:16px" onclick="ffRimuoviGiocatoreRosa(\''+r+'\',\''+pid+'\')">✕</button>'+
-        '</div>';
-      });
-    }
-    h+='</div>';
+    h+='<h3 class="ff-sec">'+FF_RUOLO_NOME[r]+' ('+ids.length+'/'+FF_SLOT_ROSA[r]+')</h3>';
+    if(!ids.length){h+='<p class="per-vuoto">Nessun giocatore selezionato</p>';return;}
+    h+='<div class="card pv-list">'+ids.map(pid=>{
+      const g=cacheFfGiocatori.find(x=>x.id===pid);
+      return ffRigaGiocatore(g,pid,'<button type="button" class="btn btn-sm btn-danger-text" aria-label="Togli '+(g?esc(g.nome):'giocatore')+'" onclick="ffRimuoviGiocatoreRosa(\''+r+'\',\''+escJs(pid)+'\')">Togli</button>');
+    }).join('')+'</div>';
   });
   wrap.innerHTML=h;
 }
@@ -16330,17 +16343,12 @@ function ffRenderRicercaGiocatoriRosa(){
   if(q)lista=lista.filter(g=>(g.nome||'').toLowerCase().includes(q)||(g.squadra||'').toLowerCase().includes(q));
   lista=lista.slice(0,60);
   if(!cacheFfGiocatori.length){
-    el.innerHTML='<div class="empty">Elenco giocatori non ancora caricato — chiedi a un Admin di premere "Aggiorna elenco giocatori Serie A"</div>';
+    el.innerHTML='<div class="empty">Elenco giocatori non ancora caricato: chiedi a un Admin di importarlo</div>';
     return;
   }
   if(!lista.length){el.innerHTML='<div class="empty">Nessun risultato</div>';return;}
-  const ruoloIcon={P:'🧤',D:'🛡',C:'⚙️',A:'⚔️'};
-  el.innerHTML=lista.map(g=>
-    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--b);cursor:pointer" onclick="ffAggiungiGiocatoreRosa(\''+g.id+'\')">'+
-      '<div style="font-size:13px">'+ruoloIcon[g.ruolo]+' '+esc(g.nome)+' <span style="color:var(--tx3);font-size:11px">· '+esc(g.squadra)+'</span></div>'+
-      '<span style="color:var(--ac2);font-size:16px">+</span>'+
-    '</div>'
-  ).join('');
+  el.innerHTML='<div class="card pv-list">'+lista.map(g=>ffRigaGiocatore(g,g.id,
+    '<button type="button" class="btn btn-sm" aria-label="Aggiungi '+esc(g.nome)+'" onclick="ffAggiungiGiocatoreRosa(\''+escJs(g.id)+'\')">Aggiungi</button>')).join('')+'</div>';
 }
 
 async function ffSalvaRosa(){
@@ -16381,17 +16389,14 @@ function ffRenderClassifica(){
     uid,nomeSquadra,punti:totali[uid]||0
   })).sort((a,b)=>b.punti-a.punti);
   if(!righe.length){el.innerHTML='<div class="empty">Nessuna squadra iscritta ancora</div>';return;}
-  el.innerHTML=righe.map((r,i)=>{
-    const medaglia=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'°';
+  el.innerHTML='<div class="card pv-list">'+righe.map((r,i)=>{
     const mia=USER&&r.uid===USER.id;
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:'+(mia?'var(--acb)':'var(--bg2)')+';border-radius:var(--rs);margin-bottom:8px'+(mia?';border:1px solid var(--ac)':'')+'">'+
-      '<div style="display:flex;align-items:center;gap:10px">'+
-        '<div style="font-size:16px;font-weight:700;min-width:28px">'+medaglia+'</div>'+
-        '<div style="font-size:13px;font-weight:600">'+r.nomeSquadra+(mia?' (tu)':'')+'</div>'+
-      '</div>'+
-      '<div style="font-size:16px;font-weight:800;color:var(--ac2)">'+r.punti+' pt</div>'+
+    return '<div class="ditem'+(mia?' ff-mia':'')+'">'+
+      '<span class="ff-pos">'+(i+1)+'°</span>'+
+      '<div class="ditem-main"><span class="ditem-title">'+esc(r.nomeSquadra||'—')+(mia?' <span class="bdg bdg-xs bp">Tu</span>':'')+'</span></div>'+
+      '<span class="ff-pt">'+r.punti+' pt</span>'+
     '</div>';
-  }).join('');
+  }).join('')+'</div>';
 }
 
 function ffRenderGiornata(){
@@ -16399,19 +16404,16 @@ function ffRenderGiornata(){
   const ultima=cacheFfGiornate.find(g=>g.sincronizzata);
   if(!ultima){el.innerHTML='<div class="empty">Nessuna giornata sincronizzata ancora — la sincronizzazione avviene automaticamente ogni giorno</div>';return;}
   const punteggiGiornata=cacheFfPunteggi.filter(p=>p.giornata===ultima.numero).sort((a,b)=>b.punti-a.punti);
-  let h='<div style="font-size:14px;font-weight:700;margin-bottom:12px">📅 Giornata '+ultima.numero+'</div>';
+  let h='<h2 class="stl" style="margin:0 0 12px">Giornata '+esc(ultima.numero)+'</h2>';
   if(!punteggiGiornata.length){
     h+='<div class="empty">Nessun punteggio calcolato per questa giornata</div>';
   } else {
     punteggiGiornata.forEach(p=>{
       const nomeSquadra=ffTeamNome[p.uid]||'—';
-      h+='<div class="card" style="margin-bottom:10px">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
-          '<div style="font-size:13px;font-weight:700">'+nomeSquadra+'</div>'+
-          '<div style="font-size:15px;font-weight:800;color:var(--ac2)">'+p.punti+' pt</div>'+
-        '</div>'+
-        (p.dettaglio||[]).map(d=>'<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);padding:3px 0"><span>'+esc(d.nome)+'</span><span>'+d.punti+'</span></div>').join('')+
-      '</div>';
+      h+='<section class="card">'+
+        '<div class="dcard-head"><h3 class="dcard-title">'+esc(nomeSquadra)+'</h3><span class="ff-pt">'+p.punti+' pt</span></div>'+
+        (p.dettaglio||[]).map(d=>'<div class="ff-det"><span>'+esc(d.nome)+'</span><span>'+esc(d.punti)+'</span></div>').join('')+
+      '</section>';
     });
   }
   el.innerHTML=h;
@@ -16478,22 +16480,19 @@ function ffRenderCalendarioSfide(){
   // ── Calendario (elenco sfide per giornata) ──
   let hCal='';
   cacheFfCalendario.forEach(g=>{
-    hCal+='<div style="margin-bottom:16px">';
-    hCal+='<div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:6px">Giornata '+g.numero+'</div>';
+    hCal+='<section class="card"><h3 class="dcard-title" style="margin-bottom:4px">Giornata '+esc(g.numero)+'</h3>';
     (g.coppie||[]).forEach(c=>{
       const p1=ffPuntiGiornataUid(c.uid1,g.numero), p2=ffPuntiGiornataUid(c.uid2,g.numero);
       const giocata=p1!==null&&p2!==null;
-      const n1=ffTeamNome[c.uid1]||'—', n2=ffTeamNome[c.uid2]||'—';
-      hCal+='<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border-radius:var(--rs);padding:8px 12px;margin-bottom:6px;font-size:13px">'+
-        '<div style="flex:1;text-align:right;font-weight:'+(giocata&&p1>p2?'700':'400')+'">'+n1+'</div>'+
-        '<div style="width:70px;text-align:center;font-weight:800;color:var(--ac2)">'+(giocata?p1+' - '+p2:'vs')+'</div>'+
-        '<div style="flex:1;font-weight:'+(giocata&&p2>p1?'700':'400')+'">'+n2+'</div>'+
+      const n1=esc(ffTeamNome[c.uid1]||'—'), n2=esc(ffTeamNome[c.uid2]||'—');
+      hCal+='<div class="ff-match">'+
+        '<span class="ff-casa'+(giocata&&p1>p2?' ff-vince':'')+'">'+n1+'</span>'+
+        '<span class="ff-ris">'+(giocata?p1+' – '+p2:'vs')+'</span>'+
+        '<span'+(giocata&&p2>p1?' class="ff-vince"':'')+'>'+n2+'</span>'+
       '</div>';
     });
-    if(g.bye){
-      hCal+='<div style="font-size:11px;color:var(--tx3);padding:4px 12px">😴 Riposa: '+(ffTeamNome[g.bye]||'—')+'</div>';
-    }
-    hCal+='</div>';
+    if(g.bye)hCal+='<div class="ff-riposa">Riposa: '+esc(ffTeamNome[g.bye]||'—')+'</div>';
+    hCal+='</section>';
   });
   elCal.innerHTML=hCal;
 
@@ -16518,20 +16517,17 @@ function ffRenderCalendarioSfide(){
   if(!righe.some(r=>r.giocate>0)){
     elClass.innerHTML='<div class="empty">Nessuna sfida ancora giocata/sincronizzata</div>';
   } else {
-    let hTab='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-      '<tr style="border-bottom:1px solid var(--b);color:var(--tx3)"><th style="text-align:left;padding:6px">Squadra</th><th style="padding:6px">PG</th><th style="padding:6px">V</th><th style="padding:6px">N</th><th style="padding:6px">P</th><th style="padding:6px">Pt</th></tr>';
+    let hTab='<div class="dtable-wrap"><table class="dtable"><caption class="visually-hidden">Classifica degli scontri diretti</caption>'+
+      '<thead><tr><th scope="col">Squadra</th><th scope="col" class="t-num" title="Partite giocate">PG</th><th scope="col" class="t-num" title="Vinte">V</th><th scope="col" class="t-num" title="Pareggiate">N</th><th scope="col" class="t-num" title="Perse">P</th><th scope="col" class="t-num">Pt</th></tr></thead><tbody>';
     righe.forEach((r,i)=>{
       const mia=USER&&r.uid===USER.id;
-      hTab+='<tr style="border-bottom:1px solid var(--b);'+(mia?'background:var(--acb)':'')+'">'+
-        '<td style="padding:6px;font-weight:600">'+(i+1)+'. '+esc(r.nome||'—')+(mia?' (tu)':'')+'</td>'+
-        '<td style="padding:6px;text-align:center">'+r.giocate+'</td>'+
-        '<td style="padding:6px;text-align:center">'+r.v+'</td>'+
-        '<td style="padding:6px;text-align:center">'+r.n+'</td>'+
-        '<td style="padding:6px;text-align:center">'+r.p+'</td>'+
-        '<td style="padding:6px;text-align:center;font-weight:800;color:var(--ac2)">'+r.puntiCampionato+'</td>'+
+      hTab+='<tr'+(mia?' class="ff-mia"':'')+'>'+
+        '<td class="t-strong-cell">'+(i+1)+'. '+esc(r.nome||'—')+(mia?' <span class="bdg bdg-xs bp">Tu</span>':'')+'</td>'+
+        '<td class="t-num">'+r.giocate+'</td><td class="t-num">'+r.v+'</td><td class="t-num">'+r.n+'</td><td class="t-num">'+r.p+'</td>'+
+        '<td class="t-num ff-pt">'+r.puntiCampionato+'</td>'+
       '</tr>';
     });
-    hTab+='</table></div>';
+    hTab+='</tbody></table></div>';
     elClass.innerHTML=hTab;
   }
 }
