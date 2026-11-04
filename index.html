@@ -28,7 +28,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.04a';
+const APP_VERSION='v2026.11.04b';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -353,7 +353,7 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
       <button class="pbtn" id="pauseBtn" onclick="togglePausa()" style="display:none;margin-top:8px;background:var(--amb);color:var(--am);border:1px solid rgba(245,158,11,.3)">☕ Pausa</button>
       <!-- Timeline turno -->
       <div id="turnoTimeline" style="display:none;margin-top:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);padding:12px">
-        <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Turno di oggi</div>
+        <div id="turnoTitolo" style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Turno di oggi</div>
         <div id="timelineItems"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--b)">
           <span style="font-size:12px;color:var(--tx2)">Ore lavorate nette</span>
@@ -3843,7 +3843,7 @@ async function punch(){
     const extra=val('luogoCustom');
     if(luogoDettaglioObbligatorio(selLuogo)&&!extra){toast('Specifica il luogo per "Altro"','r');$('luogoCustom')?.focus();return;}
     const luogo=luogoComponi(selLuogo,extra);
-    punchedIn=true;punchStart=Date.now();inPausa=false;pause=[];
+    punchedIn=true;punchStart=nowArr.getTime();inPausa=false;pause=[];ultimoTurnoChiuso=null;
     btn.className='pbtn pout';btn.textContent='⏹ Timbra uscita';
     const isSpeciale=luogo.includes('Malattia');
     pauseBtn.style.display=isSpeciale?'none':'block';
@@ -3868,6 +3868,7 @@ async function punch(){
     try{entrataISO=JSON.parse(localStorage.getItem('av_punch')||'{}').entrata||null;}catch(e){}
     if(!entrataISO&&punchStart)entrataISO=arrotondaA15Min(new Date(punchStart)).toISOString();
     if(entrataISO)pause=pauseDentroTurno(entrataISO,nowArr.toISOString(),pause);
+    if(entrataISO)ultimoTurnoChiuso={entrata:entrataISO,uscita:nowArr.toISOString(),pause:pause.slice()};
     punchedIn=false;
     btn.className='pbtn pin';btn.textContent='⏱ Timbra entrata';
     pauseBtn.style.display='none';pauseBtn.textContent='☕ Pausa';
@@ -3879,7 +3880,7 @@ async function punch(){
     punchDocId=null;punchStart=null;
     localStorage.removeItem('av_punch');
     $('luogoWrap').style.opacity='1';$('luogoWrap').style.pointerEvents='auto';
-    $('nOre').textContent='0h';
+    updateTimeline();
     toast('✓ Uscita timbrata');
   }
 }
@@ -3929,10 +3930,36 @@ function calcOreNette(){
   return Math.max(0,totMs);
 }
 
+// Ultimo turno chiuso su questo dispositivo: dopo l'uscita la scheda mostra le sue ore reali
+// (anche se è iniziato ieri sera), invece di 0h.
+let ultimoTurnoChiuso=null;
+function fmtDurata(ms){const hh=Math.floor(ms/3600000),mm=Math.floor((ms%3600000)/60000);return hh+'h '+mm+'m';}
+function titoloTurno(entrataISO){
+  if(!entrataISO||giornoLocale(entrataISO)===giornoLocale(new Date().toISOString()))return 'Turno di oggi';
+  const d=new Date(entrataISO);return 'Turno del '+pad(d.getDate())+'/'+pad(d.getMonth()+1);
+}
 function updateTimeline(){
   const tl=$('timelineItems');if(!tl)return;
-  if(!punchStart){$('turnoTimeline').style.display='none';return;}
   const fmt=iso=>{ const d=new Date(iso);return pad(d.getHours())+':'+pad(d.getMinutes());};
+  if(!punchStart&&ultimoTurnoChiuso){
+    const t=ultimoTurnoChiuso,netti=oreNetteMs(t)||0;
+    const tit=$('turnoTitolo');if(tit)tit.textContent=titoloTurno(t.entrata);
+    tl.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+      '<div style="width:10px;height:10px;border-radius:50%;background:var(--gn);flex-shrink:0"></div>'+
+      '<span style="font-size:13px;color:var(--tx)">🟢 Entrata <strong>'+fmt(t.entrata)+'</strong></span></div>'+
+      (t.pause||[]).map((p,i)=>'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+        '<div style="width:10px;height:10px;border-radius:50%;background:var(--am);flex-shrink:0"></div>'+
+        '<span style="font-size:13px;color:var(--tx)">☕ Pausa '+(i+1)+': <strong>'+fmt(p.inizio)+'</strong> → <strong>'+fmt(p.fine)+'</strong></span></div>').join('')+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+      '<div style="width:10px;height:10px;border-radius:50%;background:var(--rd);flex-shrink:0"></div>'+
+      '<span style="font-size:13px;color:var(--tx)">🔴 Uscita <strong>'+fmt(t.uscita)+'</strong>'+(giornoLocale(t.uscita)!==giornoLocale(t.entrata)?' <span style="color:var(--tx2)">(giorno dopo)</span>':'')+'</span></div>';
+    const ne=$('oreNette');if(ne)ne.textContent=fmtDurata(netti);
+    const no=$('nOre');if(no)no.textContent=fmtDurata(netti).replace(' ','');
+    $('turnoTimeline').style.display='block';
+    return;
+  }
+  if(!punchStart){$('turnoTimeline').style.display='none';return;}
+  {const tit=$('turnoTitolo');if(tit)tit.textContent=titoloTurno(new Date(punchStart).toISOString());}
   let h='';
   // Entrata
   const ent=new Date(punchStart);
@@ -15474,21 +15501,16 @@ tick();setInterval(tick,1000);setDate();
 // contatore avanza da solo senza bisogno di un'altra azione o di ricaricare la pagina
 setInterval(()=>{if(punchedIn)updateTimeline();},15000);
 
-// Reset timbratura a mezzanotte
+// A mezzanotte si aggiorna solo la data mostrata. Prima l'app timbrava da sola l'uscita
+// alle 00:00 e azzerava la scheda: i turni serali venivano spezzati e si poteva aprire
+// una seconda entrata. Un turno aperto resta aperto finché non si timbra l'uscita.
 function schedMidnightReset(){
   const now=new Date();
   const msToMidnight=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)-now;
   setTimeout(()=>{
-    if(punchedIn){
-      // Auto-uscita a mezzanotte
-      DB.collection('presenze').doc(punchDocId).update({uscita:new Date().toISOString()}).catch(()=>{});
-    }
-    localStorage.removeItem('av_punch');
-    punchedIn=false;punchStart=null;punchDocId=null;
-    const btn=$('pbtn');if(btn){btn.className='pbtn pin';btn.textContent='⏱ Timbra entrata';}
-    const stat=$('pstat');if(stat)stat.textContent='Non timbrato';
-    const oe=$('nOre');if(oe)oe.textContent='0h';
-    const lw=$('luogoWrap');if(lw){lw.style.opacity='1';lw.style.pointerEvents='auto';}
+    setDate();
+    if(!punchedIn&&ultimoTurnoChiuso&&Date.now()-new Date(ultimoTurnoChiuso.uscita).getTime()>=TURNO_APERTO_MAX_MS)ultimoTurnoChiuso=null;
+    updateTimeline();
     schedMidnightReset();
   },msToMidnight);
 }

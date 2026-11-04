@@ -161,3 +161,14 @@ test('export: il dato salvato male del 04/08 non gonfia più le ore', () => {
 test('export: giorno con un turno ancora aperto risulta incompleto', () => {
   assert.equal(F.oreNetteGiorno([{ entrata: loc('2026-11-04', '22:00'), uscita: null, pause: [] }]).complete, false);
 });
+
+// ── Regola aziendale (decisa da Sean il 04/11): ogni orario al quarto d'ora più vicino ──
+test('arrotondamento: 07:57 → 08:00, 17:08 → 17:15, 07:52:30 (a metà) → 08:00', () => {
+  const r = (d, hms) => { const [h, m, s = 0] = hms.split(':').map(Number); const [y, mo, g] = d.split('-').map(Number);
+    const x = F.arrotondaA15Min(new Date(y, mo - 1, g, h, m, s)); return String(x.getHours()).padStart(2, '0') + ':' + String(x.getMinutes()).padStart(2, '0'); };
+  assert.equal(r('2026-11-04', '07:57'), '08:00');
+  assert.equal(r('2026-11-04', '17:08'), '17:15');
+  assert.equal(r('2026-11-04', '07:52:30'), '08:00');
+  assert.equal(r('2026-11-04', '07:52:29'), '07:45');
+  assert.equal(r('2026-11-04', '23:53'), '00:00'); // può passare al giorno dopo
+});
