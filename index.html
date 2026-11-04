@@ -28,7 +28,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.04b';
+const APP_VERSION='v2026.11.04c';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -15397,7 +15397,7 @@ function renderChatTeam(){
       '</div>'+
       '<div style="flex:1;min-width:0">'+
         '<div style="font-size:14px;font-weight:'+(nonLetto?700:500)+'">'+esc(m.nome)+' '+esc(m.cognome)+'</div>'+
-        '<div style="font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(lastMsg||m.ruolo)+'</div>'+
+        '<div style="font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(lastMsg||m.ruolo)+'</div>'+
       '</div>'+
       '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'+
         (lastOra?'<span style="font-size:10px;color:var(--tx3)">'+lastOra+'</span>':'')+
