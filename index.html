@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01p';
+const APP_VERSION='v2026.11.01q';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -810,6 +810,18 @@ body.desktop-mode #calGriglia .cal-nome{display:-webkit-box!important;-webkit-li
 .per-sec{font-size:var(--text-xs);font-weight:var(--weight-semibold);color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:var(--tracking-caps);margin:18px 0 8px}
 .per-vuoto{font-size:var(--text-sm);color:var(--color-text-tertiary);padding:2px 0 6px}
 .per-back{margin-bottom:12px}
+/* ── LOCATION ── */
+.loc-grid{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:900px){.loc-grid{grid-template-columns:1fr 1fr}}
+.loc-card{display:block;width:100%;text-align:left;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:14px;color:inherit;font:inherit;cursor:pointer;transition:border-color var(--duration-fast)}
+.loc-card:hover{border-color:var(--color-border-strong)}
+.loc-card:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}
+.loc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.loc-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.loc-tags:empty{display:none}
+.loc-foto{font-size:var(--text-xs);color:var(--color-text-secondary);margin-top:8px}
+.loc-sec{font-size:var(--text-xs);font-weight:var(--weight-semibold);color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:var(--tracking-caps);margin:0 0 8px}
+.loc-note{font-size:var(--text-sm);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
 .ai-err{color:var(--color-danger);background:var(--color-danger-subtle);padding:12px;border-radius:var(--radius-md)}
 
 /* ── FORUM ── */
@@ -1046,13 +1058,14 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- LOCATION -->
     <div class="page" id="p-location">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div class="sc"><div class="sn" id="nLoc">0</div><div class="sl">Location</div></div>
-        <div class="sc"><div class="sn" id="nFoto">0</div><div class="sl">Foto totali</div></div>
+      <div class="page-head desk-only"><div><h1 class="page-title">Location</h1></div></div>
+      <div class="sg2">
+        <div class="sc"><span class="sn" id="nLoc">0</span><span class="sl">Location</span></div>
+        <div class="sc"><span class="sn" id="nFoto">0</span><span class="sl">Foto totali</span></div>
       </div>
       <div class="sec">
-        <div class="stl">Le tue location</div>
-        <button class="btn btn-p" style="padding:7px 14px;font-size:13px" onclick="openMod('mNewLoc')">+ Nuova</button>
+        <h2 class="stl">Le tue location</h2>
+        <button type="button" class="btn btn-p btn-sm" onclick="openMod('mNewLoc')">+ Nuova</button>
       </div>
       <div id="locList"><div class="empty">Nessuna location salvata</div></div>
     </div>
@@ -4813,23 +4826,23 @@ function startLocListener(){
   });
 }
 
+const locTagHtml=t=>'<span class="bdg bdg-xs '+(t==='Interferenze RF'?'ba':'bn')+'">'+esc(t)+'</span>';
 function renderLoc(){
   const nl=$('nLoc');if(nl)nl.textContent=cacheLoc.length;
   const nf=$('nFoto');if(nf)nf.textContent=cacheLoc.reduce((s,l)=>s+(l.foto||0),0);
-  const tagC={WiFi:'bb',Trifase:'bp',Generatore:'ba','Buio totale':'bp','Accesso camion':'bg','Interferenze RF':'br'};
-  let h='';
-  if(!cacheLoc.length)h='<div class="empty">Nessuna location salvata</div>';
-  else cacheLoc.forEach(l=>{
-    const tags=(l.tags||[]).map(t=>'<span class="bdg '+(tagC[t]||'bp')+'">'+t+'</span>').join('');
-    h+='<div class="card" style="cursor:pointer" onclick="openLocDet(\''+l.id+'\')">'+
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
-      '<div><div style="font-size:15px;font-weight:600;margin-bottom:2px">'+esc(l.nome)+'</div>'+
-      '<div style="font-size:12px;color:var(--tx2)">📍 '+esc(l.indirizzo||'—')+'</div></div>'+
-      '<span class="bdg bp">'+((l.tipo||'').split('/')[0].trim())+'</span></div>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:9px">'+tags+'</div>'+
-      '<div style="font-size:12px;color:var(--tx2);margin-top:8px">📷 '+(l.foto||0)+' foto</div></div>';
-  });
-  const ll=$('locList');if(ll)ll.innerHTML=h;
+  const ll=$('locList');if(!ll)return;
+  if(!cacheLoc.length){ll.innerHTML='<div class="empty">Nessuna location salvata</div>';return;}
+  ll.innerHTML='<div class="loc-grid">'+cacheLoc.map(l=>{
+    const tipo=(l.tipo||'').split('/')[0].trim();
+    return '<button type="button" class="loc-card" onclick="openLocDet(\''+escJs(l.id)+'\')">'+
+      '<span class="loc-top"><span style="min-width:0">'+
+        '<span class="cal-job-title" style="display:block;margin:0">'+esc(l.nome)+'</span>'+
+        '<span class="ditem-sub" style="display:block">'+esc(l.indirizzo||'Indirizzo non indicato')+'</span>'+
+      '</span>'+(tipo?'<span class="bdg bdg-xs bp">'+esc(tipo)+'</span>':'')+'</span>'+
+      '<span class="loc-tags">'+(l.tags||[]).map(locTagHtml).join('')+'</span>'+
+      '<span class="loc-foto">'+(l.foto||0)+(l.foto===1?' foto':' foto')+'</span>'+
+    '</button>';
+  }).join('')+'</div>';
 }
 
 async function saveLoc(){
@@ -4902,18 +4915,17 @@ function renderPins(pins, lid, editMode){
 
 function openLocDet(lid){
   const l=cacheLoc.find(x=>x.id===lid);if(!l)return;
-  const tagC={WiFi:'bb',Trifase:'bp',Generatore:'ba','Buio totale':'bp','Accesso camion':'bg','Interferenze RF':'br'};
-  const tags=(l.tags||[]).map(t=>'<span class="bdg '+(tagC[t]||'bp')+'">'+t+'</span>').join('');
+  const tags=(l.tags||[]).map(locTagHtml).join('');
   $('mLocDetBody').innerHTML=
-    '<div style="font-size:17px;font-weight:600;margin-bottom:2px">'+esc(l.nome)+'</div>'+
-    '<div style="font-size:13px;color:var(--tx2);margin-bottom:14px">📍 '+esc(l.indirizzo||'—')+'</div>'+
+    '<h2 class="stl" style="margin:0">'+esc(l.nome)+'</h2>'+
+    '<div class="ditem-sub" style="margin-bottom:14px">'+esc(l.indirizzo||'Indirizzo non indicato')+'</div>'+
 
     // MAPPA
     '<div class="card" style="margin-bottom:12px">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
-        '<div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px">Mappa interattiva</div>'+
+        '<h3 class="loc-sec" style="margin:0">Mappa interattiva</h3>'+
         '<div style="display:flex;gap:6px">'+
-          '<button id="btnEdit_'+lid+'" onclick="toggleEditMode(\''+lid+'\')" class="btn" style="padding:5px 10px;font-size:12px">✏️ Modifica</button>'+
+          '<button type="button" id="btnEdit_'+lid+'" onclick="toggleEditMode(\''+lid+'\')" class="btn btn-sm">Modifica</button>'+
         '</div>'+
       '</div>'+
       '<div class="pina" id="pina_'+lid+'" style="min-height:220px">'+
@@ -4968,22 +4980,19 @@ function openLocDet(lid){
 
     // NOTE
     '<div class="card" style="margin-bottom:12px">'+
-      '<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Note tecniche</div>'+
-      '<div style="font-size:14px;line-height:1.6">'+esc(l.note||'Nessuna nota.')+'</div>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:9px">'+tags+'</div>'+
+      '<h3 class="loc-sec">Note tecniche</h3>'+
+      '<div class="loc-note">'+esc(l.note||'Nessuna nota.')+'</div>'+
+      '<div class="loc-tags">'+tags+'</div>'+
     '</div>'+
 
     // FOTO
     '<div class="card" style="margin-bottom:12px">'+
-      '<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Foto / Planimetrie</div>'+
-      '<div class="upz" onclick="document.getElementById(\'fu_'+lid+'\').click()" style="min-height:56px;padding:10px">'+
-        '<div style="font-size:20px;margin-bottom:2px">📷</div>'+
-        '<div style="font-size:12px;color:var(--tx2)">Carica foto o planimetria</div>'+
-      '</div>'+
+      '<h3 class="loc-sec">Foto e planimetrie</h3>'+
+      '<button type="button" class="upz" style="width:100%;min-height:56px;padding:10px;font:inherit;font-size:var(--text-sm);color:var(--color-text-secondary)" onclick="document.getElementById(\'fu_'+lid+'\').click()">Carica foto o planimetria</button>'+
       '<input type="file" id="fu_'+lid+'" accept="image/*" multiple style="display:none" onchange="handleLocPhotos(event,\''+lid+'\')">'+
       '<div class="pgrid" id="pg_'+lid+'"></div>'+
     '</div>'+
-    '<button class="btn btn-f" onclick="closeMod(\'mLocDet\')">Chiudi</button>';
+    '<button type="button" class="btn btn-f" onclick="closeMod(\'mLocDet\')">Chiudi</button>';
 
   openMod('mLocDet');
   // Carica foto reali da Firestore
