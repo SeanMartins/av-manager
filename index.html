@@ -28,7 +28,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.02c';
+const APP_VERSION='v2026.11.04a';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -3709,6 +3709,124 @@ function arrotondaA15Min(date){
   return new Date(Math.round(date.getTime()/ms)*ms);
 }
 
+// ── Turni: funzioni comuni ──
+// Un turno può passare la mezzanotte (eventi serali): le sue ore appartengono al giorno di inizio.
+const TURNO_APERTO_MAX_MS=24*3600000; // un'entrata aperta da più di 24 ore non viene più ripresa
+// Giorno (YYYY-MM-DD, ora locale) a cui appartiene un turno: quello dell'entrata.
+// Prima si usava entrata.slice(0,10), cioè la data UTC: un turno iniziato tra mezzanotte
+// e le 2 (ora legale) finiva sul giorno prima.
+function giornoLocale(iso){
+  const d=new Date(iso);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+// Una pausa conta solo per la parte compresa tra entrata e uscita; pause con fine prima
+// dell'inizio non contano; pause sovrapposte contano una volta sola.
+function pauseDentroTurno(entrataISO,uscitaISO,pause){
+  const ini=new Date(entrataISO).getTime(),fin=new Date(uscitaISO).getTime();
+  if(!(fin>ini))return [];
+  return (pause||[]).filter(x=>x&&x.inizio&&x.fine)
+    .map(x=>[Math.max(ini,new Date(x.inizio).getTime()),Math.min(fin,new Date(x.fine).getTime())])
+    .filter(x=>x[1]>x[0])
+    .sort((a,b)=>a[0]-b[0])
+    .reduce((out,x)=>{const l=out[out.length-1];if(l&&x[0]<=l[1])l[1]=Math.max(l[1],x[1]);else out.push(x);return out;},[])
+    .map(x=>({inizio:new Date(x[0]).toISOString(),fine:new Date(x[1]).toISOString()}));
+}
+function pauseMsDentro(p,fineMs){
+  if(!p||!p.entrata)return 0;
+  const fine=fineMs!=null?fineMs:(p.uscita?new Date(p.uscita).getTime():Date.now());
+  return pauseDentroTurno(p.entrata,new Date(fine).toISOString(),p.pause).reduce((s,x)=>s+(new Date(x.fine)-new Date(x.inizio)),0);
+}
+// Ore nette di un turno in ms; null se manca l'uscita; mai negative
+function oreNetteMs(p){
+  if(!p||!p.entrata||!p.uscita)return null;
+  return Math.max(0,new Date(p.uscita)-new Date(p.entrata)-pauseMsDentro(p));
+}
+// Ore nette di un giorno (tutte le sessioni); complete=false se una sessione è ancora aperta
+function oreNetteGiorno(pList){
+  let ms=0,complete=true;
+  (pList||[]).forEach(p=>{const n=oreNetteMs(p);if(n===null)complete=false;else ms+=n;});
+  return {ore:ms/3600000,complete};
+}
+// Costruisce un turno inserito a mano da data + orari "HH:MM".
+// Uscita minore o uguale all'entrata → giorno successivo (turno oltre mezzanotte).
+// Pause prima dell'entrata → giorno successivo; poi limitate al turno.
+function costruisciTurnoManuale(dataISO,oraIn,oraOut,pauseOrari){
+  const mk=(d,t)=>{const [y,m,g]=d.split('-').map(Number);const [h,mi]=t.split(':').map(Number);return new Date(y,m-1,g,h,mi,0,0);};
+  const piuUnGiorno=d=>{const x=new Date(d.getTime());x.setDate(x.getDate()+1);return x;};
+  const ent=mk(dataISO,oraIn);
+  let usc=oraOut?mk(dataISO,oraOut):null,oltreMezzanotte=false;
+  if(usc&&usc<=ent){usc=piuUnGiorno(usc);oltreMezzanotte=true;}
+  let pause=(pauseOrari||[]).filter(p=>p&&p.inizio).map(p=>{
+    let i=mk(dataISO,p.inizio);if(i<ent)i=piuUnGiorno(i);
+    let f=p.fine?mk(dataISO,p.fine):null;if(f&&f<=i)f=piuUnGiorno(f);
+    return {inizio:i.toISOString(),fine:f?f.toISOString():null};
+  });
+  if(usc)pause=pauseDentroTurno(ent.toISOString(),usc.toISOString(),pause);
+  return {entrata:ent.toISOString(),uscita:usc?usc.toISOString():null,pause,oltreMezzanotte};
+}
+// Turni della stessa persona che si sovrappongono a [entrata, uscita] (uscita assente = turno aperto)
+function turniSovrapposti(lista,uid,entrataISO,uscitaISO,escludiId){
+  const e=new Date(entrataISO).getTime(),u=uscitaISO?new Date(uscitaISO).getTime():e+60000;
+  return (lista||[]).filter(p=>p&&p.uid===uid&&p.entrata&&p.id!==escludiId).filter(p=>{
+    const pe=new Date(p.entrata).getTime(),pu=p.uscita?new Date(p.uscita).getTime():Math.max(pe,Date.now())+60000;
+    return pe<u&&e<pu;
+  }).sort((a,b)=>a.entrata.localeCompare(b.entrata));
+}
+// Ultima entrata aperta della persona nelle ultime 24 ore (anche se iniziata ieri sera)
+function ultimaEntrataAperta(lista,uid,oraMs){
+  const ora=oraMs!=null?oraMs:Date.now();
+  return (lista||[]).filter(p=>p&&p.uid===uid&&p.entrata&&!p.uscita).filter(p=>{
+    const t=new Date(p.entrata).getTime();return t<=ora+15*60000&&ora-t<TURNO_APERTO_MAX_MS;
+  }).sort((a,b)=>b.entrata.localeCompare(a.entrata))[0]||null;
+}
+// Esegue fn una sola volta alla volta: un secondo tocco mentre salva viene ignorato
+function unaVoltaSola(fn){
+  let inCorso=false;
+  return async function(...a){
+    if(inCorso)return;
+    inCorso=true;
+    try{return await fn.apply(this,a);}finally{inCorso=false;}
+  };
+}
+// Finestra di conferma dell'app (al posto di confirm del browser). Risolve true/false.
+function chiediConferma(titolo,testo,okLabel,annullaLabel){
+  return new Promise(res=>{
+    const w=document.createElement('div');
+    w.className='mol on';w.style.zIndex='10050';
+    w.setAttribute('role','dialog');w.setAttribute('aria-modal','true');
+    w.innerHTML='<div class="msh" style="max-width:420px">'+
+      '<div class="stl" style="margin-bottom:8px">'+esc(titolo)+'</div>'+
+      '<div style="font-size:14px;line-height:1.5;margin-bottom:16px;white-space:pre-line">'+esc(testo)+'</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button type="button" class="btn btn-f" data-r="0">'+esc(annullaLabel||'Annulla')+'</button>'+
+        '<button type="button" class="btn btn-p btn-f" data-r="1">'+esc(okLabel||'Conferma')+'</button>'+
+      '</div></div>';
+    const chiudi=r=>{w.remove();document.removeEventListener('keydown',onKey);res(r);};
+    const onKey=e=>{if(e.key==='Escape')chiudi(false);};
+    w.addEventListener('click',e=>{if(e.target===w)chiudi(false);const b=e.target.closest('button[data-r]');if(b)chiudi(b.dataset.r==='1');});
+    document.addEventListener('keydown',onKey);
+    document.body.appendChild(w);
+    setTimeout(()=>{const b=w.querySelector('button[data-r="0"]');if(b)b.focus();},0);
+  });
+}
+// Prima di salvare un turno a mano: avvisa se la persona ha già un turno sovrapposto.
+async function confermaSeSovrapposto(uid,nome,turno,escludiId){
+  let vicini=[];
+  try{
+    const da=new Date(turno.entrata);da.setDate(da.getDate()-1);da.setHours(0,0,0,0);
+    const a=new Date(turno.entrata);a.setDate(a.getDate()+1);a.setHours(23,59,59,999);
+    const snap=await DB.collection('presenze').where('uid','==',uid).where('entrata','>=',da.toISOString()).where('entrata','<=',a.toISOString()).get();
+    vicini=snap.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){console.warn('Controllo turni sovrapposti:',e);return true;}
+  const sov=turniSovrapposti(vicini,uid,turno.entrata,turno.uscita,escludiId);
+  if(!sov.length)return true;
+  const hm=iso=>{const d=new Date(iso);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
+  const elenco=sov.map(p=>new Date(p.entrata).toLocaleDateString('it-IT')+' '+hm(p.entrata)+'–'+(p.uscita?hm(p.uscita):'in corso')).join('\n');
+  return chiediConferma('Turno sovrapposto',
+    (sov.length===1?'Esiste già un turno ':'Esistono già questi turni ')+'per '+nome+':\n'+elenco+'\n\n'+(escludiId?'Vuoi salvare comunque?':'Vuoi davvero aggiungerne un altro?'),
+    escludiId?'Salva comunque':'Aggiungi comunque','Annulla');
+}
+
 async function punch(){
   const btn=$('pbtn'),stat=$('pstat'),pauseBtn=$('pauseBtn');
   const now=new Date(),nowArr=arrotondaA15Min(now),t=pad(nowArr.getHours())+':'+pad(nowArr.getMinutes());
@@ -3718,9 +3836,9 @@ async function punch(){
     if(_punchVerifica)return;
     _punchVerifica=true;
     let giaAperta=null;
-    try{giaAperta=timbraturaApertaOggi()||await entrataApertaServer();}catch(e){console.warn('Verifica entrata aperta:',e);}
+    try{giaAperta=timbraturaAperta()||await entrataApertaServer();}catch(e){console.warn('Verifica entrata aperta:',e);}
     finally{_punchVerifica=false;}
-    if(giaAperta){adottaTimbratura(giaAperta);toast('Hai già un\'entrata aperta oggi: turno ripreso','a');return;}
+    if(giaAperta){adottaTimbratura(giaAperta);toast('Hai già un\'entrata aperta: turno ripreso','a');return;}
     // ENTRATA — il luogo si valida prima di cambiare stato
     const extra=val('luogoCustom');
     if(luogoDettaglioObbligatorio(selLuogo)&&!extra){toast('Specifica il luogo per "Altro"','r');$('luogoCustom')?.focus();return;}
@@ -3745,6 +3863,11 @@ async function punch(){
       pause.push({inizio:pauseStart,fine:nowArr.toISOString()});
       inPausa=false;pauseStart=null;
     }
+    // Pause limitate a entrata–uscita (l'uscita arrotondata può cadere prima di una pausa appena chiusa)
+    let entrataISO=null;
+    try{entrataISO=JSON.parse(localStorage.getItem('av_punch')||'{}').entrata||null;}catch(e){}
+    if(!entrataISO&&punchStart)entrataISO=arrotondaA15Min(new Date(punchStart)).toISOString();
+    if(entrataISO)pause=pauseDentroTurno(entrataISO,nowArr.toISOString(),pause);
     punchedIn=false;
     btn.className='pbtn pin';btn.textContent='⏱ Timbra entrata';
     pauseBtn.style.display='none';pauseBtn.textContent='☕ Pausa';
@@ -3843,19 +3966,27 @@ function updateTimeline(){
 // Prima lo stato della propria timbratura era solo nel localStorage del dispositivo: timbrando
 // da un altro telefono (o dopo aver cancellato i dati del browser) la scheda diceva
 // "Non timbrato" e si poteva timbrare una seconda entrata, creando doppioni nelle ore.
-function timbraturaApertaOggi(){
+function timbraturaAperta(){
   if(!USER)return null;
-  const oggi=new Date().toDateString();
-  return cachePresenze
-    .filter(p=>p.uid===USER.id&&p.entrata&&!p.uscita&&new Date(p.entrata).toDateString()===oggi)
-    .sort((a,b)=>b.entrata.localeCompare(a.entrata))[0]||null;
+  return ultimaEntrataAperta(cachePresenze,USER.id);
 }
 let _punchVerifica=false;
-// Entrata aperta di oggi letta dal server (stessa query di "Le mie ore", quindi con indice già esistente)
+// Entrata aperta nelle ultime 24 ore letta dal server (stessa forma di query di "Le mie ore",
+// quindi con indice già esistente). Copre il turno iniziato ieri sera e ancora aperto dopo mezzanotte.
 async function entrataApertaServer(){
-  const ini=new Date();ini.setHours(0,0,0,0);const fin=new Date();fin.setHours(23,59,59,999);
+  const ora=Date.now();
+  const ini=new Date(ora-TURNO_APERTO_MAX_MS),fin=new Date(ora+15*60000);
   const snap=await DB.collection('presenze').where('uid','==',USER.id).where('entrata','>=',ini.toISOString()).where('entrata','<=',fin.toISOString()).get();
-  return snap.docs.map(d=>({id:d.id,...d.data()})).filter(p=>!p.uscita).sort((a,b)=>b.entrata.localeCompare(a.entrata))[0]||null;
+  return ultimaEntrataAperta(snap.docs.map(d=>({id:d.id,...d.data()})),USER.id,ora);
+}
+// L'aggiornamento in tempo reale copre solo le entrate di oggi: un'entrata di ieri sera
+// ancora aperta va cercata sul server (al massimo una volta al minuto).
+let _ultimaVerificaServer=0;
+function verificaEntrataApertaServer(){
+  if(!USER||punchedIn||_punchVerifica)return;
+  if(Date.now()-_ultimaVerificaServer<60000)return;
+  _ultimaVerificaServer=Date.now();
+  entrataApertaServer().then(p=>{if(p&&!punchedIn)adottaTimbratura(p);}).catch(e=>console.warn('Verifica entrata aperta:',e));
 }
 function adottaTimbratura(p){
   localStorage.setItem('av_punch',JSON.stringify({docId:p.id,entrata:p.entrata,luogo:p.luogo||'',pause:p.pause||[],inPausa:false,pauseStart:null}));
@@ -3865,7 +3996,8 @@ function syncPunchConServer(){
   if(!USER)return;
   // Timbratura in corso su questo dispositivo: entrata senza id ancora, oppure uscita non ancora salvata
   if((punchedIn&&!punchDocId)||(!punchedIn&&punchDocId))return;
-  const aperta=timbraturaApertaOggi();
+  const aperta=timbraturaAperta();
+  if(!aperta&&!punchedIn)verificaEntrataApertaServer();
   if(aperta&&(!punchedIn||punchDocId!==aperta.id)){
     // Entrata aperta su Firestore che questo dispositivo non conosce: la adotto
     adottaTimbratura(aperta);
@@ -3890,7 +4022,7 @@ function restorePunch(){
   const a=localStorage.getItem('av_punch');if(!a)return;
   try{
     const p=JSON.parse(a);
-    if(new Date(p.entrata).toDateString()!==new Date().toDateString()){localStorage.removeItem('av_punch');return;}
+    if(Date.now()-new Date(p.entrata).getTime()>=TURNO_APERTO_MAX_MS){localStorage.removeItem('av_punch');return;}
     // Ripristina stato base
     punchedIn=true;punchStart=new Date(p.entrata).getTime();punchDocId=p.docId;
     pause=p.pause||[];
@@ -8787,7 +8919,7 @@ async function doExport(){
     const byDay={};
     dip.rows.forEach(p=>{
       if(!p.entrata)return;
-      const giornoISO=p.entrata.slice(0,10);
+      const giornoISO=giornoLocale(p.entrata);
       if(!byDay[giornoISO])byDay[giornoISO]=[];
       byDay[giornoISO].push(p);
     });
@@ -8820,15 +8952,8 @@ async function doExport(){
         if(tutteLePause[1]){p2i=fmtT(tutteLePause[1].inizio);p2o=fmtT(tutteLePause[1].fine);}
         // Ore nette: somma di ogni sessione individuale (entrata→uscita meno le sue pause),
         // così un eventuale buco tra due turni separati non viene contato come lavoro
-        let netteGiorno=0,sessioniComplete=true;
-        pList.forEach(p=>{
-          if(p.entrata&&p.uscita){
-            const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
-            netteGiorno+=Math.max(0,(new Date(p.uscita)-new Date(p.entrata)-pauseMs)/3600000);
-          } else {
-            sessioniComplete=false; // turno ancora aperto (mai timbrata l'uscita)
-          }
-        });
+        const og=oreNetteGiorno(pList);
+        const netteGiorno=og.ore,sessioniComplete=og.complete; // complete=false: turno ancora aperto
         if(sessioniComplete&&netteGiorno>0){
           oreLav=parseFloat(netteGiorno.toFixed(2));
           oreStr=parseFloat((netteGiorno-oreStd).toFixed(2));
@@ -10796,15 +10921,12 @@ async function perCalcolaStraordinariAuto(uid,anno){
   snap.docs.forEach(doc=>{
     const p=doc.data();
     if(!p.entrata||!p.uscita)return; // turno non completo, ignora
-    const giornoISO=p.entrata.slice(0,10);
+    const giornoISO=giornoLocale(p.entrata);
     if(!isGiornoLavorativo(giornoISO))return; // weekend/festivo: eventuali ore qui sono già "straordinario speciale", gestito manualmente
     const entrata=new Date(p.entrata),uscita=new Date(p.uscita);
     let oreLavorate=(uscita-entrata)/3600000;
-    const pauseMin=(p.pause||[]).reduce((s,pa)=>{
-      if(pa.inizio&&pa.fine)return s+(new Date(pa.fine)-new Date(pa.inizio))/60000;
-      return s;
-    },0);
-    oreLavorate-=pauseMin/60;
+    const pauseMin=pauseMsDentro(p)/60000;
+    oreLavorate=Math.max(0,oreLavorate-pauseMin/60);
     if(oreLavorate<0)oreLavorate=0;
     oreByDay[giornoISO]=(oreByDay[giornoISO]||0)+oreLavorate;
   });
@@ -11212,14 +11334,14 @@ function perRaccoglPresenzePerExport(uid,inizio,fine){
   const fineD=new Date(fine+'T12:00:00');
   while(cur<=fineD){
     const giornoISO=toLocalISO(cur);
-    const presenzeG=presenzeUid.filter(p=>p.entrata.slice(0,10)===giornoISO);
+    const presenzeG=presenzeUid.filter(p=>giornoLocale(p.entrata)===giornoISO);
     const festivita=getFestivitaItaliane(cur.getFullYear()).find(f=>f.data===giornoISO);
     const isWeekend=cur.getDay()===0||cur.getDay()===6;
     if(presenzeG.length){
       presenzeG.forEach(p=>{
         const ent=new Date(p.entrata);
         const usc=p.uscita?new Date(p.uscita):null;
-        const pauseMin=(p.pause||[]).reduce((s,pa)=>{if(pa.inizio&&pa.fine)return s+(new Date(pa.fine)-new Date(pa.inizio))/60000;return s;},0);
+        const pauseMin=usc?pauseMsDentro(p)/60000:0;
         const oreNette=usc?Math.max(0,(usc-ent)/3600000-pauseMin/60):null;
         righe.push({
           data:giornoISO,
@@ -14147,7 +14269,7 @@ async function renderArchivioPresenze(){
     let totMese=0,giorniMese=0,straordMese=0;
     pList.forEach(p=>{
       if(!p.uscita)return;
-      const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+      const pauseMs=pauseMsDentro(p);
       const nette=Math.max(0,(new Date(p.uscita)-new Date(p.entrata))-pauseMs);
       totMese+=nette;
       giorniMese++;
@@ -14213,7 +14335,7 @@ async function esportaArchivioAnno(){
     const mese=MESI_NOMI[d.getMonth()]+' '+d.getFullYear();
     const data=pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear();
     const giorno=gg[d.getDay()];
-    const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+    const pauseMs=pauseMsDentro(p);
     const lordeMs=p.uscita?(new Date(p.uscita)-d):0;
     const netteMs=Math.max(0,lordeMs-pauseMs);
     const straordMs=Math.max(0,netteMs-8*3600000);
@@ -14314,7 +14436,7 @@ async function renderMieOre(){
       if(p.uscita){
         const usc=new Date(p.uscita);
         uscitaStr=pad(usc.getHours())+':'+pad(usc.getMinutes());
-        const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+        const pauseMs=pauseMsDentro(p);
         nette=Math.max(0,(usc-ent)-pauseMs);
         if((p.pause||[]).length>0){
           pauseStr=(p.pause||[]).filter(px=>px.inizio&&px.fine).map(px=>{
@@ -14462,7 +14584,7 @@ async function openExportConfermato(){
       const d=new Date(p.entrata);
       const dataStr=pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear();
       const giornoStr=gg[d.getDay()];
-      const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+      const pauseMs=pauseMsDentro(p);
       const nette=p.uscita?Math.max(0,(new Date(p.uscita)-d-pauseMs)/3600000).toFixed(2):'';
       csv+=`"${p.nome||'—'}","${dataStr}","${giornoStr}","${p.luogo||'—'}","${fmtT(p.entrata)}","${fmtT(p.uscita)}","${nette}","${Math.round(pauseMs/60000)}min","${confermato}"\n`;
     });
@@ -14537,21 +14659,28 @@ function renderTimbRigaPause(){
   ).join('');
 }
 
-async function saveTimbRiga(){
+// Un secondo tocco su Salva mentre salva viene ignorato (prima creava turni identici)
+const saveTimbRiga=unaVoltaSola(async function(){
+  const btn=document.querySelector('[onclick="saveTimbRiga()"]');
+  if(btn)btn.disabled=true;
+  try{await _saveTimbRiga();}finally{if(btn)btn.disabled=false;}
+});
+async function _saveTimbRiga(){
   if(!timbRigaDataISO)return;
   const entrataTime=$('timbRigaIn').value;
   if(!entrataTime){toast('Inserisci l\'orario di entrata','r');return;}
   const luogo=luogoSelectGet('timbRigaLuogo','timbRigaLuogoExtra');
   if(luogo===null)return;
+  const uscitaTime=$('timbRigaOut').value;
+  if(uscitaTime&&uscitaTime===entrataTime){toast('Entrata e uscita hanno lo stesso orario','r');return;}
 
-  const mkISO=(date,time)=>time?new Date(date+'T'+time+':00').toISOString():null;
-  const entrata=mkISO(timbRigaDataISO,entrataTime);
-  const uscita=mkISO(timbRigaDataISO,$('timbRigaOut').value);
-  const pause=timbRigaPause.map(p=>{
-    const ini=p.inizioTime||(p.inizio?new Date(p.inizio).toTimeString().slice(0,5):'');
-    const fin=p.fineTime||(p.fine?new Date(p.fine).toTimeString().slice(0,5):'');
-    return{inizio:ini?mkISO(timbRigaDataISO,ini):null,fine:fin?mkISO(timbRigaDataISO,fin):null};
-  }).filter(p=>p.inizio);
+  // Uscita prima dell'entrata = turno oltre mezzanotte: l'uscita va sul giorno dopo
+  const t=costruisciTurnoManuale(timbRigaDataISO,entrataTime,uscitaTime,timbRigaPause.map(p=>({
+    inizio:p.inizioTime||(p.inizio?new Date(p.inizio).toTimeString().slice(0,5):''),
+    fine:p.fineTime||(p.fine?new Date(p.fine).toTimeString().slice(0,5):'')
+  })));
+  const entrata=t.entrata,uscita=t.uscita,pause=t.pause;
+  if(!(await confermaSeSovrapposto(USER.id,USER.nome+' '+USER.cognome,t,timbRigaPresenzaId)))return;
 
   const doc={
     uid:USER.id,nome:USER.nome+' '+USER.cognome,
@@ -14565,10 +14694,10 @@ async function saveTimbRiga(){
   try{
     if(timbRigaPresenzaId){
       await DB.collection('presenze').doc(timbRigaPresenzaId).update(doc);
-      toast('✓ Timbratura aggiornata');
+      toast('✓ Timbratura aggiornata'+(t.oltreMezzanotte?' (uscita il giorno dopo)':''));
     } else {
       await DB.collection('presenze').add(doc);
-      toast('✓ Timbratura aggiunta');
+      toast('✓ Timbratura aggiunta'+(t.oltreMezzanotte?' (uscita il giorno dopo)':''));
     }
     closeMod('mTimbRiga');
     setTimeout(()=>renderMieOre(),500);
@@ -14777,7 +14906,7 @@ function editTimb(id){
     popolaAtDip(r.uid);
     const pad2=n=>String(n).padStart(2,'0');
     const fmtTime=iso=>{if(!iso)return'';const d=new Date(iso);return pad2(d.getHours())+':'+pad2(d.getMinutes());};
-    $('atData').value=r.entrata?new Date(r.entrata).toISOString().slice(0,10):'';
+    $('atData').value=r.entrata?giornoLocale(r.entrata):'';
     $('atEntrata').value=fmtTime(r.entrata);
     $('atUscita').value=fmtTime(r.uscita);
     atSetLuogo(r.luogo||'🏢 In sede');
@@ -14838,27 +14967,28 @@ function renderAtPause(){
   ).join('');
 }
 
-async function saveTimb(){
+const saveTimb=unaVoltaSola(async function(){
+  const btn=document.querySelector('[onclick="saveTimb()"]');
+  if(btn)btn.disabled=true;
+  try{await _saveTimb();}finally{if(btn)btn.disabled=false;}
+});
+async function _saveTimb(){
   const uid=val('atDip');
   const dataVal=val('atData');
   const entrataTime=val('atEntrata');
   if(!uid||!dataVal||!entrataTime){toast('Compila dipendente, data ed entrata','r');return;}
   const luogo=atGetLuogo();
   if(luogo===null)return;
+  const uscitaTime=val('atUscita');
+  if(uscitaTime&&uscitaTime===entrataTime){toast('Entrata e uscita hanno lo stesso orario','r');return;}
   const m=cacheTeam.find(x=>x.id===uid);
-  // Costruisci ISO dates
-  const mkISO=(date,time)=>time?new Date(date+'T'+time+':00').toISOString():null;
-  const entrata=mkISO(dataVal,entrataTime);
-  const uscita=mkISO(dataVal,val('atUscita'));
-  // Costruisci pause
-  const pause=atPause.map(p=>{
-    const ini=p.inizioTime||( p.inizio?new Date(p.inizio).toTimeString().slice(0,5):'');
-    const fin=p.fineTime||(p.fine?new Date(p.fine).toTimeString().slice(0,5):'');
-    return{
-      inizio:ini?mkISO(dataVal,ini):p.inizio||'',
-      fine:fin?mkISO(dataVal,fin):p.fine||''
-    };
-  }).filter(p=>p.inizio);
+  // Uscita prima dell'entrata = turno oltre mezzanotte: l'uscita va sul giorno dopo
+  const t=costruisciTurnoManuale(dataVal,entrataTime,uscitaTime,atPause.map(p=>({
+    inizio:p.inizioTime||(p.inizio?new Date(p.inizio).toTimeString().slice(0,5):''),
+    fine:p.fineTime||(p.fine?new Date(p.fine).toTimeString().slice(0,5):'')
+  })));
+  const entrata=t.entrata,uscita=t.uscita,pause=t.pause;
+  if(!(await confermaSeSovrapposto(uid,m?m.nome+' '+m.cognome:'questa persona',t,gestTimbEditId)))return;
   const doc={
     uid,nome:m?m.nome+' '+m.cognome:'—',
     entrata,uscita,luogo,
@@ -14870,10 +15000,10 @@ async function saveTimb(){
   try{
     if(gestTimbEditId){
       await DB.collection('presenze').doc(gestTimbEditId).update(doc);
-      toast('✓ Timbratura aggiornata');
+      toast('✓ Timbratura aggiornata'+(t.oltreMezzanotte?' (uscita il giorno dopo)':''));
     } else {
       await DB.collection('presenze').add(doc);
-      toast('✓ Timbratura aggiunta');
+      toast('✓ Timbratura aggiunta'+(t.oltreMezzanotte?' (uscita il giorno dopo)':''));
     }
     closeMod('mAddTimb');
     loadGestTimb();
