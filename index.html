@@ -28,7 +28,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.04c';
+const APP_VERSION='v2026.11.04d';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -16027,7 +16027,7 @@ function ffRenderClassifica(){
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:'+(mia?'var(--acb)':'var(--bg2)')+';border-radius:var(--rs);margin-bottom:8px'+(mia?';border:1px solid var(--ac)':'')+'">'+
       '<div style="display:flex;align-items:center;gap:10px">'+
         '<div style="font-size:16px;font-weight:700;min-width:28px">'+medaglia+'</div>'+
-        '<div style="font-size:13px;font-weight:600">'+r.nomeSquadra+(mia?' (tu)':'')+'</div>'+
+        '<div style="font-size:13px;font-weight:600">'+esc(r.nomeSquadra)+(mia?' (tu)':'')+'</div>'+
       '</div>'+
       '<div style="font-size:16px;font-weight:800;color:var(--ac2)">'+r.punti+' pt</div>'+
     '</div>';
@@ -16047,7 +16047,7 @@ function ffRenderGiornata(){
       const nomeSquadra=ffTeamNome[p.uid]||'—';
       h+='<div class="card" style="margin-bottom:10px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
-          '<div style="font-size:13px;font-weight:700">'+nomeSquadra+'</div>'+
+          '<div style="font-size:13px;font-weight:700">'+esc(nomeSquadra)+'</div>'+
           '<div style="font-size:15px;font-weight:800;color:var(--ac2)">'+p.punti+' pt</div>'+
         '</div>'+
         (p.dettaglio||[]).map(d=>'<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);padding:3px 0"><span>'+esc(d.nome)+'</span><span>'+d.punti+'</span></div>').join('')+
@@ -16123,7 +16123,7 @@ function ffRenderCalendarioSfide(){
     (g.coppie||[]).forEach(c=>{
       const p1=ffPuntiGiornataUid(c.uid1,g.numero), p2=ffPuntiGiornataUid(c.uid2,g.numero);
       const giocata=p1!==null&&p2!==null;
-      const n1=ffTeamNome[c.uid1]||'—', n2=ffTeamNome[c.uid2]||'—';
+      const n1=esc(ffTeamNome[c.uid1]||'—'), n2=esc(ffTeamNome[c.uid2]||'—');
       hCal+='<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border-radius:var(--rs);padding:8px 12px;margin-bottom:6px;font-size:13px">'+
         '<div style="flex:1;text-align:right;font-weight:'+(giocata&&p1>p2?'700':'400')+'">'+n1+'</div>'+
         '<div style="width:70px;text-align:center;font-weight:800;color:var(--ac2)">'+(giocata?p1+' - '+p2:'vs')+'</div>'+
@@ -16131,7 +16131,7 @@ function ffRenderCalendarioSfide(){
       '</div>';
     });
     if(g.bye){
-      hCal+='<div style="font-size:11px;color:var(--tx3);padding:4px 12px">😴 Riposa: '+(ffTeamNome[g.bye]||'—')+'</div>';
+      hCal+='<div style="font-size:11px;color:var(--tx3);padding:4px 12px">😴 Riposa: '+esc(ffTeamNome[g.bye]||'—')+'</div>';
     }
     hCal+='</div>';
   });
