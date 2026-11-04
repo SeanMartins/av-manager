@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01u';
+const APP_VERSION='v2026.11.01v';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -851,6 +851,32 @@ body.desktop-mode #calGriglia .cal-nome{display:-webkit-box!important;-webkit-li
 .ff-ris{min-width:64px;text-align:center;font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums;color:var(--color-accent-text)}
 .ff-riposa{font-size:var(--text-xs);color:var(--color-text-secondary);padding:6px 0 2px}
 .ff-det{display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--color-text-secondary);padding:3px 0}
+/* ── FORUM E CHAT ── */
+button.fcard{display:block;width:100%;text-align:left;font:inherit;color:inherit}
+.fcard:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}
+.ffoot .bdg{margin-left:auto}
+.f-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.f-bar .f-dx{margin-left:auto}
+.f-testo{font-size:var(--text-sm);line-height:1.6;margin:12px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.f-rispondi{background:var(--color-surface-sunken);border-radius:var(--radius-md);padding:14px;margin-top:12px}
+.f-rispondi .dcard-title{font-size:var(--text-sm);margin-bottom:10px}
+.f-sep{height:1px;background:var(--color-border);margin:12px 0}
+.f-vuoto{text-align:center;font-size:var(--text-sm);color:var(--color-text-secondary);padding:10px}
+.chat-row{display:flex;align-items:center;gap:12px;width:100%;padding:10px 2px;background:none;border:none;border-bottom:1px solid var(--color-border);text-align:left;font:inherit;color:inherit;cursor:pointer;min-height:56px}
+.chat-row:last-child{border-bottom:none}
+.chat-row:focus-visible{outline:2px solid var(--color-accent);outline-offset:-2px;border-radius:var(--radius-sm)}
+.chat-av{position:relative;flex-shrink:0}
+.chat-dot{position:absolute;top:-1px;right:-1px;width:12px;height:12px;background:var(--color-accent);border-radius:50%;border:2px solid var(--color-surface)}
+.chat-nome{font-size:var(--text-sm);font-weight:var(--weight-medium)}
+.chat-row.non-letto .chat-nome{font-weight:var(--weight-semibold)}
+.chat-ultimo{font-size:var(--text-xs);color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-ora{font-size:11px;color:var(--color-text-tertiary);flex-shrink:0;font-variant-numeric:tabular-nums}
+.chat-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.chat-head .stl{margin:0}
+.chat-msgs{flex:1;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px}
+.chat-giorno{text-align:center;font-size:11px;color:var(--color-text-tertiary);margin:4px 0}
+.chat-scrivi{display:flex;gap:8px}
+.chat-scrivi input{flex:1;margin:0;min-width:0}
 .ai-err{color:var(--color-danger);background:var(--color-danger-subtle);padding:12px;border-radius:var(--radius-md)}
 
 /* ── FORUM ── */
@@ -1273,19 +1299,21 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <!-- CHAT -->
     <div class="page" id="p-chat">
       <!-- Lista colleghi -->
-      <div id="chatHome" style="padding-bottom:10px">
-        <div id="chatTeamList"><div class="empty">Caricamento...</div></div>
+      <div id="chatHome">
+        <div class="page-head desk-only"><div><h1 class="page-title">Chat</h1></div></div>
+        <div id="chatTeamList" class="card" style="padding:2px 14px"><div class="empty">Caricamento…</div></div>
       </div>
       <!-- Thread conversazione -->
       <div id="chatThread" style="display:none;flex-direction:column;height:calc(100dvh - 140px)">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-          <button class="btn" style="padding:6px 12px;font-size:12px" onclick="chiudiChat()">← Torna</button>
-          <div style="font-size:15px;font-weight:600" id="chatThreadNome">—</div>
+        <div class="chat-head">
+          <button type="button" class="btn btn-sm" onclick="chiudiChat()">← Torna</button>
+          <h2 class="stl" id="chatThreadNome">—</h2>
         </div>
-        <div id="chatMsgs" style="flex:1;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px"></div>
-        <div style="display:flex;gap:8px">
-          <input type="text" id="chatInput" placeholder="Scrivi un messaggio..." style="flex:1;margin:0" onkeydown="if(event.key==='Enter')inviaMsg()">
-          <button class="btn btn-p" style="padding:10px 16px;flex-shrink:0" onclick="inviaMsg()">➤</button>
+        <div id="chatMsgs" class="chat-msgs" role="log" aria-live="polite"></div>
+        <div class="chat-scrivi">
+          <label class="visually-hidden" for="chatInput">Messaggio</label>
+          <input type="text" id="chatInput" placeholder="Scrivi un messaggio" enterkeyhint="send" onkeydown="if(event.key==='Enter')inviaMsg()">
+          <button type="button" class="btn btn-p" onclick="inviaMsg()">Invia</button>
         </div>
       </div>
     </div>
@@ -1669,8 +1697,8 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
     <!-- FORUM -->
     <div class="page" id="p-forum">
       <div class="sec">
-        <div class="stl">💬 Forum</div>
-        <button class="btn btn-p" style="padding:7px 14px;font-size:13px" onclick="openMod('mNewPost')">+ Post</button>
+        <h1 class="stl">Forum</h1>
+        <button type="button" class="btn btn-p btn-sm" onclick="openMod('mNewPost')">+ Nuovo post</button>
       </div>
       <div id="forumList"><div class="empty">Caricamento...</div></div>
     </div>
@@ -4883,26 +4911,27 @@ function apriChatConUtente(uid){
 }
 
 // ── FORUM ──
+const FORUM_PRIO_BDG={Alta:'ba',Media:'bn',Bassa:'bn'};
 function renderForum(){
-  const prC={Alta:'br',Media:'ba',Bassa:'bg'};
+  const prC=FORUM_PRIO_BDG;
   let h='';
-  if(!cacheForum.length)h='<div class="empty">Nessun post ancora — crea il primo! 💬</div>';
+  if(!cacheForum.length)h='<div class="empty">Nessun post ancora: scrivi il primo</div>';
   else cacheForum.forEach(p=>{
     const m=cacheTeam.find(x=>x.id===p.uid);
     const av=avatarInner(m);
     const avC=cacheTeam.findIndex(x=>x.id===p.uid)%4;
     const dt=p.createdAt?new Date(p.createdAt).toLocaleDateString('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
     const imgs=(p.foto||[]).slice(0,3).map(f=>'<div class="pth"><img src="'+esc(f)+'" loading="lazy"></div>').join('');
-    h+='<div class="fcard" onclick="openThread(\''+p.id+'\')">'+
+    h+='<button type="button" class="fcard" onclick="openThread(\''+escJs(p.id)+'\')">'+
       '<div class="fhead"><div class="av a'+(avC%4+1)+'" style="width:34px;height:34px;font-size:11px;'+av.style+'">'+av.content+'</div>'+
       '<div style="flex:1;min-width:0"><div class="ftitle">'+esc(p.titolo)+'</div>'+
       '<div class="fmeta">'+(m?esc(m.nome):'?')+' · '+dt+'</div></div>'+
-      '<span class="bdg '+(prC[p.priorita]||'ba')+'" style="flex-shrink:0">'+esc(p.priorita)+'</span></div>'+
+      '<span class="bdg bdg-xs '+(prC[p.priorita]||'bn')+'" style="flex-shrink:0">'+esc(p.priorita||'')+'</span></div>'+
       (p.desc?'<div class="fbody">'+esc(p.desc.slice(0,120))+(p.desc.length>120?'…':'')+'</div>':'')+
       (imgs?'<div class="pgrid">'+imgs+'</div>':'')+
-      '<div class="ffoot"><span class="fstat">💬 '+(p.replyCount||0)+'</span><span class="fstat">🏷 '+esc(p.cat)+'</span>'+
-      (p.risolto?'<span class="bdg bg" style="margin-left:auto">✓ Risolto</span>':'')+'</div>'+
-    '</div>';
+      '<div class="ffoot"><span class="fstat">'+(p.replyCount||0)+((p.replyCount||0)===1?' risposta':' risposte')+'</span><span class="fstat">'+esc(p.cat||'')+'</span>'+
+      (p.risolto?'<span class="bdg bdg-xs bg">Risolto</span>':'')+'</div>'+
+    '</button>';
   });
   const fl=$('forumList');if(fl)fl.innerHTML=h;
 }
@@ -4952,35 +4981,33 @@ async function openThread(tid){
   const avIdx=cacheTeam.findIndex(x=>x.id===post.uid)%4;
   const dt=post.createdAt?new Date(post.createdAt).toLocaleDateString('it-IT',{day:'2-digit',month:'long',hour:'2-digit',minute:'2-digit'}):'';
   const imgs=(post.foto||[]).map(f=>'<div class="pth"><img src="'+esc(f)+'" loading="lazy"></div>').join('');
-  const prC={Alta:'br',Media:'ba',Bassa:'bg'};
+  const prC=FORUM_PRIO_BDG;
   $('mThreadBody').innerHTML=
-    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+
-      '<button class="btn" style="padding:6px 12px;font-size:12px" onclick="closeMod(\'mThread\')">← Torna</button>'+
-      '<span class="bdg '+(prC[post.priorita]||'ba')+'">'+esc(post.priorita)+'</span>'+
-      (!post.risolto?'<button class="btn bg" style="padding:6px 12px;font-size:12px;margin-left:auto" onclick="markRisolto(\''+tid+'\')">✓ Risolto</button>':'<span class="bdg bg" style="margin-left:auto">✓ Risolto</span>')+
+    '<div class="f-bar">'+
+      '<button type="button" class="btn btn-sm" onclick="closeMod(\'mThread\')">← Torna</button>'+
+      '<span class="bdg bdg-xs '+(prC[post.priorita]||'bn')+'">'+esc(post.priorita||'')+'</span>'+
+      (!post.risolto?'<button type="button" class="btn btn-sm f-dx" onclick="markRisolto(\''+escJs(tid)+'\')">Segna come risolto</button>':'<span class="bdg bdg-xs bg f-dx">Risolto</span>')+
     '</div>'+
     '<div class="fhead"><div class="av a'+(avIdx%4+1)+'" style="width:36px;height:36px;font-size:12px;'+av.style+'">'+av.content+'</div>'+
-    '<div><div class="ftitle" style="font-size:16px">'+esc(post.titolo)+'</div><div class="fmeta">'+(m?esc(m.nome):'?')+' · '+dt+'</div></div></div>'+
-    (post.desc?'<div style="font-size:14px;line-height:1.6;margin:12px 0">'+esc(post.desc)+'</div>':'')+
+    '<div><h2 class="ftitle" style="font-size:var(--text-md);margin:0 0 3px">'+esc(post.titolo)+'</h2><div class="fmeta">'+(m?esc(m.nome):'?')+' · '+dt+'</div></div></div>'+
+    (post.desc?'<div class="f-testo">'+esc(post.desc)+'</div>':'')+
     (imgs?'<div class="pgrid" style="margin-bottom:12px">'+imgs+'</div>':'')+
-    '<div style="height:1px;background:var(--b);margin:12px 0"></div>'+
-    '<div id="replyList"><div style="text-align:center;font-size:12px;color:var(--tx2);padding:10px">Caricamento risposte...</div></div>'+
-    '<div style="background:var(--bg2);border-radius:var(--r);padding:14px;margin-top:12px">'+
-      '<div style="font-size:13px;font-weight:500;margin-bottom:10px;color:var(--tx)">💬 Rispondi</div>'+
-      '<textarea id="replyText" placeholder="Scrivi una risposta..." style="margin-bottom:10px"></textarea>'+
-      '<div class="upz" onclick="document.getElementById(\'replyFotoInput\').click()" style="padding:12px">'+
-        '<div style="font-size:13px;color:var(--tx2)">📷 Aggiungi foto</div>'+
-      '</div>'+
-      '<input type="file" id="replyFotoInput" accept="image/*" multiple style="display:none" onchange="previewFoto(event,\'replyFotoPreview\')">'+
+    '<div class="f-sep"></div>'+
+    '<div id="replyList" aria-live="polite"><div class="f-vuoto">Caricamento delle risposte…</div></div>'+
+    '<section class="f-rispondi" aria-labelledby="replyTit">'+
+      '<h3 class="dcard-title" id="replyTit"><label for="replyText">Rispondi</label></h3>'+
+      '<textarea id="replyText" placeholder="Scrivi una risposta" style="margin-bottom:10px"></textarea>'+
+      '<button type="button" class="upz" style="width:100%;padding:12px;font:inherit;font-size:var(--text-sm);color:var(--color-text-secondary)" onclick="document.getElementById(\'replyFotoInput\').click()">Aggiungi foto</button>'+
+      '<input type="file" id="replyFotoInput" accept="image/*" multiple hidden onchange="previewFoto(event,\'replyFotoPreview\')">'+
       '<div class="pgrid" id="replyFotoPreview"></div>'+
-      '<button class="btn btn-p btn-f" onclick="sendReply(\''+tid+'\')">Invia risposta</button>'+
-    '</div>';
+      '<button type="button" class="btn btn-p btn-f" onclick="sendReply(\''+escJs(tid)+'\')">Invia risposta</button>'+
+    '</section>';
   openMod('mThread');
   // Carica risposte
   const rsnap=await DB.collection('forum').doc(tid).collection('replies').orderBy('createdAt').get();
   const replies=rsnap.docs.map(d=>({id:d.id,...d.data()}));
   const el=$('replyList');if(!el)return;
-  if(!replies.length){el.innerHTML='<div style="text-align:center;font-size:13px;color:var(--tx2);padding:10px">Nessuna risposta ancora 👋</div>';return;}
+  if(!replies.length){el.innerHTML='<div class="f-vuoto">Nessuna risposta ancora</div>';return;}
   let rh='';
   replies.forEach(r=>{
     const rm=cacheTeam.find(x=>x.id===r.uid);
@@ -9332,7 +9359,7 @@ function smRenderItems(){
       '<div style="width:28px;height:28px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;background:'+(a.rientrato?'var(--gnb)':'var(--rdb)')+';border:1px solid '+(a.rientrato?'var(--gn)':'var(--rd)')+'">'+
       (a.rientrato?'✓':'✕')+'</div>'+
       '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'+(a.rientrato?'text-decoration:line-through;color:var(--tx3)':'')+'">'+esc(a.nome)+'</div>'+
-      '<div style="font-size:11px;color:var(--tx2)">'+(a.ser||a.id)+' · ×'+(a.qty||1)+'</div></div>'+
+      '<div style="font-size:11px;color:var(--tx2)">'+esc(a.ser||a.id)+' · ×'+(a.qty||1)+'</div></div>'+
       '<span class="bdg '+(a.rientrato?'bg':'br')+'">'+(a.rientrato?'Rientrato':'Mancante')+'</span></div>';
   });
   el.innerHTML=h||'<div class="empty">Nessun articolo</div>';
@@ -12447,7 +12474,7 @@ function renderMagLavori(){
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700">${esc(lav.nome||'—')}</div>
             <div style="font-size:11px;color:var(--tx2);margin-top:2px">
-              ${lav.location?'📍 '+lav.location+' · ':''}👤 ${lav.tecnicoNome||'—'}
+              ${lav.location?'📍 '+esc(lav.location)+' · ':''}👤 ${esc(lav.tecnicoNome||'—')}
             </div>
             <div style="font-size:11px;color:var(--tx2);margin-top:2px">
               📅 ${dataUsc} → ${dataRient}
@@ -12563,9 +12590,9 @@ function renderStatusMag(){
             const dataUsc=l.data?fmtData(l.data,{day:'2-digit',month:'short'}):'—';
             const dataRient=l.dataFine?fmtData(l.dataFine,{day:'2-digit',month:'short'}):'—';
             return '<div style="font-size:11px;color:var(--am);margin-top:2px">'+
-              '📋 '+l.nome+
+              '📋 '+esc(l.nome)+
               ' · 📅 '+dataUsc+' → '+dataRient+
-              (l.location?' · 📍 '+l.location.replace(/[🏢🔧✈️📍🤒]/u,'').trim():'')+
+              (l.location?' · 📍 '+esc(l.location.replace(/[🏢🔧✈️📍🤒]/u,'').trim()):'')+
             '</div>';
           }).join('')+
         '</div>'+
@@ -15776,20 +15803,17 @@ function renderChatTeam(){
     const nonLetto=conv&&conv.lastUid!==USER.id&&conv.lastAt&&(!conv[lk]||conv[lk]<conv.lastAt);
     const lastMsg=conv?.lastMsg||'';
     const lastOra=conv?.lastAt?new Date(conv.lastAt).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}):'';
-    h+='<div class="row" onclick="apriConv(\''+m.id+'\')" style="display:flex;align-items:center;gap:12px;position:relative">'+
-      '<div style="position:relative;flex-shrink:0">'+
-        '<div class="av '+avC[i%4]+'" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;'+av.style+'">'+av.content+'</div>'+
-        (nonLetto?'<div style="position:absolute;top:-2px;right:-2px;width:12px;height:12px;background:var(--rd);border-radius:50%;border:2px solid var(--bg1)"></div>':'')+
-      '</div>'+
-      '<div style="flex:1;min-width:0">'+
-        '<div style="font-size:14px;font-weight:'+(nonLetto?700:500)+'">'+esc(m.nome)+' '+esc(m.cognome)+'</div>'+
-        '<div style="font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(lastMsg||m.ruolo)+'</div>'+
-      '</div>'+
-      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'+
-        (lastOra?'<span style="font-size:10px;color:var(--tx3)">'+lastOra+'</span>':'')+
-        (nonLetto?'<div style="min-width:18px;height:18px;background:var(--ac);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;padding:0 4px">●</div>':'')+
-      '</div>'+
-    '</div>';
+    h+='<button type="button" class="chat-row'+(nonLetto?' non-letto':'')+'" onclick="apriConv(\''+escJs(m.id)+'\')">'+
+      '<span class="chat-av">'+
+        '<span class="av '+avC[i%4]+'" style="width:40px;height:40px;font-size:15px;'+av.style+'">'+av.content+'</span>'+
+        (nonLetto?'<span class="chat-dot" aria-hidden="true"></span>':'')+
+      '</span>'+
+      '<span style="flex:1;min-width:0;display:flex;flex-direction:column">'+
+        '<span class="chat-nome">'+esc(m.nome)+' '+esc(m.cognome)+(nonLetto?'<span class="visually-hidden"> · messaggio non letto</span>':'')+'</span>'+
+        '<span class="chat-ultimo">'+esc(lastMsg||m.ruolo||'')+'</span>'+
+      '</span>'+
+      (lastOra?'<span class="chat-ora">'+lastOra+'</span>':'')+
+    '</button>';
   });
   el.innerHTML=h;
 }
@@ -15818,7 +15842,7 @@ async function apriConv(altroUid){
 function renderMsgList(msgs){
   const el=$('chatMsgs');if(!el)return;
   if(!msgs.length){
-    el.innerHTML='<div class="empty" style="padding:20px">Inizia la conversazione! 👋</div>';
+    el.innerHTML='<div class="empty">Nessun messaggio: scrivi il primo</div>';
     return;
   }
   let h='',lastDate='';
@@ -15827,7 +15851,7 @@ function renderMsgList(msgs){
     const d=new Date(m.at);
     const dateStr=d.toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short'});
     if(dateStr!==lastDate){
-      h+='<div style="text-align:center;font-size:11px;color:var(--tx3);margin:4px 0">'+dateStr+'</div>';
+      h+='<div class="chat-giorno">'+dateStr+'</div>';
       lastDate=dateStr;
     }
     const ora=d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
