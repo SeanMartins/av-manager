@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01j';
+const APP_VERSION='v2026.11.01k';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -685,6 +685,50 @@ body.desktop-mode #calGriglia .cal-nome{display:-webkit-box!important;-webkit-li
 .arch-zip .dcard-title{margin-bottom:12px}
 .arch-checks{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px}
 .arch-checks .check{margin:0}
+/* ── PREVENTIVI ── */
+.pv-tabs{margin-bottom:14px}
+@media(max-width:600px){.pv-tabs{grid-auto-columns:max-content;overflow-x:auto;scrollbar-width:none}.pv-tabs .seg-btn{padding:9px 11px}.pv-tabs::-webkit-scrollbar{display:none}}
+.pv-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:600px){.pv-stats{grid-template-columns:1fr 1fr}}
+.sc>.sn,.sc>.sl{display:block}
+.pv-stats .sn{font-size:20px}
+.pv-actions{display:flex;gap:8px;margin-bottom:12px}
+.pv-actions .btn{flex:1}
+.pv-search{width:100%;margin-bottom:10px}
+.pv-hint{font-size:var(--text-xs);color:var(--color-text-secondary);margin:0 0 10px}
+.pv-filtri{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.pv-filtri::-webkit-scrollbar{display:none}
+.pv-filtri .chip{white-space:nowrap;flex-shrink:0}
+.pv-list{padding:2px 14px}
+.pv-list .ditem{min-height:56px}
+.pv-item-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;background:none;border:none;padding:6px 0;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.pv-item-main:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px;border-radius:4px}
+.pv-item-main .ditem-title{white-space:normal}
+.pv-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.pv-amount{font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.pv-amount small{display:block;font-weight:var(--weight-medium);font-size:var(--text-xs);color:var(--color-text-secondary);margin-top:2px}
+.pv-view-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.pv-view-tot{background:var(--color-surface-sunken);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:14px;font-size:13px;font-variant-numeric:tabular-nums}
+.pv-view-tot div{display:flex;justify-content:space-between;padding:2px 0}
+.pv-view-tot div span:first-child{color:var(--color-text-secondary)}
+.pv-view-tot .pv-tot{font-weight:var(--weight-semibold);font-size:var(--text-md);margin-top:4px;padding-top:6px;border-top:1px solid var(--color-border)}
+.pv-view-tot .pv-tot span:first-child{color:var(--color-text)}
+.pv-stati{margin-bottom:12px}
+.pv-nota{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:10px 12px;border-radius:var(--radius-md);margin-bottom:10px;font-size:13px;background:var(--color-success-subtle);color:var(--color-success)}
+.pv-view-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:420px){.pv-view-actions{grid-template-columns:1fr 1fr}}
+.pv-view-actions .btn{width:100%}
+.ai-up{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.ai-up-tit{font-size:var(--text-xs);font-weight:var(--weight-semibold);text-transform:uppercase;letter-spacing:var(--tracking-caps);color:var(--color-text-secondary);margin:0 0 6px}
+.ai-upz{width:100%;min-height:84px;color:var(--color-text-secondary);font:inherit;font-size:var(--text-sm)}
+.ai-file{display:flex;align-items:center;gap:6px;padding:4px 4px 4px 10px;background:var(--color-surface-sunken);border-radius:var(--radius-sm);margin-top:4px;font-size:var(--text-xs)}
+.ai-file span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ai-file .btn{padding:4px 8px}
+.ai-out{font-size:var(--text-sm);line-height:1.65}
+.ai-out h3{font-size:var(--text-md);font-weight:var(--weight-semibold);margin:16px 0 6px;padding-top:12px;border-top:1px solid var(--color-border)}
+.ai-out h3:first-child{margin-top:0;padding-top:0;border-top:none}
+.ai-out .ai-li{padding:3px 0 3px 12px;border-left:2px solid var(--color-accent);margin:3px 0}
+.ai-err{color:var(--color-danger);background:var(--color-danger-subtle);padding:12px;border-radius:var(--radius-md)}
 
 /* ── FORUM ── */
 .fcard{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color var(--duration-fast) var(--ease-out)}
@@ -1322,65 +1366,65 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- PREVENTIVI -->
     <div class="page" id="p-preventivi">
-      <!-- Tab switcher -->
-      <div style="display:flex;gap:6px;margin-bottom:14px;background:var(--bg2);border-radius:var(--rs);padding:3px;overflow-x:auto">
-        <button id="pvTabBtn_clienti" onclick="pvSwitchTab('clienti')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:var(--ac);color:#fff;white-space:nowrap">👤 Clienti</button>
-        <button id="pvTabBtn_listino" onclick="pvSwitchTab('listino')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2);white-space:nowrap">💶 Listino</button>
-        <button id="pvTabBtn_pacchetti" onclick="pvSwitchTab('pacchetti')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2);white-space:nowrap">📦 Pacchetti</button>
-        <button id="pvTabBtn_fornitori" onclick="pvSwitchTab('fornitori')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2);white-space:nowrap">🚚 Fornitori</button>
-        <button id="pvTabBtn_doc" onclick="pvSwitchTab('doc')" style="flex:1;padding:9px 6px;border:none;border-radius:6px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--tx2);white-space:nowrap">📋 Preventivi</button>
+      <div class="page-head desk-only"><div><h1 class="page-title">Preventivi</h1></div></div>
+      <div class="seg pv-tabs" role="tablist" aria-label="Sezioni dei preventivi">
+        <button type="button" class="seg-btn on" id="pvTabBtn_clienti" role="tab" aria-selected="true" aria-controls="pvTab_clienti" onclick="pvSwitchTab('clienti')">Clienti</button>
+        <button type="button" class="seg-btn" id="pvTabBtn_listino" role="tab" aria-selected="false" aria-controls="pvTab_listino" onclick="pvSwitchTab('listino')">Listino</button>
+        <button type="button" class="seg-btn" id="pvTabBtn_pacchetti" role="tab" aria-selected="false" aria-controls="pvTab_pacchetti" onclick="pvSwitchTab('pacchetti')">Pacchetti</button>
+        <button type="button" class="seg-btn" id="pvTabBtn_fornitori" role="tab" aria-selected="false" aria-controls="pvTab_fornitori" onclick="pvSwitchTab('fornitori')">Fornitori</button>
+        <button type="button" class="seg-btn" id="pvTabBtn_doc" role="tab" aria-selected="false" aria-controls="pvTab_doc" onclick="pvSwitchTab('doc')">Preventivi</button>
       </div>
 
       <!-- TAB: CLIENTI -->
-      <div id="pvTab_clienti">
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <button class="btn btn-p" style="flex:1" onclick="pvOpenClienteForm()">+ Nuovo cliente</button>
-          <button class="btn btn-f" style="flex:1" onclick="$('pvImportClientiInput').click()">📥 Importa Excel</button>
-          <input type="file" id="pvImportClientiInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="pvHandleExcelFileClienti(this)">
+      <div id="pvTab_clienti" role="tabpanel" aria-labelledby="pvTabBtn_clienti">
+        <div class="pv-actions">
+          <button type="button" class="btn btn-p" onclick="pvOpenClienteForm()">+ Nuovo cliente</button>
+          <button type="button" class="btn" onclick="$('pvImportClientiInput').click()">Importa Excel</button>
+          <input type="file" id="pvImportClientiInput" accept=".xlsx,.xls,.csv" hidden onchange="pvHandleExcelFileClienti(this)">
         </div>
-        <input type="text" id="pvClientiSearch" placeholder="🔍 Cerca cliente..." oninput="renderPvClienti()" style="width:100%;padding:10px;border-radius:var(--rs);border:1px solid var(--b);background:var(--bg2);color:var(--tx);font-family:var(--font);font-size:13px;margin-bottom:10px">
+        <input type="search" id="pvClientiSearch" class="pv-search" placeholder="Cerca per nome, referente o email" aria-label="Cerca cliente" oninput="renderPvClienti()">
         <div id="pvClientiList"></div>
       </div>
 
       <!-- TAB: LISTINO -->
-      <div id="pvTab_listino" style="display:none">
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <button class="btn btn-p" style="flex:1" onclick="pvOpenListinoForm()">+ Voce listino</button>
-          <button class="btn btn-f" style="flex:1" onclick="$('pvImportExcelInput').click()">📥 Importa Excel</button>
-          <input type="file" id="pvImportExcelInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="pvHandleExcelFile(this)">
+      <div id="pvTab_listino" role="tabpanel" aria-labelledby="pvTabBtn_listino" style="display:none">
+        <div class="pv-actions">
+          <button type="button" class="btn btn-p" onclick="pvOpenListinoForm()">+ Voce listino</button>
+          <button type="button" class="btn" onclick="$('pvImportExcelInput').click()">Importa Excel</button>
+          <input type="file" id="pvImportExcelInput" accept=".xlsx,.xls,.csv" hidden onchange="pvHandleExcelFile(this)">
         </div>
-        <input type="text" id="pvListinoSearch" placeholder="🔍 Cerca voce listino..." oninput="renderPvListino()" style="width:100%;padding:10px;border-radius:var(--rs);border:1px solid var(--b);background:var(--bg2);color:var(--tx);font-family:var(--font);font-size:13px;margin-bottom:10px">
+        <input type="search" id="pvListinoSearch" class="pv-search" placeholder="Cerca voce del listino" aria-label="Cerca voce del listino" oninput="renderPvListino()">
         <div id="pvListinoList"></div>
       </div>
 
       <!-- TAB: PACCHETTI (lavori frequenti) -->
-      <div id="pvTab_pacchetti" style="display:none">
-        <button class="btn btn-p btn-f" style="margin-bottom:12px" onclick="pvOpenPacchettoForm()">+ Nuovo pacchetto</button>
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Gruppi di voci che usi spesso insieme (es. "Service base wedding") — aggiungili a un preventivo con un click.</div>
+      <div id="pvTab_pacchetti" role="tabpanel" aria-labelledby="pvTabBtn_pacchetti" style="display:none">
+        <div class="pv-actions"><button type="button" class="btn btn-p" onclick="pvOpenPacchettoForm()">+ Nuovo pacchetto</button></div>
+        <p class="pv-hint">Gruppi di voci che usi spesso insieme (es. "Service base wedding"): li aggiungi a un preventivo con un tocco.</p>
         <div id="pvPacchettiList"></div>
       </div>
 
       <!-- TAB: FORNITORI -->
-      <div id="pvTab_fornitori" style="display:none">
-        <button class="btn btn-p btn-f" style="margin-bottom:12px" onclick="pvOpenFornitoreForm()">+ Nuovo fornitore</button>
-        <input type="text" id="pvFornitoriSearch" placeholder="🔍 Cerca fornitore..." oninput="renderPvFornitori()" style="width:100%;padding:10px;border-radius:var(--rs);border:1px solid var(--b);background:var(--bg2);color:var(--tx);font-family:var(--font);font-size:13px;margin-bottom:10px">
+      <div id="pvTab_fornitori" role="tabpanel" aria-labelledby="pvTabBtn_fornitori" style="display:none">
+        <div class="pv-actions"><button type="button" class="btn btn-p" onclick="pvOpenFornitoreForm()">+ Nuovo fornitore</button></div>
+        <input type="search" id="pvFornitoriSearch" class="pv-search" placeholder="Cerca per nome, referente o email" aria-label="Cerca fornitore" oninput="renderPvFornitori()">
         <div id="pvFornitoriList"></div>
       </div>
 
       <!-- TAB: PREVENTIVI (documenti) -->
-      <div id="pvTab_doc" style="display:none">
-        <div id="pvStatsBar" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px"></div>
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <button class="btn btn-p" style="flex:1" onclick="pvOpenNuovoPreventivo()">+ Nuovo preventivo</button>
-          <button id="pvExportZipBtn" class="btn btn-f" style="flex:1" onclick="pvOpenExportZip()">📦 Esporta ZIP</button>
+      <div id="pvTab_doc" role="tabpanel" aria-labelledby="pvTabBtn_doc" style="display:none">
+        <div id="pvStatsBar" class="pv-stats"></div>
+        <div class="pv-actions">
+          <button type="button" class="btn btn-p" onclick="pvOpenNuovoPreventivo()">+ Nuovo preventivo</button>
+          <button type="button" id="pvExportZipBtn" class="btn" onclick="pvOpenExportZip()">Esporta ZIP</button>
         </div>
-        <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto">
-          <button class="chip on" onclick="pvFiltraStato('tutti',this)" data-stato="tutti">Tutti</button>
-          <button class="chip" onclick="pvFiltraStato('bozza',this)" data-stato="bozza">⚪ Bozza</button>
-          <button class="chip" onclick="pvFiltraStato('inviato',this)" data-stato="inviato">🔵 Inviato</button>
-          <button class="chip" onclick="pvFiltraStato('accettato',this)" data-stato="accettato">🟢 Accettato</button>
-          <button class="chip" onclick="pvFiltraStato('rifiutato',this)" data-stato="rifiutato">🔴 Rifiutato</button>
-          <button class="chip" onclick="pvFiltraStato('dafatturare',this)" data-stato="dafatturare">💰 Da fatturare</button>
+        <div class="pv-filtri" role="radiogroup" aria-label="Filtra per stato">
+          <button type="button" class="chip on" role="radio" aria-checked="true" onclick="pvFiltraStato('tutti',this)" data-stato="tutti">Tutti</button>
+          <button type="button" class="chip" role="radio" aria-checked="false" onclick="pvFiltraStato('bozza',this)" data-stato="bozza">Bozza</button>
+          <button type="button" class="chip" role="radio" aria-checked="false" onclick="pvFiltraStato('inviato',this)" data-stato="inviato">Inviato</button>
+          <button type="button" class="chip" role="radio" aria-checked="false" onclick="pvFiltraStato('accettato',this)" data-stato="accettato">Accettato</button>
+          <button type="button" class="chip" role="radio" aria-checked="false" onclick="pvFiltraStato('rifiutato',this)" data-stato="rifiutato">Rifiutato</button>
+          <button type="button" class="chip" role="radio" aria-checked="false" onclick="pvFiltraStato('dafatturare',this)" data-stato="dafatturare">Da fatturare</button>
         </div>
         <div id="pvDocList"></div>
       </div>
@@ -1450,62 +1494,41 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- AI PREVENTIVI -->
     <div class="page" id="p-ai-preventivi">
-      <!-- Header -->
-      <div style="background:linear-gradient(135deg,var(--acb) 0%,var(--bg2) 100%);border-radius:var(--r);padding:16px;margin-bottom:16px;border:1px solid var(--ac)">
-        <div style="font-size:18px;font-weight:700;margin-bottom:4px">🤖 AI Analisi Preventivi</div>
-        <div style="font-size:12px;color:var(--tx2)">Carica i PDF dei preventivi e lascia che l'AI analizzi pattern di successo e fallimento</div>
-      </div>
+      <div class="page-head"><div><h1 class="page-title desk-only">Analisi preventivi con AI</h1><p class="page-sub">Carica i PDF dei preventivi accettati e rifiutati: l'AI cerca cosa distingue quelli vinti.</p></div></div>
 
-      <!-- Upload area -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <!-- Accettati -->
+      <div class="ai-up">
         <div>
-          <div style="font-size:11px;font-weight:600;color:var(--gn);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">✅ Accettati</div>
-          <div class="upz" onclick="$('aiPdfAccInput').click()" style="border-color:var(--gn);min-height:80px">
-            <div style="font-size:20px">📄</div>
-            <div style="font-size:11px;color:var(--tx2);margin-top:4px">Carica PDF</div>
-            <input type="file" id="aiPdfAccInput" accept=".pdf" multiple style="display:none" onchange="aiAggiungiPdf(this,'acc')">
-          </div>
-          <div id="aiListAcc" style="margin-top:6px"></div>
+          <h2 class="ai-up-tit" id="aiTitAcc">Accettati</h2>
+          <button type="button" class="upz ai-upz" aria-describedby="aiTitAcc" onclick="$('aiPdfAccInput').click()">Carica PDF</button>
+          <input type="file" id="aiPdfAccInput" accept=".pdf" multiple hidden onchange="aiAggiungiPdf(this,'acc')">
+          <div id="aiListAcc"></div>
         </div>
-        <!-- Rifiutati -->
         <div>
-          <div style="font-size:11px;font-weight:600;color:var(--rd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">❌ Rifiutati</div>
-          <div class="upz" onclick="$('aiPdfRifInput').click()" style="border-color:var(--rd);min-height:80px">
-            <div style="font-size:20px">📄</div>
-            <div style="font-size:11px;color:var(--tx2);margin-top:4px">Carica PDF</div>
-            <input type="file" id="aiPdfRifInput" accept=".pdf" multiple style="display:none" onchange="aiAggiungiPdf(this,'rif')">
-          </div>
-          <div id="aiListRif" style="margin-top:6px"></div>
+          <h2 class="ai-up-tit" id="aiTitRif">Rifiutati</h2>
+          <button type="button" class="upz ai-upz" aria-describedby="aiTitRif" onclick="$('aiPdfRifInput').click()">Carica PDF</button>
+          <input type="file" id="aiPdfRifInput" accept=".pdf" multiple hidden onchange="aiAggiungiPdf(this,'rif')">
+          <div id="aiListRif"></div>
         </div>
       </div>
 
-      <!-- Contatori -->
-      <div id="aiContatori" style="display:none;background:var(--bg2);border-radius:var(--rs);padding:10px;margin-bottom:12px">
-        <div style="display:flex;justify-content:space-around;text-align:center">
-          <div><div style="font-size:20px;font-weight:800;color:var(--gn)" id="aiNAcc">0</div><div style="font-size:10px;color:var(--tx2)">Accettati</div></div>
-          <div><div style="font-size:20px;font-weight:800;color:var(--rd)" id="aiNRif">0</div><div style="font-size:10px;color:var(--tx2)">Rifiutati</div></div>
-          <div><div style="font-size:20px;font-weight:800" id="aiTotPages">0</div><div style="font-size:10px;color:var(--tx2)">Pagine tot.</div></div>
-        </div>
+      <div id="aiContatori" class="sg3" style="display:none">
+        <div class="sc"><span class="sn" id="aiNAcc">0</span><span class="sl">Accettati</span></div>
+        <div class="sc"><span class="sn" id="aiNRif">0</span><span class="sl">Rifiutati</span></div>
+        <div class="sc"><span class="sn" id="aiTotPages">0</span><span class="sl">Pagine tot.</span></div>
       </div>
 
-      <!-- Note aggiuntive -->
-      <div class="ig" style="margin-bottom:12px">
-        <label class="il">📝 Contesto aggiuntivo (opzionale)</label>
-        <textarea id="aiContesto" placeholder="Es: Siamo una società AV di medie dimensioni, operiamo principalmente in Toscana, principali concorrenti sono X e Y, clienti tipici sono hotel 4-5 stelle..." style="min-height:70px;font-size:13px;line-height:1.5"></textarea>
+      <div class="ig">
+        <label class="il" for="aiContesto">Contesto aggiuntivo (facoltativo)</label>
+        <textarea id="aiContesto" rows="3" placeholder="Es.: società AV di medie dimensioni, lavoriamo soprattutto in Toscana, clienti tipici hotel 4-5 stelle…"></textarea>
       </div>
 
-      <!-- Bottone analisi -->
-      <button id="aiBtnAnalisi" class="btn btn-p btn-f" style="padding:14px;font-size:15px;font-weight:600" onclick="avviaAnalisiAI()" disabled>
-        🤖 Analizza con AI
-      </button>
+      <button type="button" id="aiBtnAnalisi" class="btn btn-p btn-f btn-lg" onclick="avviaAnalisiAI()" disabled>Analizza con AI</button>
 
-      <!-- Risultato -->
-      <div id="aiRisultato" style="display:none;margin-top:16px">
-        <div style="font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px">📊 Analisi AI</div>
-        <div id="aiRisultatoContent" style="background:var(--bg2);border-radius:var(--r);padding:16px;font-size:13px;line-height:1.7;color:var(--tx)"></div>
-        <button class="btn btn-f" style="margin-top:10px;width:100%" onclick="aiReset()">🔄 Nuova analisi</button>
-      </div>
+      <section id="aiRisultato" class="card" style="display:none;margin-top:16px" aria-labelledby="aiTitRis">
+        <h2 class="dcard-title" id="aiTitRis" style="margin-bottom:12px">Risultato dell'analisi</h2>
+        <div id="aiRisultatoContent" class="ai-out" aria-live="polite"></div>
+        <button type="button" class="btn btn-f" style="margin-top:14px" onclick="aiReset()">Nuova analisi</button>
+      </section>
     </div>
 
     <!-- FORUM -->
@@ -6561,8 +6584,9 @@ function pvSwitchTab(tab){
   pvActiveTab=tab;
   ['clienti','listino','pacchetti','fornitori','doc'].forEach(t=>{
     $('pvTab_'+t).style.display=t===tab?'block':'none';
-    $('pvTabBtn_'+t).style.background=t===tab?'var(--ac)':'transparent';
-    $('pvTabBtn_'+t).style.color=t===tab?'#fff':'var(--tx2)';
+    const b=$('pvTabBtn_'+t);
+    b.classList.toggle('on',t===tab);b.setAttribute('aria-selected',t===tab?'true':'false');
+    if(t===tab&&b.parentNode.scrollWidth>b.parentNode.clientWidth)b.parentNode.scrollLeft=b.offsetLeft-b.parentNode.offsetLeft-8;
   });
 }
 
@@ -6613,20 +6637,32 @@ async function pvDeleteCliente(cliId){
   }catch(e){toast('Errore: '+e.message,'r');}
 }
 
+// Riga di elenco comune (clienti, fornitori, listino, pacchetti, preventivi)
+function pvRigaHtml({apri,titolo,sub,sub2,badges,importo,importoSub,elimina,nomeElimina}){
+  return '<div class="ditem">'+
+    '<button type="button" class="pv-item-main" onclick="'+apri+'">'+
+      '<span class="ditem-title">'+titolo+'</span>'+
+      (sub?'<span class="ditem-sub">'+sub+'</span>':'')+
+      (sub2?'<span class="ditem-sub">'+sub2+'</span>':'')+
+      (badges?'<span class="pv-badges">'+badges+'</span>':'')+
+    '</button>'+
+    (importo!=null?'<span class="pv-amount">'+importo+(importoSub?'<small>'+importoSub+'</small>':'')+'</span>':'')+
+    (elimina?'<button type="button" class="btn btn-sm btn-danger-text" aria-label="Elimina '+nomeElimina+'" onclick="'+elimina+'">Elimina</button>':'')+
+  '</div>';
+}
+const pvVuoto=t=>'<div class="empty">'+t+'</div>';
+const pvLista=righe=>'<div class="card pv-list">'+righe+'</div>';
+
 function renderPvClienti(){
   const list=$('pvClientiList');if(!list)return;
   const q=(val('pvClientiSearch')||'').toLowerCase();
   const filtered=cachePvClienti.filter(c=>!q||((c.nome||'')+(c.referente||'')+(c.email||'')).toLowerCase().includes(q));
-  if(!filtered.length){list.innerHTML='<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessun cliente'+(q?' trovato':' — aggiungine uno!')+'</div>';return;}
-  list.innerHTML=filtered.map(c=>`
-    <div class="row" style="align-items:flex-start;padding:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px">
-      <div style="flex:1;min-width:0;cursor:pointer" onclick="pvOpenClienteForm('${c.id}')">
-        <div style="font-size:14px;font-weight:600">${esc(c.nome||'—')}</div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${c.piva?'P.IVA '+esc(c.piva)+' · ':''}${esc(c.referente||'')}</div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${esc(c.email||'')}${c.email&&c.tel?' · ':''}${esc(c.tel||'')}</div>
-      </div>
-      <button onclick="pvDeleteCliente('${c.id}')" style="flex-shrink:0;width:32px;height:32px;border-radius:var(--rs);border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:13px;cursor:pointer">🗑</button>
-    </div>`).join('');
+  if(!filtered.length){list.innerHTML=pvVuoto(q?'Nessun cliente trovato':'Nessun cliente: aggiungine uno');return;}
+  list.innerHTML=pvLista(filtered.map(c=>pvRigaHtml({
+    apri:`pvOpenClienteForm('${escJs(c.id)}')`,titolo:esc(c.nome||'—'),
+    sub:[c.piva?'P.IVA '+esc(c.piva):'',esc(c.referente||'')].filter(Boolean).join(' · '),
+    sub2:[esc(c.email||''),esc(c.tel||'')].filter(Boolean).join(' · '),
+    elimina:`pvDeleteCliente('${escJs(c.id)}')`,nomeElimina:esc(c.nome||'cliente')})).join(''));
 }
 
 // ── FORNITORI ──
@@ -6679,18 +6715,13 @@ function renderPvFornitori(){
   const list=$('pvFornitoriList');if(!list)return;
   const q=(val('pvFornitoriSearch')||'').toLowerCase();
   const filtered=cachePvFornitori.filter(f=>!q||((f.nome||'')+(f.referente||'')+(f.email||'')).toLowerCase().includes(q));
-  if(!filtered.length){list.innerHTML='<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessun fornitore'+(q?' trovato':' — aggiungine uno!')+'</div>';return;}
-  const catLabel={audio:'🎙 Audio',luci:'💡 Luci',ledwall:'🖥 LED wall',traduzione:'🎧 Traduzione',video:'📽 Video',strutture:'🏗 Strutture',informatica:'💻 Informatica',altro:'📦 Altro'};
-  list.innerHTML=filtered.map(f=>`
-    <div class="row" style="align-items:flex-start;padding:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px">
-      <div style="flex:1;min-width:0;cursor:pointer" onclick="pvOpenFornitoreForm('${f.id}')">
-        <div style="font-size:14px;font-weight:600">${esc(f.nome||'—')}</div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${catLabel[f.cat]||''}${f.referente?' · '+esc(f.referente):''}</div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${esc(f.email||'')}${f.email&&f.tel?' · ':''}${esc(f.tel||'')}</div>
-        ${f.condizioni?'<div style="font-size:11px;color:var(--tx3);margin-top:2px">💳 '+esc(f.condizioni)+'</div>':''}
-      </div>
-      <button onclick="pvDeleteFornitore('${f.id}')" style="flex-shrink:0;width:32px;height:32px;border-radius:var(--rs);border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:13px;cursor:pointer">🗑</button>
-    </div>`).join('');
+  if(!filtered.length){list.innerHTML=pvVuoto(q?'Nessun fornitore trovato':'Nessun fornitore: aggiungine uno');return;}
+  const catLabel={audio:'Audio',luci:'Luci',ledwall:'LED wall',traduzione:'Traduzione',video:'Video',strutture:'Strutture',informatica:'Informatica',altro:'Altro'};
+  list.innerHTML=pvLista(filtered.map(f=>pvRigaHtml({
+    apri:`pvOpenFornitoreForm('${escJs(f.id)}')`,titolo:esc(f.nome||'—'),
+    sub:[catLabel[f.cat]||'',esc(f.referente||''),f.condizioni?'Pagamento: '+esc(f.condizioni):''].filter(Boolean).join(' · '),
+    sub2:[esc(f.email||''),esc(f.tel||'')].filter(Boolean).join(' · '),
+    elimina:`pvDeleteFornitore('${escJs(f.id)}')`,nomeElimina:esc(f.nome||'fornitore')})).join(''));
 }
 
 function pvPopolaSelectClienti(){
@@ -6886,17 +6917,14 @@ async function pvDeletePacchetto(pkId){
 
 function renderPvPacchetti(){
   const list=$('pvPacchettiList');if(!list)return;
-  if(!cachePvPacchetti.length){list.innerHTML='<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessun pacchetto — creane uno per velocizzare i preventivi futuri!</div>';return;}
-  list.innerHTML=cachePvPacchetti.map(p=>{
+  if(!cachePvPacchetti.length){list.innerHTML=pvVuoto('Nessun pacchetto: creane uno per velocizzare i prossimi preventivi');return;}
+  list.innerHTML=pvLista(cachePvPacchetti.map(p=>{
     const tot=(p.righe||[]).reduce((s,r)=>s+(r.qty*r.prezzo),0);
-    return `<div class="row" style="align-items:center;padding:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px">
-      <div style="flex:1;min-width:0;cursor:pointer" onclick="pvOpenPacchettoForm('${p.id}')">
-        <div style="font-size:13px;font-weight:600">${esc(p.nome)}</div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${(p.righe||[]).length} voci · ${fmtEuro(tot)}</div>
-      </div>
-      <button onclick="pvDeletePacchetto('${p.id}')" style="flex-shrink:0;width:32px;height:32px;border-radius:var(--rs);border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:13px;cursor:pointer">🗑</button>
-    </div>`;
-  }).join('');
+    const n=(p.righe||[]).length;
+    return pvRigaHtml({apri:`pvOpenPacchettoForm('${escJs(p.id)}')`,titolo:esc(p.nome||'—'),
+      sub:n+(n===1?' voce':' voci'),importo:fmtEuro(tot),
+      elimina:`pvDeletePacchetto('${escJs(p.id)}')`,nomeElimina:esc(p.nome||'pacchetto')});
+  }).join(''));
 }
 
 // Applica pacchetto a un preventivo in editing
@@ -7006,16 +7034,12 @@ function renderPvListino(){
   const list=$('pvListinoList');if(!list)return;
   const q=(val('pvListinoSearch')||'').toLowerCase();
   const filtered=cachePvListino.filter(v=>!q||(v.nome||'').toLowerCase().includes(q));
-  if(!filtered.length){list.innerHTML='<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessuna voce'+(q?' trovata':' in listino — aggiungine una o importa da Excel!')+'</div>';return;}
-  list.innerHTML=filtered.map(v=>`
-    <div class="row" style="align-items:center;padding:12px;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px">
-      <div style="flex:1;min-width:0;cursor:pointer" onclick="pvOpenListinoForm('${v.id}')">
-        <div style="font-size:13px;font-weight:500">${esc(v.nome||'—')}</div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${PV_CAT_LABEL[v.cat]||v.cat||''} · ${v.um||'pezzo'}${v.fonte==='import'?' · 📥 da import':''}</div>
-      </div>
-      <div style="font-size:14px;font-weight:700;color:var(--ac2);margin-right:8px;white-space:nowrap">${fmtEuro(v.prezzo)}</div>
-      <button onclick="pvDeleteListino('${v.id}')" style="flex-shrink:0;width:32px;height:32px;border-radius:var(--rs);border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--rd);font-size:13px;cursor:pointer">🗑</button>
-    </div>`).join('');
+  if(!filtered.length){list.innerHTML=pvVuoto(q?'Nessuna voce trovata':'Listino vuoto: aggiungi una voce o importa da Excel');return;}
+  list.innerHTML=pvLista(filtered.map(v=>pvRigaHtml({
+    apri:`pvOpenListinoForm('${escJs(v.id)}')`,titolo:esc(v.nome||'—'),
+    sub:[esc((PV_CAT_LABEL[v.cat]||v.cat||'').replace(/^[^\p{L}\d]+/u,'')),'per '+esc(v.um||'pezzo'),v.fonte==='import'?'da import':''].filter(Boolean).join(' · '),
+    importo:fmtEuro(v.prezzo),
+    elimina:`pvDeleteListino('${escJs(v.id)}')`,nomeElimina:esc(v.nome||'voce')})).join(''));
 }
 
 // ── IMPORT EXCEL LISTINO ──
@@ -7132,13 +7156,14 @@ async function pvConfirmImport(){
 // ── PREVENTIVI (documenti) ──
 function pvFiltraStato(stato,btn){
   pvFiltroStato=stato;
-  document.querySelectorAll('#pvTab_doc .chip').forEach(c=>c.classList.remove('on'));
-  btn.classList.add('on');
+  document.querySelectorAll('#pvTab_doc .chip').forEach(c=>{const on=c===btn;c.classList.toggle('on',on);c.setAttribute('aria-checked',on?'true':'false');});
   renderPvDocList();
 }
 
-const PV_STATO_LABEL={bozza:'⚪ Bozza',inviato:'🔵 Inviato',accettato:'🟢 Accettato',rifiutato:'🔴 Rifiutato'};
-const PV_STATO_COLOR={bozza:'var(--tx3)',inviato:'var(--ac2)',accettato:'var(--gn)',rifiutato:'var(--rd)'};
+// Etichette senza emoji: il rosso resta solo per la validità scaduta
+const PV_STATO_NOME={bozza:'Bozza',inviato:'Inviato',accettato:'Accettato',rifiutato:'Rifiutato'};
+const PV_STATO_BDG={bozza:'bn',inviato:'bp',accettato:'bg',rifiutato:'bn'};
+const pvStatoBdg=st=>'<span class="bdg bdg-xs '+(PV_STATO_BDG[st]||'bn')+'">'+esc(PV_STATO_NOME[st]||st||'—')+'</span>';
 
 function pvRenderStats(){
   const bar=$('pvStatsBar');if(!bar)return;
@@ -7151,15 +7176,13 @@ function pvRenderStats(){
   const valoreAccettati=cachePvDoc.filter(d=>d.stato==='accettato'&&(d.createdAt||'').startsWith(meseCorrente)).reduce((s,d)=>s+(d.totale||0),0);
   const daFatturare=cachePvDoc.filter(d=>d.stato==='accettato'&&d.fatturaStato!=='fatturato');
 
-  const card=(label,value,color,onclick)=>`<div ${onclick?`onclick="${onclick}" style="cursor:pointer;background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);padding:10px;text-align:center"`:'style="background:var(--bg1);border:1px solid var(--b);border-radius:var(--rs);padding:10px;text-align:center"'}>
-    <div style="font-size:18px;font-weight:800;color:${color||'var(--tx)'}">${value}</div>
-    <div style="font-size:9px;color:var(--tx2);text-transform:uppercase;letter-spacing:.3px;margin-top:2px">${label}</div>
-  </div>`;
-  bar.style.gridTemplateColumns='1fr 1fr 1fr 1fr';
-  bar.innerHTML=card('Preventivi mese',delMese.length)+
-    card('% Accettati',tassoAccettazione+'%','var(--gn)')+
-    card('Valore accettato',fmtEuro(valoreAccettati).replace('€ ',''),'var(--ac2)')+
-    card('💰 Da fatturare',daFatturare.length,daFatturare.length?'var(--am)':'var(--gn)',"document.querySelector('#pvTab_doc .chip[data-stato=dafatturare]').click()");
+  const card=(label,value,tono,onclick)=>onclick
+    ?`<button type="button" class="sc sc-btn" onclick="${onclick}"><span class="sn"${tono?' data-tono="'+tono+'"':''}>${value}</span><span class="sl">${label}</span></button>`
+    :`<div class="sc"><span class="sn">${value}</span><span class="sl">${label}</span></div>`;
+  bar.innerHTML=card('Preventivi del mese',delMese.length)+
+    card('Accettati',tassoAccettazione+'%')+
+    card('Valore accettato',fmtEuro(valoreAccettati))+
+    card('Da fatturare',daFatturare.length,daFatturare.length?'warning':'',"document.querySelector('#pvTab_doc .chip[data-stato=dafatturare]').click()");
 }
 
 function pvIsScaduto(d){
@@ -7177,24 +7200,20 @@ function renderPvDocList(){
   if(pvFiltroStato==='tutti')filtered=cachePvDoc;
   else if(pvFiltroStato==='dafatturare')filtered=cachePvDoc.filter(d=>d.stato==='accettato'&&d.fatturaStato!=='fatturato');
   else filtered=cachePvDoc.filter(d=>d.stato===pvFiltroStato);
-  if(!filtered.length){list.innerHTML='<div class="empty" style="padding:20px;text-align:center;color:var(--tx3)">Nessun preventivo'+(pvFiltroStato!=='tutti'?' in questo stato':' — creane uno!')+'</div>';return;}
-  list.innerHTML=filtered.map(d=>{
+  if(!filtered.length){list.innerHTML=pvVuoto(pvFiltroStato!=='tutti'?'Nessun preventivo in questo stato':'Nessun preventivo: creane uno');return;}
+  list.innerHTML=pvLista(filtered.map(d=>{
     const _cBase=cachePvClienti.find(c=>c.id===d.clienteId);
     const cliente=_cBase||(d.clienteLibero?{nome:d.clienteLibero,piva:'',indirizzo:''}:null);
     const scaduto=pvIsScaduto(d);
-    const fattBadge=d.stato==='accettato'?(d.fatturaStato==='fatturato'?'<span style="font-size:10px;font-weight:700;color:var(--gn);margin-left:4px">✓ Fatturato</span>':'<span style="font-size:10px;font-weight:700;color:var(--am);background:var(--amb);padding:1px 6px;border-radius:8px;margin-left:4px">💰 Da fatturare</span>'):'';
-    return `<div onclick="pvViewDoc('${d.id}')" class="row" style="align-items:center;padding:12px;background:var(--bg1);border:1px solid ${scaduto?'var(--am)':'var(--b)'};border-radius:var(--rs);margin-bottom:8px;cursor:pointer">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600">${d.numero||'—'} · ${esc(d.oggetto||'Senza oggetto')}${scaduto?' <span style="font-size:10px;font-weight:700;color:var(--am);background:var(--amb);padding:1px 6px;border-radius:8px;margin-left:4px">⏰ Scaduto</span>':''}${fattBadge}</div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${cliente?esc(cliente.nome):'Cliente eliminato'}</div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${d.dataEvento?new Date(d.dataEvento+'T12:00:00').toLocaleDateString('it-IT'):''}</div>
-      </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:14px;font-weight:700;color:var(--ac2)">${fmtEuro(d.totale)}</div>
-        <div style="font-size:10px;font-weight:600;color:${PV_STATO_COLOR[d.stato]||'var(--tx2)'};margin-top:2px">${PV_STATO_LABEL[d.stato]||d.stato}</div>
-      </div>
-    </div>`;
-  }).join('');
+    const badges=pvStatoBdg(d.stato)+
+      (scaduto?'<span class="bdg bdg-xs br">Validità scaduta</span>':'')+
+      (d.stato==='accettato'?(d.fatturaStato==='fatturato'?'<span class="bdg bdg-xs bg">Fatturato</span>':'<span class="bdg bdg-xs ba">Da fatturare</span>'):'');
+    return pvRigaHtml({apri:`pvViewDoc('${escJs(d.id)}')`,
+      titolo:esc(d.numero||'—')+' · '+esc(d.oggetto||'Senza oggetto'),
+      sub:cliente?esc(cliente.nome):'Cliente eliminato',
+      sub2:d.dataEvento?'Evento '+new Date(d.dataEvento+'T12:00:00').toLocaleDateString('it-IT'):'',
+      badges,importo:fmtEuro(d.totale)});
+  }).join(''));
 }
 
 function pvOnClienteChange(){
@@ -7484,7 +7503,7 @@ async function pvSaveDoc(){
 async function pvCambiaStato(docId,nuovoStato){
   try{
     await DB.collection('preventivi').doc(docId).update({stato:nuovoStato,updatedAt:new Date().toISOString()});
-    toast('Stato aggiornato: '+PV_STATO_LABEL[nuovoStato]);
+    toast('Stato aggiornato: '+(PV_STATO_NOME[nuovoStato]||nuovoStato));
     const d=cachePvDoc.find(x=>x.id===docId);
     if(nuovoStato==='accettato'&&d&&!d.lavoroCalId){
       pvViewDoc(docId); // refresh per mostrare lo stato e il bottone "Crea lavoro"
@@ -7667,50 +7686,44 @@ function pvViewDoc(docId){
   const scaduto=pvIsScaduto(d);
   const righeHtml=(d.righe||[]).map(r=>{
     const qty=pvSafeNum(r.qty),prezzo=pvSafeNum(r.prezzo);
-    return `<tr><td style="padding:6px 4px;font-size:12px;border-bottom:1px solid var(--b)">${esc(r.nome)}</td>
-    <td style="padding:6px 4px;font-size:12px;text-align:center;border-bottom:1px solid var(--b)">${qty} ${r.um||''}</td>
-    <td style="padding:6px 4px;font-size:12px;text-align:right;border-bottom:1px solid var(--b)">${fmtEuro(prezzo)}</td>
-    <td style="padding:6px 4px;font-size:12px;text-align:right;border-bottom:1px solid var(--b);font-weight:600">${fmtEuro(qty*prezzo)}</td></tr>`;
+    return `<tr><td>${esc(r.nome)}</td><td class="t-num">${qty} ${esc(r.um||'')}</td><td class="t-num">${fmtEuro(prezzo)}</td><td class="t-num t-strong">${fmtEuro(qty*prezzo)}</td></tr>`;
   }).join('');
   $('pvDocViewBody').innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+    <div class="pv-view-head">
       <div>
-        <div class="stl">${d.numero} — ${esc(d.oggetto||'')}</div>
-        <div style="font-size:12px;color:var(--tx2);margin-top:2px">${cliente?esc(cliente.nome):'Cliente eliminato'}</div>
-        ${scaduto?'<div style="font-size:11px;font-weight:700;color:var(--am);margin-top:4px">⏰ Validità scaduta</div>':''}
+        <div class="stl">${esc(d.numero||'—')} · ${esc(d.oggetto||'')}</div>
+        <div class="ditem-sub">${cliente?esc(cliente.nome):'Cliente eliminato'}</div>
+        ${scaduto?'<div class="pv-badges"><span class="bdg bdg-xs br">Validità scaduta</span></div>':''}
       </div>
-      <span style="font-size:11px;font-weight:600;color:${PV_STATO_COLOR[d.stato]};white-space:nowrap">${PV_STATO_LABEL[d.stato]}</span>
+      ${pvStatoBdg(d.stato)}
     </div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
-      <thead><tr><th style="text-align:left;font-size:10px;color:var(--tx3);padding-bottom:6px">DESCRIZIONE</th><th style="font-size:10px;color:var(--tx3);padding-bottom:6px">QTÀ</th><th style="text-align:right;font-size:10px;color:var(--tx3);padding-bottom:6px">PREZZO</th><th style="text-align:right;font-size:10px;color:var(--tx3);padding-bottom:6px">TOT.</th></tr></thead>
-      <tbody>${righeHtml}</tbody>
-    </table>
-    <div style="background:var(--bg2);border-radius:var(--rs);padding:10px;margin-bottom:14px;font-size:12px">
-      <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">Imponibile</span><span>${fmtEuro(d.imponibile)}</span></div>
-      <div style="display:flex;justify-content:space-between"><span style="color:var(--tx2)">IVA (${d.ivaPct}%)</span><span>${fmtEuro(d.iva)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px;margin-top:4px;padding-top:4px;border-top:1px solid var(--b)"><span>Totale</span><span style="color:var(--ac2)">${fmtEuro(d.totale)}</span></div>
+    <div class="dtable-wrap"><table class="dtable">
+      <thead><tr><th scope="col">Descrizione</th><th scope="col" class="t-num">Qtà</th><th scope="col" class="t-num">Prezzo</th><th scope="col" class="t-num">Totale</th></tr></thead>
+      <tbody>${righeHtml||'<tr><td colspan="4" class="t-muted">Nessuna voce</td></tr>'}</tbody>
+    </table></div>
+    <div class="pv-view-tot">
+      <div><span>Imponibile</span><span>${fmtEuro(d.imponibile)}</span></div>
+      <div><span>IVA (${esc(String(d.ivaPct??''))}%)</span><span>${fmtEuro(d.iva)}</span></div>
+      <div class="pv-tot"><span>Totale</span><span>${fmtEuro(d.totale)}</span></div>
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-      <button class="btn btn-f" style="flex:1;font-size:11px;min-width:90px" onclick="pvCambiaStato('${d.id}','inviato')">🔵 Inviato</button>
-      <button class="btn btn-f" style="flex:1;font-size:11px;min-width:90px;color:var(--gn)" onclick="pvCambiaStato('${d.id}','accettato')">🟢 Accettato</button>
-      <button class="btn btn-f" style="flex:1;font-size:11px;min-width:90px;color:var(--rd)" onclick="pvCambiaStato('${d.id}','rifiutato')">🔴 Rifiutato</button>
+    <div class="seg pv-stati" role="radiogroup" aria-label="Stato del preventivo">
+      ${['inviato','accettato','rifiutato'].map(st=>`<button type="button" class="seg-btn${d.stato===st?' on':''}" role="radio" aria-checked="${d.stato===st}" onclick="pvCambiaStato('${escJs(d.id)}','${st}')">${PV_STATO_NOME[st]}</button>`).join('')}
     </div>
     ${d.stato==='accettato'?(d.lavoroCalId
-      ?'<div style="background:var(--gnb);border:1px solid var(--gn);border-radius:var(--rs);padding:10px;margin-bottom:10px;font-size:12px;color:var(--gn);display:flex;align-items:center;gap:6px">✅ Collegato al Calendario Lavori — assegna il tecnico da lì</div>'
-      :'<button class="btn btn-p btn-f" style="margin-bottom:10px;font-size:12px" onclick="pvCreaLavoroDaPreventivo(\''+d.id+'\')">📅 Crea lavoro in Calendario</button>')
+      ?'<div class="pv-nota">Collegato al Calendario lavori: assegna il tecnico da lì</div>'
+      :'<button type="button" class="btn btn-p btn-f" style="margin-bottom:10px" onclick="pvCreaLavoroDaPreventivo(\''+escJs(d.id)+'\')">Crea lavoro in Calendario</button>')
       :''}
     ${d.stato==='accettato'?(d.fatturaStato==='fatturato'
-      ?'<div style="background:var(--gnb);border:1px solid var(--gn);border-radius:var(--rs);padding:10px;margin-bottom:10px;font-size:12px;color:var(--gn)">'+
-          '✅ Fatturato'+(d.fatturaNumero?' — n. '+d.fatturaNumero:'')+(d.fatturaData?' del '+new Date(d.fatturaData).toLocaleDateString('it-IT'):'')+
-          '<button onclick="pvSegnaDaFatturare(\''+d.id+'\')" style="background:none;border:none;color:var(--tx3);font-size:11px;text-decoration:underline;cursor:pointer;margin-left:8px">annulla</button>'+
+      ?'<div class="pv-nota">Fatturato'+(d.fatturaNumero?' · n. '+esc(d.fatturaNumero):'')+(d.fatturaData?' del '+new Date(d.fatturaData).toLocaleDateString('it-IT'):'')+
+          '<button type="button" class="btn btn-sm" style="margin-left:auto" onclick="pvSegnaDaFatturare(\''+escJs(d.id)+'\')">Annulla</button>'+
         '</div>'
-      :'<button class="btn btn-f" style="margin-bottom:10px;font-size:12px;border-color:var(--am);color:var(--am)" onclick="pvSegnaFatturato(\''+d.id+'\')">💰 Segna come fatturato</button>')
+      :'<button type="button" class="btn btn-f" style="margin-bottom:10px" onclick="pvSegnaFatturato(\''+escJs(d.id)+'\')">Segna come fatturato</button>')
       :''}
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-f" onclick="pvGeneraPDF('${d.id}')">📄 PDF</button>
-      <button class="btn btn-f" onclick="pvOpenModificaPreventivo('${d.id}')">✏️ Modifica</button>
-      <button class="btn btn-f" onclick="pvDuplicaDoc('${d.id}')">📑 Duplica</button>
-      <button class="btn btn-f" style="color:var(--rd)" onclick="pvDeleteDoc('${d.id}')">🗑</button>
+    <div class="pv-view-actions">
+      <button type="button" class="btn" onclick="pvGeneraPDF('${escJs(d.id)}')">PDF</button>
+      <button type="button" class="btn" onclick="pvOpenModificaPreventivo('${escJs(d.id)}')">Modifica</button>
+      <button type="button" class="btn" onclick="pvDuplicaDoc('${escJs(d.id)}')">Duplica</button>
+      <button type="button" class="btn btn-danger-text" onclick="pvDeleteDoc('${escJs(d.id)}')">Elimina</button>
     </div>`;
   openMod('mPvDocView');
 }
@@ -13840,10 +13853,9 @@ function aiRenderListe(){
   const renderLista=(files,elId,color)=>{
     const el=$(elId);if(!el)return;
     el.innerHTML=files.map((f,i)=>`
-      <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--bg2);border-radius:var(--rs);margin-bottom:4px;font-size:11px">
-        <span>📄</span>
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.name)}</span>
-        <button onclick="aiRimuovi('${elId==='aiListAcc'?'acc':'rif'}',${i})" style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:13px;padding:0">✕</button>
+      <div class="ai-file">
+        <span>${esc(f.name)}</span>
+        <button type="button" class="btn btn-sm btn-danger-text" aria-label="Togli ${esc(f.name)}" onclick="aiRimuovi('${elId==='aiListAcc'?'acc':'rif'}',${i})">Togli</button>
       </div>`).join('');
   };
   renderLista(aiPdfAcc,'aiListAcc','var(--gn)');
@@ -13887,14 +13899,14 @@ async function avviaAnalisiAI(){
   if(!btn||!cnt)return;
   if(aiPdfAcc.length+aiPdfRif.length===0){toast('Carica almeno un PDF','r');return;}
 
-  btn.textContent='⏳ Lettura PDF...';btn.disabled=true;
+  btn.textContent='Lettura dei PDF…';btn.disabled=true;
   if(ris)ris.style.display='none';
 
   try{
     const accLetti=await Promise.all(aiPdfAcc.map(leggiPdf));
     const rifLetti=await Promise.all(aiPdfRif.map(leggiPdf));
     const contesto=val('aiContesto')||'';
-    btn.textContent='🤖 Analisi AI in corso...';
+    btn.textContent='Analisi in corso…';
 
     const msgContent=[];
     accLetti.forEach(p=>{
@@ -13939,21 +13951,23 @@ async function avviaAnalisiAI(){
     if(data.error)throw new Error(data.error.message);
 
     const testo=(data.content||[]).map(c=>c.text||'').join('\n');
-    const html=testo
-      .replace(/## (.*)/g,'<div style="font-size:15px;font-weight:700;color:var(--ac2);margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--b)">$1</div>')
+    // Il testo arriva dall'AI (e indirettamente dai PDF): va escapato prima di applicare il markdown
+    const html=esc(testo)
+      .replace(/^## (.*)$/gm,'<h3>$1</h3>')
       .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-      .replace(/^- (.*)/gm,'<div style="padding:4px 0 4px 12px;border-left:2px solid var(--ac);margin:3px 0;font-size:12px">$1</div>')
-      .replace(/\n/g,'<br>');
+      .replace(/^- (.*)$/gm,'<div class="ai-li">$1</div>')
+      .replace(/\n/g,'<br>')
+      .replace(/<\/h3><br>/g,'</h3>').replace(/<\/div><br>/g,'</div>');
     cnt.innerHTML=html;
     if(ris){ris.style.display='block';ris.scrollIntoView({behavior:'smooth'});}
 
   }catch(e){
     console.error('AI:',e);
     toast('Errore: '+e.message,'r');
-    if(cnt)cnt.innerHTML='<div style="color:var(--rd);padding:12px;background:rgba(239,68,68,.1);border-radius:var(--rs)"><strong>Errore:</strong> '+esc(e.message)+'<br><small>Verifica ANTHROPIC_API_KEY su Vercel → Settings → Environment Variables</small></div>';
+    if(cnt)cnt.innerHTML='<div class="ai-err"><strong>Errore:</strong> '+esc(e.message)+'<br><small>Verifica ANTHROPIC_API_KEY su Vercel → Settings → Environment Variables</small></div>';
     if(ris)ris.style.display='block';
   }
-  btn.textContent='🤖 Analizza con AI';
+  btn.textContent='Analizza con AI';
   btn.disabled=(aiPdfAcc.length+aiPdfRif.length===0);
 }
 
