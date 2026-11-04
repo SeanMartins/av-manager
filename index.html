@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01m';
+const APP_VERSION='v2026.11.01n';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -764,6 +764,37 @@ body.desktop-mode #calGriglia .cal-nome{display:-webkit-box!important;-webkit-li
 .sc-tools{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
 .sc-test-msg{font-size:var(--text-xs);color:var(--color-text-secondary);margin:-6px 0 12px}
 .sc-test-msg:empty{display:none}
+/* ── TOOLS ── */
+.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+@media(min-width:900px){.tool-grid{grid-template-columns:repeat(3,1fr)}}
+.tool-btn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 14px;min-height:64px;text-align:left;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);color:inherit;font:inherit;cursor:pointer;transition:border-color var(--duration-fast)}
+.tool-btn:hover{border-color:var(--color-border-strong)}
+.tool-btn[aria-pressed="true"]{border-color:var(--color-accent);background:var(--color-accent-subtle)}
+.tool-btn b{font-size:var(--text-sm);font-weight:var(--weight-semibold)}
+.tool-btn span{font-size:var(--text-xs);color:var(--color-text-secondary)}
+.tool-desc{font-size:var(--text-sm);color:var(--color-text-secondary);margin:0 0 14px}
+.tool-nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:12px;width:100%}
+.tool-num{text-align:center}
+.tool-num b{display:block;font-size:24px;font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums;color:var(--color-accent-text);letter-spacing:var(--tracking-tight)}
+.tool-num span{font-size:var(--text-xs);font-weight:var(--weight-regular);color:var(--color-text-secondary)}
+.tool-calc{font-size:var(--text-xs);font-weight:var(--weight-regular);color:var(--color-text-secondary);margin-top:8px;text-align:center}
+.tool-info{background:var(--color-surface-sunken);border-radius:var(--radius-md);padding:12px;margin-top:12px;font-size:var(--text-xs);color:var(--color-text-secondary);line-height:1.7}
+.tool-info h3{font-size:var(--text-xs);font-weight:var(--weight-semibold);color:var(--color-text);margin:0 0 4px}
+.tool-info code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.spl-box{text-align:center;margin-bottom:16px}
+.spl-val{font-size:64px;font-weight:var(--weight-semibold);line-height:1;font-variant-numeric:tabular-nums;color:var(--color-text)}
+.spl-val[data-livello="medio"]{color:var(--color-warning)}
+.spl-val[data-livello="alto"]{color:var(--color-danger)}
+.spl-sub{font-size:var(--text-sm);color:var(--color-text-secondary);margin-top:4px}
+.spl-bar{background:var(--color-surface-sunken);border-radius:8px;height:16px;overflow:hidden;margin-bottom:16px}
+.spl-fill{height:100%;width:0;background:linear-gradient(to right,var(--color-success),var(--color-warning),var(--color-danger));transition:width .1s}
+.tool-actions{display:flex;gap:8px}
+.tool-actions .btn{flex:1}
+.tool-foot{font-size:var(--text-xs);color:var(--color-text-secondary);margin-top:10px;text-align:center}
+.cov-canvas{width:100%;height:180px;border-radius:var(--radius-md);background:var(--color-surface-sunken);margin-top:12px;display:block}
+.mezzo-facts{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin:8px 0 0}
+.mezzo-facts dt{font-size:11px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:var(--tracking-caps)}
+.mezzo-facts dd{font-size:13px;font-weight:var(--weight-medium);margin:1px 0 0;font-variant-numeric:tabular-nums}
 .ai-err{color:var(--color-danger);background:var(--color-danger-subtle);padding:12px;border-radius:var(--radius-md)}
 
 /* ── FORUM ── */
@@ -1174,125 +1205,99 @@ body.desktop-mode #app{max-width:100vw!important;width:100vw!important;margin:0!
 
     <!-- TOOLS TECNICI -->
     <div class="page" id="p-tools">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px">
-        <button class="btn btn-f" id="tool-delay" onclick="showTool('delay')" style="flex-direction:column;gap:4px;padding:14px;border-color:var(--ac);color:var(--ac2)">
-          <span style="font-size:22px">⏱</span><span style="font-size:12px;font-weight:600">Delay Audio</span>
-          <span style="font-size:10px;color:var(--tx2)">ms per distanza</span>
-        </button>
-        <button class="btn btn-f" id="tool-spl" onclick="showTool('spl')" style="flex-direction:column;gap:4px;padding:14px">
-          <span style="font-size:22px">🎚</span><span style="font-size:12px;font-weight:600">SPL Meter</span>
-          <span style="font-size:10px;color:var(--tx2)">livelli col mic</span>
-        </button>
-        <button class="btn btn-f" id="tool-throw" onclick="showTool('throw')" style="flex-direction:column;gap:4px;padding:14px">
-          <span style="font-size:22px">📐</span><span style="font-size:12px;font-weight:600">Throw Ratio</span>
-          <span style="font-size:10px;color:var(--tx2)">distanza proiettore</span>
-        </button>
-        <button class="btn btn-f" id="tool-coverage" onclick="showTool('coverage')" style="flex-direction:column;gap:4px;padding:14px">
-          <span style="font-size:22px">🔊</span><span style="font-size:12px;font-weight:600">Speaker Coverage</span>
-          <span style="font-size:10px;color:var(--tx2)">copertura area</span>
-        </button>
-        <button class="btn btn-f" id="tool-mezzi" onclick="showTool('mezzi')" style="flex-direction:column;gap:4px;padding:14px;grid-column:1/-1">
-          <span style="font-size:22px">🚐</span><span style="font-size:12px;font-weight:600">Mezzi aziendali</span>
-          <span style="font-size:10px;color:var(--tx2)">dimensioni, peso, consumi, potenza</span>
-        </button>
-        <button class="btn btn-f" id="tool-schede" onclick="showTool('schede')" style="flex-direction:column;gap:4px;padding:14px;grid-column:1/-1">
-          <span style="font-size:22px">📋</span><span style="font-size:12px;font-weight:600">Schede tecniche materiali</span>
-          <span style="font-size:10px;color:var(--tx2)">elenco articoli già cercati</span>
-        </button>
+      <div class="page-head desk-only"><div><h1 class="page-title">Tools tecnici</h1></div></div>
+      <div class="tool-grid">
+        <button type="button" class="tool-btn" id="tool-delay" aria-pressed="false" aria-controls="tool-panel-delay" onclick="showTool('delay')"><b>Delay audio</b><span>ms in base alla distanza</span></button>
+        <button type="button" class="tool-btn" id="tool-spl" aria-pressed="false" aria-controls="tool-panel-spl" onclick="showTool('spl')"><b>Fonometro</b><span>livello col microfono</span></button>
+        <button type="button" class="tool-btn" id="tool-throw" aria-pressed="false" aria-controls="tool-panel-throw" onclick="showTool('throw')"><b>Throw ratio</b><span>distanza del proiettore</span></button>
+        <button type="button" class="tool-btn" id="tool-coverage" aria-pressed="false" aria-controls="tool-panel-coverage" onclick="showTool('coverage')"><b>Copertura speaker</b><span>area coperta</span></button>
+        <button type="button" class="tool-btn" id="tool-mezzi" aria-pressed="false" aria-controls="tool-panel-mezzi" onclick="showTool('mezzi')"><b>Mezzi aziendali</b><span>misure, peso, consumi</span></button>
+        <button type="button" class="tool-btn" id="tool-schede" aria-pressed="false" aria-controls="tool-panel-schede" onclick="showTool('schede')"><b>Schede tecniche</b><span>articoli già cercati</span></button>
       </div>
 
       <!-- DELAY AUDIO -->
-      <div id="tool-panel-delay" class="tool-panel" style="display:none">
-        <div class="tool-title">⏱ Calcolatore Delay Audio</div>
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Calcola il ritardo da applicare a uno speaker ritardato rispetto alla sorgente principale</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-          <div class="ig"><label class="il">Distanza speaker (m)</label><input type="number" id="delDist" value="10" step="0.5" min="0" oninput="calcDelay()"></div>
-          <div class="ig"><label class="il">Temperatura aria (°C)</label><input type="number" id="delTemp" value="20" step="1" oninput="calcDelay()"></div>
+      <section id="tool-panel-delay" class="tool-panel" style="display:none" aria-labelledby="tt-delay">
+        <h2 class="tool-title" id="tt-delay">Delay audio</h2>
+        <p class="tool-desc">Ritardo da applicare a uno speaker rispetto alla sorgente principale.</p>
+        <div class="grid2">
+          <div class="ig"><label class="il" for="delDist">Distanza speaker (m)</label><input type="number" id="delDist" value="10" step="0.5" min="0" inputmode="decimal" oninput="calcDelay()"></div>
+          <div class="ig"><label class="il" for="delTemp">Temperatura aria (°C)</label><input type="number" id="delTemp" value="20" step="1" inputmode="decimal" oninput="calcDelay()"></div>
         </div>
-        <div class="ig"><label class="il">Offset aggiuntivo (ms)</label><input type="number" id="delOffset" value="0" step="0.1" oninput="calcDelay()"></div>
-        <div id="delResult" class="tool-result"></div>
-        <div style="background:var(--bg2);border-radius:var(--rs);padding:12px;margin-top:12px">
-          <div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:6px">📚 Formula</div>
-          <div style="font-size:11px;color:var(--tx3);font-family:monospace">v = 331.3 + 0.606 × T (m/s)<br>delay = distanza / velocità × 1000 (ms)</div>
+        <div class="ig"><label class="il" for="delOffset">Offset aggiuntivo (ms)</label><input type="number" id="delOffset" value="0" step="0.1" inputmode="decimal" oninput="calcDelay()"></div>
+        <div id="delResult" class="tool-result" aria-live="polite"></div>
+        <div class="tool-info">
+          <h3>Formula</h3>
+          <code>v = 331,3 + 0,606 × T (m/s)<br>delay = distanza / v × 1000 (ms)</code>
         </div>
-      </div>
+      </section>
 
       <!-- SPL METER -->
-      <div id="tool-panel-spl" class="tool-panel" style="display:none">
-        <div class="tool-title">🎚 SPL Meter</div>
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Misura il livello sonoro usando il microfono del telefono. I valori sono indicativi — per misure professionali usa un fonometro calibrato.</div>
-        <div style="text-align:center;margin-bottom:16px">
-          <div id="splValue" style="font-size:64px;font-weight:700;color:var(--gn);line-height:1;font-variant-numeric:tabular-nums">—</div>
-          <div style="font-size:14px;color:var(--tx2);margin-top:4px">dB SPL (relativo)</div>
-          <div id="splPeak" style="font-size:13px;color:var(--rd);margin-top:4px">Peak: —</div>
+      <section id="tool-panel-spl" class="tool-panel" style="display:none" aria-labelledby="tt-spl">
+        <h2 class="tool-title" id="tt-spl">Fonometro</h2>
+        <p class="tool-desc">Misura il livello sonoro con il microfono del telefono. Per misure professionali usa un fonometro calibrato.</p>
+        <div class="spl-box">
+          <div id="splValue" class="spl-val">—</div>
+          <div class="spl-sub">dB SPL (relativo)</div>
+          <div id="splPeak" class="spl-sub">Picco: —</div>
         </div>
-        <!-- Meter bar -->
-        <div style="background:var(--bg2);border-radius:8px;height:20px;overflow:hidden;margin-bottom:16px;position:relative">
-          <div id="splBar" style="height:100%;width:0%;background:linear-gradient(to right,var(--gn),var(--am),var(--rd));transition:width .1s;border-radius:8px"></div>
+        <div class="spl-bar" aria-hidden="true"><div id="splBar" class="spl-fill"></div></div>
+        <div class="tool-actions">
+          <button type="button" id="splStartBtn" class="btn btn-p" onclick="startSPL()">Avvia</button>
+          <button type="button" id="splStopBtn" class="btn" onclick="stopSPL()" style="display:none">Ferma</button>
+          <button type="button" class="btn" onclick="resetSPLPeak()">Azzera picco</button>
         </div>
-        <div style="display:flex;gap:8px">
-          <button id="splStartBtn" class="btn btn-p btn-f" onclick="startSPL()">🎤 Avvia</button>
-          <button id="splStopBtn" class="btn btn-f" onclick="stopSPL()" style="display:none">⏹ Stop</button>
-          <button class="btn btn-f" onclick="resetSPLPeak()">↺ Reset peak</button>
-        </div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:10px;text-align:center">⚠️ Valori indicativi — dipendono dal microfono del dispositivo</div>
-      </div>
+        <p class="tool-foot">Valori indicativi: dipendono dal microfono del dispositivo.</p>
+      </section>
 
       <!-- THROW RATIO -->
-      <div id="tool-panel-throw" class="tool-panel" style="display:none">
-        <div class="tool-title">📐 Throw Ratio Proiettore</div>
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Calcola distanza, dimensione schermo o throw ratio per qualsiasi combinazione di valori.</div>
+      <section id="tool-panel-throw" class="tool-panel" style="display:none" aria-labelledby="tt-throw">
+        <h2 class="tool-title" id="tt-throw">Throw ratio del proiettore</h2>
+        <p class="tool-desc">Calcola distanza, larghezza dell'immagine o throw ratio a partire dagli altri due valori.</p>
         <div class="ig">
-          <label class="il">Calcola</label>
+          <label class="il" for="throwCalc">Calcola</label>
           <select id="throwCalc" onchange="updateThrowInputs();calcThrow()">
             <option value="dist">Distanza proiettore → schermo</option>
             <option value="width">Larghezza immagine proiettata</option>
             <option value="ratio">Throw ratio necessario</option>
           </select>
         </div>
-        <div id="throwInputs" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px"></div>
-        <div id="throwResult" class="tool-result"></div>
-        <div id="throwGuide" style="background:var(--bg2);border-radius:var(--rs);padding:12px;margin-top:12px">
-          <div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:8px">📋 Throw ratio tipici</div>
-          <div style="font-size:11px;color:var(--tx3);line-height:1.8">
-            Short throw: 0.4 – 0.8<br>
-            Standard: 1.2 – 2.0<br>
-            Long throw: 2.0 – 3.0+<br>
-            Ultra short throw: &lt; 0.4
-          </div>
+        <div id="throwInputs" class="grid2"></div>
+        <div id="throwResult" class="tool-result" aria-live="polite"></div>
+        <div id="throwGuide" class="tool-info">
+          <h3>Throw ratio tipici</h3>
+          Ultra short throw: meno di 0,4<br>Short throw: 0,4 – 0,8<br>Standard: 1,2 – 2,0<br>Long throw: 2,0 – 3,0 e oltre
         </div>
-      </div>
+      </section>
 
       <!-- SPEAKER COVERAGE -->
-      <div id="tool-panel-coverage" class="tool-panel" style="display:none">
-        <div class="tool-title">🔊 Speaker Coverage</div>
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Calcola la copertura orizzontale e verticale di uno speaker a una certa distanza.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-          <div class="ig"><label class="il">Angolo orizzontale (°)</label><input type="number" id="covAngH" value="90" min="1" max="360" oninput="calcCoverage()"></div>
-          <div class="ig"><label class="il">Angolo verticale (°)</label><input type="number" id="covAngV" value="60" min="1" max="360" oninput="calcCoverage()"></div>
-          <div class="ig"><label class="il">Distanza (m)</label><input type="number" id="covDist" value="10" min="0.1" step="0.5" oninput="calcCoverage()"></div>
-          <div class="ig"><label class="il">Altezza mount (m)</label><input type="number" id="covHeight" value="3" min="0" step="0.5" oninput="calcCoverage()"></div>
+      <section id="tool-panel-coverage" class="tool-panel" style="display:none" aria-labelledby="tt-cov">
+        <h2 class="tool-title" id="tt-cov">Copertura speaker</h2>
+        <p class="tool-desc">Copertura orizzontale e verticale di uno speaker a una certa distanza.</p>
+        <div class="grid2">
+          <div class="ig"><label class="il" for="covAngH">Angolo orizzontale (°)</label><input type="number" id="covAngH" value="90" min="1" max="360" inputmode="decimal" oninput="calcCoverage()"></div>
+          <div class="ig"><label class="il" for="covAngV">Angolo verticale (°)</label><input type="number" id="covAngV" value="60" min="1" max="360" inputmode="decimal" oninput="calcCoverage()"></div>
+          <div class="ig"><label class="il" for="covDist">Distanza (m)</label><input type="number" id="covDist" value="10" min="0.1" step="0.5" inputmode="decimal" oninput="calcCoverage()"></div>
+          <div class="ig"><label class="il" for="covHeight">Altezza di montaggio (m)</label><input type="number" id="covHeight" value="3" min="0" step="0.5" inputmode="decimal" oninput="calcCoverage()"></div>
         </div>
-        <div id="covResult" class="tool-result"></div>
-        <!-- Canvas visualizzazione -->
-        <canvas id="covCanvas" style="width:100%;max-height:180px;border-radius:var(--rs);background:var(--bg2);margin-top:12px;display:block"></canvas>
-      </div>
+        <div id="covResult" class="tool-result" aria-live="polite"></div>
+        <canvas id="covCanvas" class="cov-canvas" role="img" aria-label="Schema del cono di copertura"></canvas>
+      </section>
 
       <!-- MEZZI AZIENDALI -->
-      <div id="tool-panel-mezzi" class="tool-panel" style="display:none">
-        <div class="tool-title">🚐 Mezzi aziendali</div>
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Dimensioni, peso, consumi e potenza — utile quando sei on site e il cliente chiede.</div>
-        <button class="btn btn-p btn-f" style="margin-bottom:12px" onclick="apriNuovoMezzo()">+ Aggiungi mezzo</button>
-        <div id="mezziList"><div class="empty">Caricamento...</div></div>
-      </div>
+      <section id="tool-panel-mezzi" class="tool-panel" style="display:none" aria-labelledby="tt-mezzi">
+        <h2 class="tool-title" id="tt-mezzi">Mezzi aziendali</h2>
+        <p class="tool-desc">Misure, peso, consumi e potenza: utile on site quando il cliente chiede.</p>
+        <button type="button" class="btn btn-p btn-f" style="margin-bottom:12px" onclick="apriNuovoMezzo()">+ Aggiungi mezzo</button>
+        <div id="mezziList"><div class="empty">Caricamento…</div></div>
+      </section>
 
       <!-- SCHEDE TECNICHE MATERIALI (elenco articoli con scheda già generata) -->
-      <div id="tool-panel-schede" class="tool-panel" style="display:none">
-        <div class="tool-title">📋 Schede tecniche materiali</div>
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Articoli del Magazzino con scheda tecnica già cercata — tocca per vederla, senza dover cercare l'articolo da capo.</div>
-        <input type="text" id="schedeSearch" placeholder="🔍 Cerca per nome o marca..." oninput="renderSchedeTecnicheList()" style="margin-bottom:10px">
-        <div id="schedeTecnicheList"><div class="empty">Caricamento...</div></div>
-      </div>
+      <section id="tool-panel-schede" class="tool-panel" style="display:none" aria-labelledby="tt-schede">
+        <h2 class="tool-title" id="tt-schede">Schede tecniche dei materiali</h2>
+        <p class="tool-desc">Articoli del Magazzino con la scheda tecnica già cercata: tocca per aprirla.</p>
+        <input type="search" id="schedeSearch" class="pv-search" placeholder="Cerca per nome o marca" aria-label="Cerca scheda tecnica" oninput="renderSchedeTecnicheList()">
+        <div id="schedeTecnicheList"><div class="empty">Caricamento…</div></div>
+      </section>
     </div>
 
     <!-- DASHBOARD KPI (solo desktop) -->
@@ -13998,7 +14003,7 @@ function showTool(name){
   ['delay','spl','throw','coverage','mezzi','schede'].forEach(t=>{
     const btn=$('tool-'+t);
     const panel=$('tool-panel-'+t);
-    if(btn)btn.style.cssText=btn.style.cssText.replace('background:var(--acb);border-color:var(--ac);color:var(--ac2)','');
+    if(btn)btn.setAttribute('aria-pressed','false');
     if(panel)panel.style.display='none';
   });
   // Ferma SPL se si cambia tool
@@ -14006,7 +14011,7 @@ function showTool(name){
   // Attiva selezionato
   const btn=$('tool-'+name);
   const panel=$('tool-panel-'+name);
-  if(btn)btn.style.cssText+='background:var(--acb);border-color:var(--ac);color:var(--ac2)';
+  if(btn)btn.setAttribute('aria-pressed','true');
   if(panel)panel.style.display='block';
   // Init specifici
   if(name==='delay')calcDelay();
@@ -14023,22 +14028,23 @@ function renderSchedeTecnicheList(){
   if(q)lista=lista.filter(m=>(m.nome||'').toLowerCase().includes(q)||(m.marca||'').toLowerCase().includes(q));
   lista.sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
   if(!cacheMag.some(m=>m.schedaTecnica)){
-    el.innerHTML='<div class="empty">Nessuna scheda tecnica generata ancora — vai su un articolo del Magazzino e premi "🤖 Genera con IA"</div>';
+    el.innerHTML='<div class="empty">Nessuna scheda tecnica ancora: apri un articolo del Magazzino e generala con l\'AI</div>';
     return;
   }
-  if(!lista.length){el.innerHTML='<div class="empty">Nessun risultato per "'+q+'"</div>';return;}
+  if(!lista.length){el.innerHTML='<div class="empty">Nessun risultato per "'+esc(q)+'"</div>';return;}
   el.innerHTML=lista.map(m=>{
     const s=m.schedaTecnica;
-    const affColor=s.affidabilita==='alta'?'var(--gn)':s.affidabilita==='media'?'var(--am)':'var(--rd)';
-    const riassunto=[s.peso_kg?s.peso_kg+' kg':'',s.potenza_w?s.potenza_w+' W':''].filter(Boolean).join(' · ');
-    return '<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="closeMod(\'mNewArt\');mostraStorico(\''+m.id+'\')">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center">'+
-        '<div><div style="font-size:13px;font-weight:600">'+esc(m.nome)+'</div>'+
-        '<div style="font-size:11px;color:var(--tx2)">'+(m.marca||'—')+(riassunto?' · '+riassunto:'')+'</div></div>'+
-        '<span style="font-size:10px;color:'+affColor+';font-weight:600;white-space:nowrap">'+(s.affidabilita||'—')+'</span>'+
-      '</div>'+
+    const affBdg=s.affidabilita==='alta'?'bg':s.affidabilita==='media'?'ba':'bn';
+    const riassunto=[s.peso_kg?esc(s.peso_kg)+' kg':'',s.potenza_w?esc(s.potenza_w)+' W':''].filter(Boolean).join(' · ');
+    return '<div class="ditem">'+
+      '<button type="button" class="pv-item-main" onclick="closeMod(\'mNewArt\');mostraStorico(\''+escJs(m.id)+'\')">'+
+        '<span class="ditem-title">'+esc(m.nome)+'</span>'+
+        '<span class="ditem-sub">'+esc(m.marca||'—')+(riassunto?' · '+riassunto:'')+'</span>'+
+      '</button>'+
+      '<span class="bdg bdg-xs '+affBdg+'" title="Affidabilità della scheda">'+esc(s.affidabilita||'—')+'</span>'+
     '</div>';
   }).join('');
+  el.innerHTML='<div class="card pv-list">'+el.innerHTML+'</div>';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -14060,18 +14066,16 @@ function renderMezzi(){
   const el=$('mezziList');if(!el)return;
   if(!cacheMezzi.length){el.innerHTML='<div class="empty">Nessun mezzo ancora — aggiungine uno</div>';return;}
   el.innerHTML=cacheMezzi.map(m=>{
-    const dim=[m.altezza?m.altezza+'m (H)':'',m.larghezza?m.larghezza+'m (L)':'',m.lunghezza?m.lunghezza+'m (Lu)':''].filter(Boolean).join(' × ');
-    return '<div class="card" style="margin-bottom:10px;cursor:pointer" onclick="apriModificaMezzo(\''+m.id+'\')">'+
-      '<div style="font-size:14px;font-weight:700">🚐 '+esc(m.nome||'—')+'</div>'+
-      (dim?'<div style="font-size:12px;color:var(--tx2);margin-top:4px">📐 '+dim+'</div>':'')+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;font-size:12px;color:var(--tx2)">'+
-        (m.peso?'<div>⚖️ Peso: '+m.peso+' kg</div>':'')+
-        (m.carico?'<div>📦 Carico: '+m.carico+' kg</div>':'')+
-        (m.potenza?'<div>⚙️ Potenza: '+m.potenza+'</div>':'')+
-        (m.consumi?'<div>⛽ Consumi: '+m.consumi+' l/100km</div>':'')+
-      '</div>'+
-      (m.note?'<div style="font-size:11px;color:var(--tx3);margin-top:6px;white-space:pre-wrap">'+esc(m.note)+'</div>':'')+
-    '</div>';
+    const dim=[m.altezza?'H '+esc(m.altezza)+' m':'',m.larghezza?'L '+esc(m.larghezza)+' m':'',m.lunghezza?'Lu '+esc(m.lunghezza)+' m':''].filter(Boolean).join(' × ');
+    const fatti=[['Peso',m.peso?esc(m.peso)+' kg':''],['Carico utile',m.carico?esc(m.carico)+' kg':''],['Potenza',esc(m.potenza||'')],['Consumi',m.consumi?esc(m.consumi)+' l/100 km':'']].filter(f=>f[1]);
+    return '<article class="ces-card">'+
+      '<button type="button" class="sc-open" onclick="apriModificaMezzo(\''+escJs(m.id)+'\')">'+
+        '<h3 class="cal-job-title">'+esc(m.nome||'—')+'</h3>'+
+        (dim?'<div class="sc-meta">'+dim+'</div>':'')+
+      '</button>'+
+      (fatti.length?'<dl class="mezzo-facts">'+fatti.map(f=>'<div><dt>'+f[0]+'</dt><dd>'+f[1]+'</dd></div>').join('')+'</dl>':'')+
+      (m.note?'<p class="ces-note" style="white-space:pre-wrap">'+esc(m.note)+'</p>':'')+
+    '</article>';
   }).join('');
 }
 
@@ -14143,20 +14147,13 @@ function calcDelay(){
   const vSound=331.3+(0.606*temp);
   const delayMs=(dist/vSound)*1000+offset;
   const el=$('delResult');if(!el)return;
+  const f=n=>n.toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1});
   el.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%">
-      <div style="text-align:center">
-        <div style="font-size:28px;font-weight:800;color:var(--ac2)">${delayMs.toFixed(1)}</div>
-        <div style="font-size:12px;color:var(--tx2)">ms totale</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:20px;font-weight:700;color:var(--tx)">${vSound.toFixed(1)}</div>
-        <div style="font-size:12px;color:var(--tx2)">m/s a ${temp}°C</div>
-      </div>
+    <div class="tool-nums">
+      <div class="tool-num"><b>${f(delayMs)}</b><span>ms in totale</span></div>
+      <div class="tool-num"><b>${f(vSound)}</b><span>m/s a ${temp} °C</span></div>
     </div>
-    <div style="font-size:11px;color:var(--tx3);margin-top:8px;text-align:center">
-      ${dist}m ÷ ${vSound.toFixed(1)}m/s = ${((dist/vSound)*1000).toFixed(1)}ms${offset?` + ${offset}ms offset`:''}
-    </div>`;
+    <div class="tool-calc">${dist} m ÷ ${f(vSound)} m/s = ${f((dist/vSound)*1000)} ms${offset?` + ${offset} ms di offset`:''}</div>`;
 }
 
 // ── SPL METER ──
@@ -14194,11 +14191,11 @@ function updateSPL(){
   const peakEl=$('splPeak');
   if(valEl)valEl.textContent=isFinite(db)?(db+94).toFixed(1):'—'; // +94 offset SPL relativo
   if(barEl)barEl.style.width=pct+'%';
-  if(peakEl&&isFinite(splPeak))peakEl.textContent='Peak: '+(splPeak+94).toFixed(1)+' dB';
+  if(peakEl&&isFinite(splPeak))peakEl.textContent='Picco: '+(splPeak+94).toFixed(1)+' dB';
   // Colore in base al livello
   if(valEl){
     const spl=db+94;
-    valEl.style.color=spl>100?'var(--rd)':spl>85?'var(--am)':'var(--gn)';
+    valEl.dataset.livello=spl>100?'alto':spl>85?'medio':'';
   }
   splAnimFrame=requestAnimationFrame(updateSPL);
 }
@@ -14260,13 +14257,13 @@ function calcThrow(){
   } else if(mode==='width'){
     const w=dist/ratio;
     result=w.toFixed(2)+' m';
-    sub='Larghezza immagine proiettata ('+Math.round(w/0.0254*39.37/39.37*100/2.54)+'")';
+    sub='Larghezza immagine proiettata ('+Math.round(w/0.0254)+'″)';
   } else {
     const r=dist/width;
     result=r.toFixed(2);
     sub='Throw ratio necessario · '+(r<0.4?'Ultra short throw':r<0.8?'Short throw':r<1.2?'Semi short':r<2.0?'Standard':'Long throw');
   }
-  el.innerHTML='<div><div style="font-size:28px;font-weight:800">'+result+'</div><div style="font-size:12px;color:var(--tx2);margin-top:4px">'+sub+'</div></div>';
+  el.innerHTML='<div class="tool-nums"><div class="tool-num"><b>'+result.replace('.',',')+'</b><span>'+sub+'</span></div></div>';
 }
 
 // ── SPEAKER COVERAGE ──
@@ -14282,20 +14279,12 @@ function calcCoverage(){
   // Distanza proiezione a terra (dalla base del mount)
   const distTerra=Math.sqrt(dist*dist+height*height);
   const el=$('covResult');if(!el)return;
+  const f=n=>n.toLocaleString('it-IT',{maximumFractionDigits:1});
   el.innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%">
-      <div style="text-align:center">
-        <div style="font-size:20px;font-weight:800;color:var(--ac2)">${covW.toFixed(1)}m</div>
-        <div style="font-size:11px;color:var(--tx2)">Larghezza</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:20px;font-weight:800;color:var(--ac2)">${covD.toFixed(1)}m</div>
-        <div style="font-size:11px;color:var(--tx2)">Profondità</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:20px;font-weight:800;color:var(--am)">${area.toFixed(0)}m²</div>
-        <div style="font-size:11px;color:var(--tx2)">Area</div>
-      </div>
+    <div class="tool-nums">
+      <div class="tool-num"><b>${f(covW)} m</b><span>Larghezza</span></div>
+      <div class="tool-num"><b>${f(covD)} m</b><span>Profondità</span></div>
+      <div class="tool-num"><b>${Math.round(area)} m²</b><span>Area</span></div>
     </div>`;
   // Disegna canvas
   drawCoverageCanvas(angH,dist,covW);
@@ -14308,26 +14297,27 @@ function drawCoverageCanvas(angH,dist,covW){
   const ctx=c.getContext('2d');
   const cx=c.width/2,cy=20,scale=Math.min((c.width-40)/covW,(c.height-40)/dist);
   ctx.clearRect(0,0,c.width,c.height);
+  const cs=getComputedStyle(document.documentElement);
+  const colAcc=cs.getPropertyValue('--color-accent').trim()||'#272A71';
+  const colTxt=cs.getPropertyValue('--color-text-secondary').trim()||'#5E574E';
   // Speaker
-  ctx.fillStyle='#6c63ff';
+  ctx.fillStyle=colAcc;
   ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#fff';ctx.font='10px sans-serif';ctx.textAlign='center';
-  ctx.fillText('🔊',cx,cy+3);
   // Cono copertura
   const halfAng=(angH/2)*Math.PI/180;
   const endL={x:cx-Math.sin(halfAng)*dist*scale,y:cy+Math.cos(halfAng)*dist*scale};
   const endR={x:cx+Math.sin(halfAng)*dist*scale,y:cy+Math.cos(halfAng)*dist*scale};
   ctx.beginPath();
   ctx.moveTo(cx,cy);ctx.lineTo(endL.x,endL.y);ctx.lineTo(endR.x,endR.y);ctx.closePath();
-  ctx.fillStyle='rgba(108,99,255,.15)';ctx.fill();
-  ctx.strokeStyle='rgba(108,99,255,.6)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.globalAlpha=.15;ctx.fillStyle=colAcc;ctx.fill();
+  ctx.globalAlpha=.7;ctx.strokeStyle=colAcc;ctx.lineWidth=1.5;ctx.stroke();ctx.globalAlpha=1;
   // Arco copertura
   ctx.beginPath();
   ctx.arc(cx,cy,dist*scale,-Math.PI/2-halfAng+Math.PI/2,-Math.PI/2+halfAng+Math.PI/2);
-  ctx.strokeStyle='rgba(108,99,255,.4)';ctx.lineWidth=1;ctx.stroke();
-  // Labels
-  ctx.fillStyle='var(--tx2)';ctx.font='11px sans-serif';ctx.textAlign='center';
-  ctx.fillStyle='rgba(255,255,255,.7)';
+  ctx.globalAlpha=.45;ctx.strokeStyle=colAcc;ctx.lineWidth=1;ctx.stroke();ctx.globalAlpha=1;
+  // Etichette
+  ctx.font='12px '+(cs.getPropertyValue('--font-sans').trim()||'sans-serif');ctx.textAlign='center';
+  ctx.fillStyle=colTxt;
   ctx.fillText(covW.toFixed(1)+'m',(endL.x+endR.x)/2,endL.y+14);
   ctx.fillText(dist+'m',cx+dist*scale*0.15+8,cy+dist*scale/2);
 }
