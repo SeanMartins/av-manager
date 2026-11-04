@@ -30,7 +30,7 @@
 <script>
 // Versione dell'app: unico punto da aggiornare a ogni consegna.
 // Popola la variabile CSS --app-version (footer mobile) e ogni elemento con [data-app-version].
-const APP_VERSION='v2026.11.01o';
+const APP_VERSION='v2026.11.01p';
 document.documentElement.style.setProperty('--app-version',JSON.stringify(APP_VERSION));
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-app-version]').forEach(el=>{el.textContent=APP_VERSION;});
@@ -4310,6 +4310,31 @@ function arrotondaA15Min(date){
   return new Date(Math.round(date.getTime()/ms)*ms);
 }
 
+// ── Pause dentro il turno ──
+// Entrata e uscita sono arrotondate ai 15 minuti, le pause no: con un turno breve l'uscita
+// arrotondata può cadere prima della pausa reale. Una pausa conta solo per la parte che sta
+// tra entrata e uscita; pause con fine prima dell'inizio (inserite a mano male) non contano;
+// pause sovrapposte contano una volta sola. Le ore nette non scendono mai sotto zero.
+function pauseDentroTurno(entrataISO,uscitaISO,pause){
+  const ini=new Date(entrataISO).getTime(),fin=new Date(uscitaISO).getTime();
+  if(!(fin>ini))return [];
+  return (pause||[]).filter(x=>x&&x.inizio&&x.fine)
+    .map(x=>[Math.max(ini,new Date(x.inizio).getTime()),Math.min(fin,new Date(x.fine).getTime())])
+    .filter(x=>x[1]>x[0])
+    .sort((a,b)=>a[0]-b[0])
+    .reduce((out,x)=>{const l=out[out.length-1];if(l&&x[0]<=l[1])l[1]=Math.max(l[1],x[1]);else out.push(x);return out;},[])
+    .map(x=>({inizio:new Date(x[0]).toISOString(),fine:new Date(x[1]).toISOString()}));
+}
+function pauseMsDentro(p,fineMs){
+  if(!p||!p.entrata)return 0;
+  const fine=fineMs!=null?fineMs:(p.uscita?new Date(p.uscita).getTime():Date.now());
+  return pauseDentroTurno(p.entrata,new Date(fine).toISOString(),p.pause).reduce((s,x)=>s+(new Date(x.fine)-new Date(x.inizio)),0);
+}
+function oreNetteMs(p){
+  if(!p||!p.entrata||!p.uscita)return null;
+  return Math.max(0,new Date(p.uscita)-new Date(p.entrata)-pauseMsDentro(p));
+}
+
 async function punch(){
   const btn=$('pbtn'),stat=$('pstat'),pauseBtn=$('pauseBtn');
   const now=new Date(),nowArr=arrotondaA15Min(now),t=pad(nowArr.getHours())+':'+pad(nowArr.getMinutes());
@@ -4338,6 +4363,11 @@ async function punch(){
       pause.push({inizio:pauseStart,fine:nowArr.toISOString()});
       inPausa=false;pauseStart=null;
     }
+    // Pause limitate a entrata–uscita (l'uscita arrotondata può cadere prima di una pausa appena chiusa)
+    let entrataISO=null;
+    try{entrataISO=JSON.parse(localStorage.getItem('av_punch')||'{}').entrata||null;}catch(e){}
+    if(!entrataISO&&punchStart)entrataISO=arrotondaA15Min(new Date(punchStart)).toISOString();
+    if(entrataISO)pause=pauseDentroTurno(entrataISO,nowArr.toISOString(),pause);
     punchedIn=false;
     btn.className='pbtn pin';btn.textContent='Timbra entrata';
     pauseBtn.style.display='none';setPausaBtn(false);
@@ -9332,7 +9362,7 @@ async function doExport(){
         let netteGiorno=0,sessioniComplete=true;
         pList.forEach(p=>{
           if(p.entrata&&p.uscita){
-            const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+            const pauseMs=pauseMsDentro(p);
             netteGiorno+=Math.max(0,(new Date(p.uscita)-new Date(p.entrata)-pauseMs)/3600000);
           } else {
             sessioniComplete=false; // turno ancora aperto (mai timbrata l'uscita)
@@ -11162,11 +11192,8 @@ async function perCalcolaStraordinariAuto(uid,anno){
     if(!isGiornoLavorativo(giornoISO))return; // weekend/festivo: eventuali ore qui sono già "straordinario speciale", gestito manualmente
     const entrata=new Date(p.entrata),uscita=new Date(p.uscita);
     let oreLavorate=(uscita-entrata)/3600000;
-    const pauseMin=(p.pause||[]).reduce((s,pa)=>{
-      if(pa.inizio&&pa.fine)return s+(new Date(pa.fine)-new Date(pa.inizio))/60000;
-      return s;
-    },0);
-    oreLavorate-=pauseMin/60;
+    const pauseMin=pauseMsDentro(p)/60000;
+    oreLavorate=Math.max(0,oreLavorate-pauseMin/60);
     if(oreLavorate<0)oreLavorate=0;
     oreByDay[giornoISO]=(oreByDay[giornoISO]||0)+oreLavorate;
   });
@@ -11553,7 +11580,7 @@ function perRaccoglPresenzePerExport(uid,inizio,fine){
       presenzeG.forEach(p=>{
         const ent=new Date(p.entrata);
         const usc=p.uscita?new Date(p.uscita):null;
-        const pauseMin=(p.pause||[]).reduce((s,pa)=>{if(pa.inizio&&pa.fine)return s+(new Date(pa.fine)-new Date(pa.inizio))/60000;return s;},0);
+        const pauseMin=usc?pauseMsDentro(p)/60000:0;
         const oreNette=usc?Math.max(0,(usc-ent)/3600000-pauseMin/60):null;
         righe.push({
           data:giornoISO,
@@ -14488,7 +14515,7 @@ async function renderArchivioPresenze(){
     let totMese=0,giorniMese=0,straordMese=0;
     pList.forEach(p=>{
       if(!p.uscita)return;
-      const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+      const pauseMs=pauseMsDentro(p);
       const nette=Math.max(0,(new Date(p.uscita)-new Date(p.entrata))-pauseMs);
       totMese+=nette;
       giorniMese++;
@@ -14554,7 +14581,7 @@ async function esportaArchivioAnno(){
     const mese=MESI_NOMI[d.getMonth()]+' '+d.getFullYear();
     const data=pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear();
     const giorno=gg[d.getDay()];
-    const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+    const pauseMs=pauseMsDentro(p);
     const lordeMs=p.uscita?(new Date(p.uscita)-d):0;
     const netteMs=Math.max(0,lordeMs-pauseMs);
     const straordMs=Math.max(0,netteMs-8*3600000);
@@ -14655,7 +14682,7 @@ async function renderMieOre(){
       if(p.uscita){
         const usc=new Date(p.uscita);
         uscitaStr=pad(usc.getHours())+':'+pad(usc.getMinutes());
-        const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+        const pauseMs=pauseMsDentro(p);
         nette=Math.max(0,(usc-ent)-pauseMs);
         if((p.pause||[]).length>0){
           pauseStr=(p.pause||[]).filter(px=>px.inizio&&px.fine).map(px=>{
@@ -14789,7 +14816,7 @@ async function openExportConfermato(){
       const d=new Date(p.entrata);
       const dataStr=pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear();
       const giornoStr=gg[d.getDay()];
-      const pauseMs=(p.pause||[]).reduce((s,px)=>{if(px.inizio&&px.fine)s+=new Date(px.fine)-new Date(px.inizio);return s;},0);
+      const pauseMs=pauseMsDentro(p);
       const nette=p.uscita?Math.max(0,(new Date(p.uscita)-d-pauseMs)/3600000).toFixed(2):'';
       csv+=`"${p.nome||'—'}","${dataStr}","${giornoStr}","${p.luogo||'—'}","${fmtT(p.entrata)}","${fmtT(p.uscita)}","${nette}","${Math.round(pauseMs/60000)}min","${confermato}"\n`;
     });
